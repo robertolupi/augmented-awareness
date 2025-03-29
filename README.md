@@ -1,2 +1,2 @@
 # augmented-awareness
-Augmented Awareness is a toolset for local-first, quantified self projects
+Augmented Awareness will eventually contain a toolset for local-first, quantified self projects
