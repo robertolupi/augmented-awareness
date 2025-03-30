@@ -66,6 +66,11 @@ class Task:
     name: str
     done: bool
 
+@dataclass
+class Event:
+    """A tracked or scheduled event in an Obsidian page."""
+    name: str
+    time: datetime.time
 
 @dataclass
 class Event:
