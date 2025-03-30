@@ -5,6 +5,7 @@ description = "Augmented Awareness"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "click>=8.1.8",
     "mistune>=3.1.3",
     "pyyaml>=6.0.2",
     "rich>=13.9.4",
