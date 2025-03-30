@@ -1,9 +1,11 @@
-import pytest
-from aww.observe.obsidian import Vault
-import pathlib
 import datetime
+import pathlib
+
+import pytest
 import rich
 import rich.markdown
+
+from aww.observe.obsidian import Vault
 
 test_dir = pathlib.Path(__file__).parent
 test_vault_dir = test_dir / "vault"

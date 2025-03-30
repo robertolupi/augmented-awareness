@@ -1,19 +1,16 @@
 """Observe the content of an Obsidian vault."""
 
-from typing import TypeVar
-
-from dataclasses import dataclass
 import collections
-import os
 import datetime
+import os
 import pathlib
 import re
+from dataclasses import dataclass
 
+import mistune
 import rich
 import rich.markdown
 import yaml
-
-import mistune
 
 
 class Vault:
