@@ -77,13 +77,6 @@ class Event:
     time: datetime.time
 
 
-@dataclass
-class Event:
-    """A tracked or scheduled event in an Obsidian page."""
-    name: str
-    time: datetime.time
-
-
 class Page:
     """An Obsidian page."""
 
