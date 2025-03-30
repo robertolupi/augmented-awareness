@@ -26,6 +26,8 @@ def test_pages():
     v = Vault(test_vault_dir)
     pages = v.pages()
     assert len(pages) == 2
+    assert pages["index"].name == "index"
+    assert pages["2025-03-30"].name == "2025-03-30"
 
 
 def test_journal():
@@ -38,20 +40,20 @@ def test_journal():
 def test_frontmatter():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-03-30"]
-    assert page.frontmatter == {"stress": 4}
+    assert page.frontmatter() == {"stress": 4}
 
 
 def test_markdown():
     v = Vault(test_vault_dir)
     page = v.pages()["index"]
-    assert page.content == "# Obsidian Test Vault\n\nJust a simple page.\n\n---\n\nThis page has no frontmatter.\n"
-    assert isinstance(page.content.__rich__(), rich.markdown.Markdown)
+    assert page.content() == "# Obsidian Test Vault\n\nJust a simple page.\n\n---\n\nThis page has no frontmatter.\n"
+    assert isinstance(page.content().__rich__(), rich.markdown.Markdown)
 
 
 def test_markdown_parse():
     v = Vault(test_vault_dir)
     page = v.pages()["index"]
-    parsed = page.content.parse()
+    parsed = page.content().parse()
     assert parsed == [
         {
             'type': 'heading',
@@ -72,3 +74,15 @@ def test_markdown_parse():
             'children': [{'type': 'text', 'raw': 'This page has no frontmatter.'}]
         }
     ]
+
+def test_tasks():
+    v = Vault(test_vault_dir)
+    page = v.pages()["2025-03-30"]    
+    tasks = page.tasks()
+    if len(tasks) != 2:
+        rich.print(page.content().parse())
+        assert False
+    assert tasks[0].name == 'task 1'
+    assert not tasks[0].done
+    assert tasks[1].name == 'task 2'
+    assert tasks[1].done

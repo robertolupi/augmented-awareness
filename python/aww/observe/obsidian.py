@@ -2,7 +2,7 @@
 
 from typing import TypeVar
 
-
+from dataclasses import dataclass
 import collections
 import os
 import datetime
@@ -14,6 +14,7 @@ import rich.markdown
 import yaml
 
 import mistune
+
 
 class Vault:
     """An Obsidian vault."""
@@ -38,7 +39,7 @@ class Vault:
                     pages[page.name] = page
         return pages
 
-    def journal(self) -> dict[datetime.datetime, 'Page']:
+    def journal(self) -> collections.OrderedDict[datetime.date, 'Page']:
         """Get the pages corresponding to dates in the vault."""
         DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
         pages = []
@@ -62,6 +63,13 @@ class Markdown(str):
         return md(self)
 
 
+@dataclass
+class Task:
+    """A task in an Obsidian page."""
+    name: str
+    done: bool
+
+
 class Page:
     """An Obsidian page."""
 
@@ -75,7 +83,6 @@ class Page:
         """Get the name of the page."""
         return self.path.stem
 
-    @property
     def frontmatter(self) -> dict:
         """Get the frontmatter of the page."""
         with open(self.path, "r", encoding="utf-8") as f:
@@ -85,11 +92,21 @@ class Page:
             return yaml.safe_load(frontmatter)
         return {}
 
-    @property
     def content(self) -> Markdown:
         """Get the content of the page."""
         with open(self.path, "r", encoding="utf-8") as f:
             content = f.read()
-        if content.startswith("---"):
+        if content.startswith("---\n"):
             _, _, content = content.split("---\n", 2)
         return Markdown(content)
+
+    def tasks(self) -> [Task]:
+        """Get the tasks in the page."""
+        parsed = self.content().parse()
+        tasks = []
+        for tok in parsed:
+            if tok['type'] == 'list':
+                for item in tok['children']:
+                    if item['type'] == 'task_list_item':
+                        tasks.append(Task(item['children'][0]['children'][0]['raw'], item['attrs']['checked']))
+        return tasks
