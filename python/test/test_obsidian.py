@@ -27,16 +27,18 @@ def test_valid_vault():
 def test_pages():
     v = Vault(test_vault_dir)
     pages = v.pages()
-    assert len(pages) == 2
+    assert len(pages) == 3
     assert pages["index"].name == "index"
     assert pages["2025-03-30"].name == "2025-03-30"
+    assert pages["2025-04-01"].name == "2025-04-01"
 
 
 def test_journal():
     v = Vault(test_vault_dir)
     journal = v.journal()
-    assert len(journal) == 1
+    assert len(journal) == 2
     assert datetime.date(2025, 3, 30) in journal
+    assert datetime.date(2025, 4, 1) in journal
 
 
 def test_frontmatter():
@@ -77,9 +79,10 @@ def test_markdown_parse():
         }
     ]
 
+
 def test_tasks():
     v = Vault(test_vault_dir)
-    page = v.pages()["2025-03-30"]    
+    page = v.pages()["2025-03-30"]
     tasks = page.tasks()
     if len(tasks) != 2:
         rich.print(page.content().parse())
@@ -88,10 +91,11 @@ def test_tasks():
     assert not tasks[0].done
     assert tasks[1].name == 'task 2'
     assert tasks[1].done
-    
+
+
 def test_events():
     v = Vault(test_vault_dir)
-    page = v.pages()["2025-03-30"]    
+    page = v.pages()["2025-03-30"]
     events = page.events()
     if len(events) != 3:
         rich.print(page.content().parse())
@@ -102,3 +106,17 @@ def test_events():
     assert events[1].time == datetime.time(6, 30)
     assert events[2].name == 'yoga'
     assert events[2].time == datetime.time(7, 0)
+
+
+def test_tags():
+    v = Vault(test_vault_dir)
+    page = v.pages()["2025-04-01"]
+    tags = page.tags()
+    try:
+        assert "tag1" in tags
+        assert "tag2" in tags
+        assert "tag3/with-parts" in tags
+        assert len(tags) == 3
+    except:
+        rich.print(page.content().parse())
+        raise

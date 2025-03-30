@@ -1,16 +1,20 @@
 """Observe the content of an Obsidian vault."""
-
 import collections
 import datetime
 import os
 import pathlib
 import re
 from dataclasses import dataclass
+from typing import Iterable
 
 import mistune
 import rich
 import rich.markdown
 import yaml
+
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
+TAGS_RE = re.compile(r"\B#([-/a-zA-Z0-9_]*)")
 
 
 class Vault:
@@ -38,10 +42,9 @@ class Vault:
 
     def journal(self) -> collections.OrderedDict[datetime.date, 'Page']:
         """Get the pages corresponding to dates in the vault."""
-        date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
         pages = []
         for name, page in self.pages().items():
-            if date_re.match(name):
+            if DATE_RE.match(name):
                 date = datetime.datetime.strptime(name, "%Y-%m-%d").date()
                 pages.append((date, page))
         pages.sort(key=lambda x: x[0])
@@ -66,11 +69,13 @@ class Task:
     name: str
     done: bool
 
+
 @dataclass
 class Event:
     """A tracked or scheduled event in an Obsidian page."""
     name: str
     time: datetime.time
+
 
 @dataclass
 class Event:
@@ -123,14 +128,27 @@ class Page:
     def events(self) -> [Event]:
         parsed = self.content().parse()
         events = []
-        time_re = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
+
         for tok in parsed:
             if tok['type'] == 'paragraph':
                 for child in tok['children']:
                     if child['type'] == 'text':
-                        match = time_re.match(child['raw'])
+                        match = TIME_RE.match(child['raw'])
                         if match:
                             time, name = match.groups()
                             time = datetime.datetime.strptime(time, "%H:%M").time()
                             events.append(Event(name, time))
         return events
+
+    def tags(self) -> list[str]:
+        """Get the tags in the page."""
+        parsed = self.content().parse()
+        return list(_get_tags(parsed))
+
+
+def _get_tags(tokens: list) -> Iterable[str]:
+    for tok in tokens:
+        if tok['type'] == 'text':
+            yield from TAGS_RE.findall(tok['raw'])
+        elif 'children' in tok:
+            yield from _get_tags(tok['children'])
