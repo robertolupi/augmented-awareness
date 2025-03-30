@@ -1,0 +1,16 @@
+[project]
+name = "aww"
+version = "0.1.0"
+description = "Augmented Awareness"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "mistune>=3.1.3",
+    "pyyaml>=6.0.2",
+    "rich>=13.9.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
