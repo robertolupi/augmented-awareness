@@ -38,11 +38,11 @@ class Vault:
 
     def journal(self) -> collections.OrderedDict[datetime.date, 'Page']:
         """Get the pages corresponding to dates in the vault."""
-        DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+        date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
         pages = []
-        for pagename, page in self.pages().items():
-            if DATE_RE.match(pagename):
-                date = datetime.datetime.strptime(pagename, "%Y-%m-%d").date()
+        for name, page in self.pages().items():
+            if date_re.match(name):
+                date = datetime.datetime.strptime(name, "%Y-%m-%d").date()
                 pages.append((date, page))
         pages.sort(key=lambda x: x[0])
         return collections.OrderedDict(pages)
@@ -65,6 +65,13 @@ class Task:
     """A task in an Obsidian page."""
     name: str
     done: bool
+
+
+@dataclass
+class Event:
+    """A tracked or scheduled event in an Obsidian page."""
+    name: str
+    time: datetime.time
 
 
 class Page:
@@ -107,3 +114,18 @@ class Page:
                     if item['type'] == 'task_list_item':
                         tasks.append(Task(item['children'][0]['children'][0]['raw'], item['attrs']['checked']))
         return tasks
+
+    def events(self) -> [Event]:
+        parsed = self.content().parse()
+        events = []
+        time_re = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
+        for tok in parsed:
+            if tok['type'] == 'paragraph':
+                for child in tok['children']:
+                    if child['type'] == 'text':
+                        match = time_re.match(child['raw'])
+                        if match:
+                            time, name = match.groups()
+                            time = datetime.datetime.strptime(time, "%H:%M").time()
+                            events.append(Event(name, time))
+        return events

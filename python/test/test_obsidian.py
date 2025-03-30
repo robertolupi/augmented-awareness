@@ -88,3 +88,17 @@ def test_tasks():
     assert not tasks[0].done
     assert tasks[1].name == 'task 2'
     assert tasks[1].done
+    
+def test_events():
+    v = Vault(test_vault_dir)
+    page = v.pages()["2025-03-30"]    
+    events = page.events()
+    if len(events) != 3:
+        rich.print(page.content().parse())
+        assert False
+    assert events[0].name == 'wake up'
+    assert events[0].time == datetime.time(6, 15)
+    assert events[1].name == 'breakfast & shower'
+    assert events[1].time == datetime.time(6, 30)
+    assert events[2].name == 'yoga'
+    assert events[2].time == datetime.time(7, 0)
