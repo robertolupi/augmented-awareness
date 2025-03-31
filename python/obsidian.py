@@ -25,13 +25,13 @@ def main(vault_path):
     "date_start",
     "-s",
     type=click.DateTime(),
-    default=(datetime.date.today() - datetime.timedelta(days=7)).strftime("%Y-%m-%d"),
+    default=(datetime.date.today() - datetime.timedelta(days=8)).strftime("%Y-%m-%d"),
 )
 @click.option(
     "date_end",
     "-e",
     type=click.DateTime(),
-    default=datetime.date.today().strftime("%Y-%m-%d"),
+    default=(datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
 )
 def busy(
     date_start: datetime.date | datetime.datetime,
