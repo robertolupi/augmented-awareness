@@ -1,4 +1,5 @@
 """Observe the content of an Obsidian vault."""
+
 import collections
 import datetime
 import os
@@ -29,7 +30,7 @@ class Vault:
         if not (self.path / ".obsidian").is_dir():
             raise ValueError(f"Path {self.path} is not an Obsidian vault.")
 
-    def pages(self) -> dict[str, 'Page']:
+    def pages(self) -> dict[str, "Page"]:
         """Get the pages in the vault."""
         pages = {}
         for root, _, files in os.walk(self.path):
@@ -40,7 +41,7 @@ class Vault:
                     pages[page.name] = page
         return pages
 
-    def journal(self) -> collections.OrderedDict[datetime.date, 'Page']:
+    def journal(self) -> collections.OrderedDict[datetime.date, "Page"]:
         """Get the pages corresponding to dates in the vault."""
         pages = []
         for name, page in self.pages().items():
@@ -59,6 +60,7 @@ class Markdown(str):
 
     def parse(self) -> list[dict]:
         from mistune.plugins.task_lists import task_lists
+
         md = mistune.Markdown(renderer=None, plugins=[task_lists])
         return md(self)
 
@@ -66,6 +68,7 @@ class Markdown(str):
 @dataclass
 class Task:
     """A task in an Obsidian page."""
+
     name: str
     done: bool
 
@@ -73,9 +76,11 @@ class Task:
 @dataclass
 class Event:
     """A tracked or scheduled event in an Obsidian page."""
+
     name: str
     time: datetime.time
     tags: list[str] = None
+    duration: datetime.timedelta | None = None
 
 
 class Page:
@@ -113,10 +118,15 @@ class Page:
         parsed = self.content().parse()
         tasks = []
         for tok in parsed:
-            if tok['type'] == 'list':
-                for item in tok['children']:
-                    if item['type'] == 'task_list_item':
-                        tasks.append(Task(item['children'][0]['children'][0]['raw'], item['attrs']['checked']))
+            if tok["type"] == "list":
+                for item in tok["children"]:
+                    if item["type"] == "task_list_item":
+                        tasks.append(
+                            Task(
+                                item["children"][0]["children"][0]["raw"],
+                                item["attrs"]["checked"],
+                            )
+                        )
         return tasks
 
     def events(self) -> [Event]:
@@ -124,15 +134,22 @@ class Page:
         events = []
 
         for tok in parsed:
-            if tok['type'] == 'paragraph':
-                for child in tok['children']:
-                    if child['type'] == 'text':
-                        match = TIME_RE.match(child['raw'])
+            if tok["type"] == "paragraph":
+                for child in tok["children"]:
+                    if child["type"] == "text":
+                        match = TIME_RE.match(child["raw"])
                         if match:
                             time, name = match.groups()
                             time = datetime.datetime.strptime(time, "%H:%M").time()
                             tags = TAGS_RE.findall(name)
                             events.append(Event(name, time, tags))
+        dt = datetime.date.today()  # arbitrary date
+
+        def time2date(t):
+            return datetime.datetime.combine(dt, t)
+
+        for event, prev_event in zip(events[1:], events):
+            prev_event.duration = time2date(event.time) - time2date(prev_event.time)
         return events
 
     def tags(self) -> list[str]:
@@ -143,7 +160,7 @@ class Page:
 
 def _get_tags(tokens: list) -> Iterable[str]:
     for tok in tokens:
-        if tok['type'] == 'text':
-            yield from TAGS_RE.findall(tok['raw'])
-        elif 'children' in tok:
-            yield from _get_tags(tok['children'])
+        if tok["type"] == "text":
+            yield from TAGS_RE.findall(tok["raw"])
+        elif "children" in tok:
+            yield from _get_tags(tok["children"])

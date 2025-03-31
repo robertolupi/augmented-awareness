@@ -50,7 +50,10 @@ def test_frontmatter():
 def test_markdown():
     v = Vault(test_vault_dir)
     page = v.pages()["index"]
-    assert page.content() == "# Obsidian Test Vault\n\nJust a simple page.\n\n---\n\nThis page has no frontmatter.\n"
+    assert (
+        page.content()
+        == "# Obsidian Test Vault\n\nJust a simple page.\n\n---\n\nThis page has no frontmatter.\n"
+    )
     assert isinstance(page.content().__rich__(), rich.markdown.Markdown)
 
 
@@ -60,23 +63,23 @@ def test_markdown_parse():
     parsed = page.content().parse()
     assert parsed == [
         {
-            'type': 'heading',
-            'attrs': {'level': 1},
-            'style': 'atx',
-            'children': [{'type': 'text', 'raw': 'Obsidian Test Vault'}]
+            "type": "heading",
+            "attrs": {"level": 1},
+            "style": "atx",
+            "children": [{"type": "text", "raw": "Obsidian Test Vault"}],
         },
-        {'type': 'blank_line'},
+        {"type": "blank_line"},
         {
-            'type': 'paragraph',
-            'children': [{'type': 'text', 'raw': 'Just a simple page.'}]
+            "type": "paragraph",
+            "children": [{"type": "text", "raw": "Just a simple page."}],
         },
-        {'type': 'blank_line'},
-        {'type': 'thematic_break'},
-        {'type': 'blank_line'},
+        {"type": "blank_line"},
+        {"type": "thematic_break"},
+        {"type": "blank_line"},
         {
-            'type': 'paragraph',
-            'children': [{'type': 'text', 'raw': 'This page has no frontmatter.'}]
-        }
+            "type": "paragraph",
+            "children": [{"type": "text", "raw": "This page has no frontmatter."}],
+        },
     ]
 
 
@@ -87,9 +90,9 @@ def test_tasks():
     if len(tasks) != 2:
         rich.print(page.content().parse())
         assert False
-    assert tasks[0].name == 'task 1'
+    assert tasks[0].name == "task 1"
     assert not tasks[0].done
-    assert tasks[1].name == 'task 2'
+    assert tasks[1].name == "task 2"
     assert tasks[1].done
 
 
@@ -100,12 +103,15 @@ def test_events():
     if len(events) != 3:
         rich.print(page.content().parse())
         assert False
-    assert events[0].name == 'wake up'
+    assert events[0].name == "wake up"
     assert events[0].time == datetime.time(6, 15)
-    assert events[1].name == 'breakfast & shower'
+    assert events[1].name == "breakfast & shower"
     assert events[1].time == datetime.time(6, 30)
-    assert events[2].name == 'yoga'
+    assert events[0].duration == datetime.timedelta(minutes=15)
+    assert events[2].name == "yoga"
     assert events[2].time == datetime.time(7, 0)
+    assert events[1].duration == datetime.timedelta(minutes=30)
+    assert events[2].duration is None
 
 
 def test_events_tags():
@@ -114,13 +120,13 @@ def test_events_tags():
     events = page.events()
     if len(events) != 3:
         rich.print(page.content().parse())
-    assert events[0].name == 'woke up'
+    assert events[0].name == "woke up"
     assert events[0].time == datetime.time(6, 4)
-    assert events[1].name == '#aww did some work'
-    assert events[1].tags == ['aww']
+    assert events[1].name == "#aww did some work"
+    assert events[1].tags == ["aww"]
     assert events[1].time == datetime.time(7, 0)
-    assert events[2].name == '#work'
-    assert events[2].tags == ['work']
+    assert events[2].name == "#work"
+    assert events[2].tags == ["work"]
     assert events[2].time == datetime.time(8, 30)
 
 

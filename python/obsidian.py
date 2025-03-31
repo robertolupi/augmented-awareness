@@ -10,7 +10,10 @@ vault: Vault
 
 
 @click.group()
-@click.argument('vault_path', type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True))
+@click.argument(
+    "vault_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True),
+)
 def main(vault_path):
     """Observe the content of an Obsidian vault."""
     global vault
@@ -18,11 +21,24 @@ def main(vault_path):
 
 
 @main.command()
-@click.option('date_start', '-s', type=click.DateTime(), default=(datetime.date.today() - datetime.timedelta(days=7)).strftime("%Y-%m-%d"))
-@click.option('date_end', '-e', type=click.DateTime(), default=datetime.date.today().strftime("%Y-%m-%d"))
-def busy(date_start: datetime.date | datetime.datetime, date_end: datetime.date | datetime.datetime):
+@click.option(
+    "date_start",
+    "-s",
+    type=click.DateTime(),
+    default=(datetime.date.today() - datetime.timedelta(days=7)).strftime("%Y-%m-%d"),
+)
+@click.option(
+    "date_end",
+    "-e",
+    type=click.DateTime(),
+    default=datetime.date.today().strftime("%Y-%m-%d"),
+)
+def busy(
+    date_start: datetime.date | datetime.datetime,
+    date_end: datetime.date | datetime.datetime,
+):
     """Print schedule information for a date range.
-    
+
     Obtains the events, then compute the time spent between each event and the next, compute sums by tags.
     """
     global vault
@@ -36,13 +52,10 @@ def busy(date_start: datetime.date | datetime.datetime, date_end: datetime.date 
             continue
         page = journal[date]
         events = page.events()
-        prev_event = None
-        for event in events:
-            if prev_event:
-                duration = datetime.datetime.combine(date, event.time) - datetime.datetime.combine(date, prev_event.time)
-                for tag in prev_event.tags:
-                    tag_durations[tag] += duration
-            prev_event = event
+        for ev in events:
+            if ev.duration is not None:
+                for tag in ev.tags:
+                    tag_durations[tag] += ev.duration
         date = date + datetime.timedelta(days=1)
 
     durations = list(tag_durations.items())
@@ -57,8 +70,10 @@ def busy(date_start: datetime.date | datetime.datetime, date_end: datetime.date 
 
 
 @main.command()
-@click.option('verbose', '-v', is_flag=True, help='Verbose output. Print markdown content.')
-@click.argument('page_name', type=str, required=False)
+@click.option(
+    "verbose", "-v", is_flag=True, help="Verbose output. Print markdown content."
+)
+@click.argument("page_name", type=str, required=False)
 def info(verbose, page_name=None):
     """Print general information about a page."""
     global vault
