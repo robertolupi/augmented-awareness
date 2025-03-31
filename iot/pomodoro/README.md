@@ -1,5 +1,7 @@
 # Aww, Pomodoro!
 
+![](pomodoro-timer-photo.jpg)
+
 A simple pomodoro timer for M5Stack Core2 devices.
 
 ## Hardware
