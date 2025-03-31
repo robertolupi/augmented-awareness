@@ -33,11 +33,13 @@ def main(vault_path):
     type=click.DateTime(),
     default=(datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
 )
+@click.option("today", "-t", "--today", is_flag=True, help="Set dates to today.")
 @click.option("verbose", "-v", is_flag=True, help="Verbose output. Print dates and events.")
 def busy(
     date_start: datetime.date | datetime.datetime,
     date_end: datetime.date | datetime.datetime,
-    verbose: bool = False
+    verbose: bool = False,
+    today: bool = False,
 ):
     """Print schedule information for a date range.
 
@@ -47,9 +49,12 @@ def busy(
     journal = vault.journal()
     date_start = date_start.date()
     date_end = date_end.date()
+    if today:
+        date_start = datetime.date.today()
+        date_end = datetime.date.today()
     date = date_start
     tag_durations = collections.defaultdict(lambda: datetime.timedelta())
-    while date < date_end:
+    while date <= date_end:
         if verbose:
             rich.print(date)
         if date in journal:            
