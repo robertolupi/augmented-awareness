@@ -50,6 +50,8 @@ def busy(
     date = date_start
     tag_durations = collections.defaultdict(lambda: datetime.timedelta())
     while date < date_end:
+        if verbose:
+            rich.print(date)
         if date in journal:            
             page = journal[date]
             events = page.events()
@@ -57,6 +59,8 @@ def busy(
                 if ev.duration is not None:
                     for tag in ev.tags:
                         tag_durations[tag] += ev.duration
+                if verbose:
+                    rich.print(f"  [bold]{ev.time}[/] {ev.name} {ev.tags}")
         date = date + datetime.timedelta(days=1)
 
     durations = list(tag_durations.items())
