@@ -108,6 +108,22 @@ def test_events():
     assert events[2].time == datetime.time(7, 0)
 
 
+def test_events_tags():
+    v = Vault(test_vault_dir)
+    page = v.pages()["2025-04-01"]
+    events = page.events()
+    if len(events) != 3:
+        rich.print(page.content().parse())
+    assert events[0].name == 'woke up'
+    assert events[0].time == datetime.time(6, 4)
+    assert events[1].name == '#aww did some work'
+    assert events[1].tags == ['aww']
+    assert events[1].time == datetime.time(7, 0)
+    assert events[2].name == '#work'
+    assert events[2].tags == ['work']
+    assert events[2].time == datetime.time(8, 30)
+
+
 def test_tags():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-04-01"]
@@ -116,7 +132,9 @@ def test_tags():
         assert "tag1" in tags
         assert "tag2" in tags
         assert "tag3/with-parts" in tags
-        assert len(tags) == 3
+        assert "aww" in tags
+        assert "work" in tags
+        assert len(tags) == 5
     except:
         rich.print(page.content().parse())
         raise

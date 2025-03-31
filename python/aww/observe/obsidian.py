@@ -75,6 +75,7 @@ class Event:
     """A tracked or scheduled event in an Obsidian page."""
     name: str
     time: datetime.time
+    tags: list[str] = None
 
 
 class Page:
@@ -130,7 +131,8 @@ class Page:
                         if match:
                             time, name = match.groups()
                             time = datetime.datetime.strptime(time, "%H:%M").time()
-                            events.append(Event(name, time))
+                            tags = TAGS_RE.findall(name)
+                            events.append(Event(name, time, tags))
         return events
 
     def tags(self) -> list[str]:
