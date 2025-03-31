@@ -1,3 +1,5 @@
+import collections
+import datetime
 import click
 import rich
 import rich.table
@@ -10,14 +12,55 @@ vault: Vault
 @click.group()
 @click.argument('vault_path', type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True))
 def main(vault_path):
+    """Observe the content of an Obsidian vault."""
     global vault
     vault = Vault(vault_path)
+
+
+@main.command()
+@click.option('date_start', '-s', type=click.DateTime(), default=(datetime.date.today() - datetime.timedelta(days=7)).strftime("%Y-%m-%d"))
+@click.option('date_end', '-e', type=click.DateTime(), default=datetime.date.today().strftime("%Y-%m-%d"))
+def busy(date_start: datetime.date | datetime.datetime, date_end: datetime.date | datetime.datetime):
+    """Print schedule information for a date range.
+    
+    Obtains the events, then compute the time spent between each event and the next, compute sums by tags.
+    """
+    global vault
+    journal = vault.journal()
+    date_start = date_start.date()
+    date_end = date_end.date()
+    date = date_start
+    tag_durations = collections.defaultdict(lambda: datetime.timedelta())
+    while date < date_end:
+        if date not in journal:
+            continue
+        page = journal[date]
+        events = page.events()
+        prev_event = None
+        for event in events:
+            if prev_event:
+                duration = datetime.datetime.combine(date, event.time) - datetime.datetime.combine(date, prev_event.time)
+                for tag in prev_event.tags:
+                    tag_durations[tag] += duration
+            prev_event = event
+        date = date + datetime.timedelta(days=1)
+
+    durations = list(tag_durations.items())
+    durations.sort(key=lambda x: x[1], reverse=True)
+
+    table = rich.table.Table()
+    table.add_column("tag")
+    table.add_column("duration")
+    for tag, duration in durations:
+        table.add_row(tag, str(duration))
+    rich.print(table)
 
 
 @main.command()
 @click.option('verbose', '-v', is_flag=True, help='Verbose output. Print markdown content.')
 @click.argument('page_name', type=str, required=False)
 def info(verbose, page_name=None):
+    """Print general information about a page."""
     global vault
     rich.print(vault.path)
     pages = vault.pages()
