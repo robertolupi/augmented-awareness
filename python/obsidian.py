@@ -60,7 +60,7 @@ def busy(
                     for tag in ev.tags:
                         tag_durations[tag] += ev.duration
                 if verbose:
-                    rich.print(f"  [bold]{ev.time}[/] {ev.name} {ev.tags}")
+                    rich.print(f"  [bold]{ev.time}[/] {ev.name} {ev.tags} ({ev.duration})")
         date = date + datetime.timedelta(days=1)
 
     durations = list(tag_durations.items())
