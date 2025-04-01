@@ -1,11 +1,19 @@
 import collections
 import datetime
+import textwrap
+from textwrap import dedent
+
 import click
 import rich
 import rich.columns
 import rich.table
+import rich.markdown
 import os
 import subprocess
+
+from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.agent import Agent
 
 from aww.observe.obsidian import Vault
 
@@ -28,6 +36,51 @@ def web():
     global vault
     os.environ["OBSIDIAN_VAULT"] = str(vault.path)
     subprocess.run(["streamlit", "run", "obsidian_web.py"])
+
+
+@main.command()
+@click.option("provider_url", "--llm-url", default="http://localhost:1234/v1")
+@click.option("model_name", "--llm-model", "-m", default="gemma-3-4b-it")
+@click.option(
+    "preamble",
+    "--preamble",
+    required=False,
+    default=textwrap.dedent(
+        """You're an helpful psychology, wellness and mindfulness coach.
+        You answer with 5 helpful, short and actionable tips to live a more wholesome life.
+        This was my schedule:
+        """),
+)
+@click.argument("user_prompt", required=False, default="What can I do differently?")
+def tips(provider_url, model_name, preamble, user_prompt):
+    global vault
+    model = OpenAIModel(
+        model_name=model_name, provider=OpenAIProvider(base_url=provider_url)
+    )
+    agent = Agent(model=model, system_prompt=preamble)
+
+    date_end = datetime.date.today()
+    date_start = date_end - datetime.timedelta(days=7)
+    journal = vault.journal()
+
+    date = date_start
+    full_user_prompt = []
+    while date <= date_end:
+        if date in journal:
+            page = journal[date]
+            full_user_prompt.append("")
+            full_user_prompt.append("# " + date.strftime("On %A, %B %d:"))
+            for ev in page.events():
+                full_user_prompt.append(" " + str(ev))
+            full_user_prompt.append("")
+        date = date + datetime.timedelta(days=1)
+
+    full_user_prompt.append("# Question")
+    full_user_prompt.append(user_prompt)
+
+    result = agent.run_sync("\n".join(full_user_prompt))
+    md = rich.markdown.Markdown(result.data)
+    rich.print(md)
 
 
 @main.command()

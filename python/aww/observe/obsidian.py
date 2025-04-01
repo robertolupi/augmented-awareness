@@ -13,6 +13,7 @@ import mistune
 import rich
 import rich.markdown
 import yaml
+from pydantic import BaseModel, Field
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
@@ -66,29 +67,40 @@ class Markdown(str):
         return md(self)
 
 
-@dataclass
-class Task:
-    """A task in an Obsidian page."""
+class Task(BaseModel):
+    """A task."""
 
-    name: str
-    done: bool
+    name: str = Field(description="name of the task")
+    done: bool = Field(description="whether the task is done or not completed yet")
 
-    def __rich__(self):
-        x = 'x' if self.done else ' '
+    def __str__(self):
+        x = "x" if self.done else " "
         return f"- [{x}] {self.name}"
 
+    def __rich__(self):
+        return str(self)
 
-@dataclass
-class Event:
-    """A tracked or scheduled event in an Obsidian page."""
 
-    name: str
-    time: datetime.datetime
-    tags: list[str] = None
-    duration: datetime.timedelta | None = None
+class Event(BaseModel):
+    """A tracked or scheduled event."""
+
+    name: str = Field(description="description of the event")
+    time: datetime.datetime = Field(description="date and time of the event")
+    tags: list[str] = Field(description="tags of the event", default_factory=list)
+    duration: datetime.timedelta | None = Field(
+        description="duration of the event", default=None
+    )
+
+    def __str__(self):
+        time_str = time.strftime(
+            "%Y-%m-%d %H:%M", time.localtime(self.time.timestamp())
+        )
+        return f"{time_str} {self.name} {self.tags} ({self.duration or ''})"
 
     def __rich__(self):
-        time_str = time.strftime('%Y-%m-%d %H:%M', time.localtime(self.time.timestamp()))
+        time_str = time.strftime(
+            "%Y-%m-%d %H:%M", time.localtime(self.time.timestamp())
+        )
         return f"[b]{time_str}[/] {self.name} {self.tags} ({self.duration})"
 
 
@@ -132,8 +144,8 @@ class Page:
                     if item["type"] == "task_list_item":
                         tasks.append(
                             Task(
-                                item["children"][0]["children"][0]["raw"],
-                                item["attrs"]["checked"],
+                                name=item["children"][0]["children"][0]["raw"],
+                                done=item["attrs"]["checked"],
                             )
                         )
         return tasks
@@ -155,7 +167,7 @@ class Page:
                                 datetime.datetime.strptime(time_str, "%H:%M").time(),
                             )
                             tags = TAGS_RE.findall(name)
-                            events.append(Event(name, dt, tags))
+                            events.append(Event(name=name, time=dt, tags=tags))
 
         for event, prev_event in zip(events[1:], events):
             prev_event.duration = event.time - prev_event.time
