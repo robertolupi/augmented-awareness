@@ -3,6 +3,8 @@ import datetime
 import click
 import rich
 import rich.table
+import os
+import subprocess
 
 from aww.observe.obsidian import Vault
 
@@ -21,6 +23,13 @@ def main(vault_path):
 
 
 @main.command()
+def web():
+    global vault
+    os.environ["OBSIDIAN_VAULT"] = str(vault.path)
+    subprocess.run(["streamlit", "run", "obsidian_web.py"])
+
+
+@main.command()
 @click.option(
     "date_start",
     "-s",
@@ -36,10 +45,10 @@ def main(vault_path):
 @click.option("today", "-t", "--today", is_flag=True, help="Set dates to today.")
 @click.option("verbose", "-v", is_flag=True, help="Verbose output. Print dates and events.")
 def busy(
-    date_start: datetime.date | datetime.datetime,
-    date_end: datetime.date | datetime.datetime,
-    verbose: bool = False,
-    today: bool = False,
+        date_start: datetime.date | datetime.datetime,
+        date_end: datetime.date | datetime.datetime,
+        verbose: bool = False,
+        today: bool = False,
 ):
     """Print schedule information for a date range.
 
@@ -57,7 +66,7 @@ def busy(
     while date <= date_end:
         if verbose:
             rich.print(date)
-        if date in journal:            
+        if date in journal:
             page = journal[date]
             events = page.events()
             for ev in events:
