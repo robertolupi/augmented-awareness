@@ -2,6 +2,7 @@ import collections
 import datetime
 import click
 import rich
+import rich.columns
 import rich.table
 import os
 import subprocess
@@ -43,12 +44,14 @@ def web():
     default=(datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
 )
 @click.option("today", "-t", "--today", is_flag=True, help="Set dates to today.")
-@click.option("verbose", "-v", is_flag=True, help="Verbose output. Print dates and events.")
+@click.option(
+    "verbose", "-v", is_flag=True, help="Verbose output. Print dates and events."
+)
 def busy(
-        date_start: datetime.date | datetime.datetime,
-        date_end: datetime.date | datetime.datetime,
-        verbose: bool = False,
-        today: bool = False,
+    date_start: datetime.date | datetime.datetime,
+    date_end: datetime.date | datetime.datetime,
+    verbose: bool = False,
+    today: bool = False,
 ):
     """Print schedule information for a date range.
 
@@ -74,7 +77,9 @@ def busy(
                     for tag in ev.tags:
                         tag_durations[tag] += ev.duration
                 if verbose:
-                    rich.print(f"  [bold]{ev.time}[/] {ev.name} {ev.tags} ({ev.duration})")
+                    rich.print(
+                        f"  [bold]{ev.time}[/] {ev.name} {ev.tags} ({ev.duration})"
+                    )
         date = date + datetime.timedelta(days=1)
 
     durations = list(tag_durations.items())
@@ -111,8 +116,10 @@ def info(verbose, page_name=None):
         return
     rich.print("\n")
     rich.print(f"Page: {entry.name}")
-    rich.print(f"Frontmatter: {entry.frontmatter()}")
-    rich.print(f"Tags: {entry.tags()}")
+    rich.print("Frontmatter:", entry.frontmatter())
+    rich.print("Events:", rich.columns.Columns(entry.events()))
+    rich.print("Tasks:", rich.columns.Columns(entry.tasks()))
+    rich.print("Tags:", rich.columns.Columns(entry.tags()))
     if verbose:
         rich.print(entry.content())
 

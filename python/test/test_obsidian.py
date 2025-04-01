@@ -104,12 +104,12 @@ def test_events():
         rich.print(page.content().parse())
         assert False
     assert events[0].name == "wake up"
-    assert events[0].time == datetime.time(6, 15)
+    assert events[0].time == datetime.datetime(2025, 3, 30, 6, 15)
     assert events[1].name == "breakfast & shower"
-    assert events[1].time == datetime.time(6, 30)
+    assert events[1].time == datetime.datetime(2025, 3, 30, 6, 30)
     assert events[0].duration == datetime.timedelta(minutes=15)
     assert events[2].name == "yoga"
-    assert events[2].time == datetime.time(7, 0)
+    assert events[2].time == datetime.datetime(2025, 3, 30, 7, 0)
     assert events[1].duration == datetime.timedelta(minutes=30)
     assert events[2].duration is None
 
@@ -121,13 +121,13 @@ def test_events_tags():
     if len(events) != 3:
         rich.print(page.content().parse())
     assert events[0].name == "woke up"
-    assert events[0].time == datetime.time(6, 4)
+    assert events[0].time == datetime.datetime(2025, 4, 1, 6, 4)
     assert events[1].name == "#aww did some work"
     assert events[1].tags == ["aww"]
-    assert events[1].time == datetime.time(7, 0)
+    assert events[1].time == datetime.datetime(2025, 4, 1, 7, 0)
     assert events[2].name == "#work"
     assert events[2].tags == ["work"]
-    assert events[2].time == datetime.time(8, 30)
+    assert events[2].time == datetime.datetime(2025, 4, 1, 8, 30)
 
 
 def test_tags():

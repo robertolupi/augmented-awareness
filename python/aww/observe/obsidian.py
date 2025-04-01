@@ -5,6 +5,7 @@ import datetime
 import os
 import pathlib
 import re
+import time
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -72,15 +73,21 @@ class Task:
     name: str
     done: bool
 
+    def __rich__(self):
+        return f"- [{'x' if self.done else ' '}] {self.name}"
+
 
 @dataclass
 class Event:
     """A tracked or scheduled event in an Obsidian page."""
 
     name: str
-    time: datetime.time
+    time: datetime.datetime
     tags: list[str] = None
     duration: datetime.timedelta | None = None
+
+    def __rich__(self):
+        return f"[b]{time.strftime('%Y-%m-%d %H:%M', time.localtime(self.time.timestamp()))}[/] {self.name} {self.tags} ({self.duration})"
 
 
 class Page:
@@ -132,6 +139,7 @@ class Page:
     def events(self) -> [Event]:
         parsed = self.content().parse()
         events = []
+        page_date = datetime.datetime.strptime(self.name, "%Y-%m-%d").date()
 
         for tok in parsed:
             if tok["type"] == "paragraph":
@@ -140,16 +148,15 @@ class Page:
                         match = TIME_RE.match(child["raw"])
                         if match:
                             time, name = match.groups()
-                            time = datetime.datetime.strptime(time, "%H:%M").time()
+                            time = datetime.datetime.combine(
+                                page_date,
+                                datetime.datetime.strptime(time, "%H:%M").time(),
+                            )
                             tags = TAGS_RE.findall(name)
                             events.append(Event(name, time, tags))
-        dt = datetime.date.today()  # arbitrary date
-
-        def time2date(t):
-            return datetime.datetime.combine(dt, t)
 
         for event, prev_event in zip(events[1:], events):
-            prev_event.duration = time2date(event.time) - time2date(prev_event.time)
+            prev_event.duration = event.time - prev_event.time
         return events
 
     def tags(self) -> list[str]:
