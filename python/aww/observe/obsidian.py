@@ -74,7 +74,8 @@ class Task:
     done: bool
 
     def __rich__(self):
-        return f"- [{'x' if self.done else ' '}] {self.name}"
+        x = 'x' if self.done else ' '
+        return f"- [{x}] {self.name}"
 
 
 @dataclass
@@ -87,7 +88,8 @@ class Event:
     duration: datetime.timedelta | None = None
 
     def __rich__(self):
-        return f"[b]{time.strftime('%Y-%m-%d %H:%M', time.localtime(self.time.timestamp()))}[/] {self.name} {self.tags} ({self.duration})"
+        time_str = time.strftime('%Y-%m-%d %H:%M', time.localtime(self.time.timestamp()))
+        return f"[b]{time_str}[/] {self.name} {self.tags} ({self.duration})"
 
 
 class Page:
@@ -147,13 +149,13 @@ class Page:
                     if child["type"] == "text":
                         match = TIME_RE.match(child["raw"])
                         if match:
-                            time, name = match.groups()
-                            time = datetime.datetime.combine(
+                            time_str, name = match.groups()
+                            dt = datetime.datetime.combine(
                                 page_date,
-                                datetime.datetime.strptime(time, "%H:%M").time(),
+                                datetime.datetime.strptime(time_str, "%H:%M").time(),
                             )
                             tags = TAGS_RE.findall(name)
-                            events.append(Event(name, time, tags))
+                            events.append(Event(name, dt, tags))
 
         for event, prev_event in zip(events[1:], events):
             prev_event.duration = event.time - prev_event.time
