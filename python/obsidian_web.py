@@ -1,6 +1,6 @@
 # Run this script using the obsidian command:
 #
-# uv run obsidian.py /path/to/your/vault web
+# uv run aww.py obsidian web
 
 import streamlit as st
 import os
@@ -17,6 +17,15 @@ st.header(f"Obsidian Vault: {vault_path}")
 
 st.text(f"{len(vault.pages())} pages")
 
-date, page = list(vault.journal().items())[-1]
-st.text(date)
-st.markdown(page.content())
+date = st.date_input('Date')
+
+if date:
+    page = None
+    try:
+        page = vault.journal()[date]
+    except KeyError:
+        st.error("Date not found")
+        st.stop()
+
+    st.header(page.name)
+    st.markdown(page.content())
