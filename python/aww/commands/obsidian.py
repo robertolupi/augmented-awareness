@@ -1,7 +1,6 @@
 import collections
 import datetime
-import textwrap
-from textwrap import dedent
+import pathlib
 
 import click
 import rich
@@ -15,50 +14,56 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.agent import Agent
 
+from aww.commands import config
 from aww.observe.obsidian import Vault
 
 vault: Vault
 
 
-@click.group()
-@click.argument(
+@click.group(name="obsidian")
+@click.option(
     "vault_path",
+    "--vault",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True),
 )
-def main(vault_path):
+def commands(vault_path=None):
     """Observe the content of an Obsidian vault."""
     global vault
+    if not vault_path:
+        vault_path = (
+            pathlib.Path(config.configuration["obsidian"]["vault"])
+            .expanduser()
+            .resolve()
+        )
     vault = Vault(vault_path)
 
 
-@main.command()
+@commands.command()
 def web():
     global vault
     os.environ["OBSIDIAN_VAULT"] = str(vault.path)
     subprocess.run(["streamlit", "run", "obsidian_web.py"])
 
 
-@main.command()
-@click.option("provider_url", "--llm-url", default="http://localhost:1234/v1")
-@click.option("model_name", "--llm-model", "-m", default="gemma-3-4b-it")
-@click.option(
-    "preamble",
-    "--preamble",
-    required=False,
-    default=textwrap.dedent(
-        """You're an helpful psychology, wellness and mindfulness coach.
-        You answer with 5 helpful, short and actionable tips to live a more wholesome life.
-        This was my schedule:
-        """),
-)
-@click.argument("user_prompt", required=False, default="What can I do differently?")
-def tips(provider_url, model_name, preamble, user_prompt):
-    global vault
-    model = OpenAIModel(
-        model_name=model_name, provider=OpenAIProvider(base_url=provider_url)
-    )
-    agent = Agent(model=model, system_prompt=preamble)
+def get_model(model_name: str) -> OpenAIModel:
+    model_config = config.configuration["llm"]["model"][model_name]
+    provider_name = model_config["provider"]
+    provider_config = config.configuration["llm"]["provider"][provider_name]
+    provider = OpenAIProvider(base_url=provider_config["base_url"])
+    return OpenAIModel(model_name=model_config["model"], provider=provider)
 
+
+@commands.command()
+@click.option("model_name", "--model", "-m", default="local", help="LLM Model.")
+def tips(model_name: str | None = None):
+    model_name = model_name or config.configuration["obsidian"]["tips"]["model_name"]
+    system_prompt = config.configuration["obsidian"]["tips"]["system_prompt"]
+    user_prompt = config.configuration["obsidian"]["tips"]["user_prompt"]
+
+    model = get_model(model_name)
+    agent = Agent(model=model, system_prompt=system_prompt)
+
+    global vault
     date_end = datetime.date.today()
     date_start = date_end - datetime.timedelta(days=7)
     journal = vault.journal()
@@ -83,7 +88,7 @@ def tips(provider_url, model_name, preamble, user_prompt):
     rich.print(md)
 
 
-@main.command()
+@commands.command()
 @click.option(
     "date_start",
     "-s",
@@ -146,7 +151,7 @@ def busy(
     rich.print(table)
 
 
-@main.command()
+@commands.command()
 @click.option(
     "verbose", "-v", is_flag=True, help="Verbose output. Print markdown content."
 )
@@ -175,7 +180,3 @@ def info(verbose, page_name=None):
     rich.print("Tags:", rich.columns.Columns(entry.tags()))
     if verbose:
         rich.print(entry.content())
-
-
-if __name__ == "__main__":
-    main()

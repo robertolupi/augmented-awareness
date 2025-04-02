@@ -6,7 +6,6 @@ import os
 import pathlib
 import re
 import time
-from dataclasses import dataclass
 from typing import Iterable
 
 import mistune
