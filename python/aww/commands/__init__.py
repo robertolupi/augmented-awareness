@@ -9,6 +9,7 @@ import tomlkit.exceptions
 from aww.commands import config
 from aww.commands import obsidian
 
+from pyarrow import fs
 
 @click.group()
 @click.option(
@@ -37,8 +38,18 @@ def main(
             config.configuration = tomlkit.parse(config.path.read_text())
         except tomlkit.exceptions.ParseError as e:
             rich.print(config.path, e)
+    
+    if 'data' in config.configuration and 'uri' in config.configuration['data']:
+        config.filesystem = fs.FileSystem.from_uri(config.configuration['data']['uri'])
+    else:
+        data_path = (platformdirs.user_data_path(app_name, app_author) / "data").resolve()
+        data_path.mkdir(parents=True, exist_ok=True)
+        config.filesystem = fs.SubTreeFileSystem(str(data_path), fs.LocalFileSystem())
+
+    
     if show_config:
-        rich.print(config.configuration)
+        rich.print("Configuration", config.configuration)
+        rich.print("Filesystem", config.filesystem)
 
 
 main.add_command(config.commands)

@@ -8,9 +8,11 @@ import rich
 import rich.prompt
 import tomlkit
 
+from pyarrow import fs
+
 path: pathlib.Path
 configuration: tomlkit.TOMLDocument = tomlkit.document()
-
+filesystem: fs.FileSystem
 
 @click.group(name="config")
 def commands():
