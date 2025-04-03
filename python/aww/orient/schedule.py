@@ -30,13 +30,12 @@ class Schedule:
                 tags_list.append(event.tags)
                 durations_list.append(event.duration)
         return pa.Table.from_arrays(
-            [
+            arrays=[
                 pa.array(name_list),
                 pa.array(time_list),
                 pa.array(tags_list),
                 pa.array(durations_list),
             ],
-            # names=["name", "time", "tags", "duration"],
             schema=pa.schema(
                 [
                     pa.field("name", pa.string()),
@@ -48,7 +47,6 @@ class Schedule:
         )
 
     def total_duration_by_tag(self) -> pa.Table:
-        # Iterate over all events, summing durations for each tag.
         totals = collections.defaultdict(lambda: timedelta(seconds=0))
         for page in self.journal.values():
             for event in page.events():
