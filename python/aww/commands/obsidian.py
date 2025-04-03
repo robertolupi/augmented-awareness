@@ -43,10 +43,10 @@ config: settings.Settings
 )
 @click.option("today", "-t", "--today", is_flag=True, help="Set dates to today.")
 def commands(
-    date_start: datetime.date | datetime.datetime,
-    date_end: datetime.date | datetime.datetime,
-    today: bool = False,
-    vault_path=None,
+        date_start: datetime.date | datetime.datetime,
+        date_end: datetime.date | datetime.datetime,
+        today: bool = False,
+        vault_path=None,
 ):
     """Observe the content of an Obsidian vault."""
     global vault
@@ -80,12 +80,13 @@ def get_model(model_name: str) -> OpenAIModel:
 
 @commands.command()
 @click.option("model_name", "--model", "-m", default="local", help="LLM Model.")
-def tips(model_name: str | None = None):
+@click.argument("user_prompt", type=str, required=False)
+def tips(user_prompt: str | None = None, model_name: str | None = None):
     global config
     global schedule
     model_name = model_name or config.obsidian.tips.model_name
     system_prompt = config.obsidian.tips.system_prompt
-    user_prompt = config.obsidian.tips.user_prompt
+    user_prompt = user_prompt or config.obsidian.tips.user_prompt
 
     model = get_model(model_name)
     agent = Agent(model=model, system_prompt=system_prompt)
