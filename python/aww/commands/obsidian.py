@@ -1,6 +1,5 @@
 import collections
 import datetime
-import pathlib
 
 import click
 import rich
@@ -14,11 +13,11 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.agent import Agent
 
-from aww.commands import config
+from aww import settings
 from aww.observe.obsidian import Vault
 
 vault: Vault
-
+config : settings.Settings
 
 @click.group(name="obsidian")
 @click.option(
@@ -29,13 +28,9 @@ vault: Vault
 def commands(vault_path=None):
     """Observe the content of an Obsidian vault."""
     global vault
-    if not vault_path:
-        vault_path = (
-            pathlib.Path(config.configuration["obsidian"]["vault"])
-            .expanduser()
-            .resolve()
-        )
-    vault = Vault(vault_path)
+    global config
+    config = settings.Settings()
+    vault = Vault(config.obsidian.vault)
 
 
 @commands.command()
@@ -46,19 +41,21 @@ def web():
 
 
 def get_model(model_name: str) -> OpenAIModel:
-    model_config = config.configuration["llm"]["model"][model_name]
-    provider_name = model_config["provider"]
-    provider_config = config.configuration["llm"]["provider"][provider_name]
-    provider = OpenAIProvider(base_url=provider_config["base_url"])
-    return OpenAIModel(model_name=model_config["model"], provider=provider)
+    global config
+    model_config = config.llm.model[model_name]
+    provider_name = model_config.provider
+    provider_config = config.llm.provider[provider_name]
+    provider = OpenAIProvider(base_url=provider_config.base_url)
+    return OpenAIModel(model_name=model_config.model, provider=provider)
 
 
 @commands.command()
 @click.option("model_name", "--model", "-m", default="local", help="LLM Model.")
 def tips(model_name: str | None = None):
-    model_name = model_name or config.configuration["obsidian"]["tips"]["model_name"]
-    system_prompt = config.configuration["obsidian"]["tips"]["system_prompt"]
-    user_prompt = config.configuration["obsidian"]["tips"]["user_prompt"]
+    global config
+    model_name = model_name or config.obsidian.tips.model_name
+    system_prompt = config.obsidian.tips.system_prompt
+    user_prompt = config.obsidian.tips.user_prompt
 
     model = get_model(model_name)
     agent = Agent(model=model, system_prompt=system_prompt)

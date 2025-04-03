@@ -1,5 +1,4 @@
 import os
-import pathlib
 import subprocess
 import sys
 
@@ -8,11 +7,7 @@ import rich
 import rich.prompt
 import tomlkit
 
-from pyarrow import fs
-
-path: pathlib.Path
-configuration: tomlkit.TOMLDocument = tomlkit.document()
-filesystem: fs.FileSystem
+from aww import settings
 
 
 @click.group(name="config")
@@ -27,26 +22,25 @@ def edit():
     if not editor:
         rich.print("[red]no EDITOR in environment[/red]")
         sys.exit(1)
-    subprocess.run([editor, path])
+    subprocess.run([editor, settings.CONFIG_FILE])
 
 
 @commands.command()
 def show():
-    global path, configuration
-    rich.print(f"[b]Config file:[/b] {str(path)!r}")
-    rich.print(configuration)
+    cfg = settings.Settings()
+    rich.print(f"[b]Config file:[/b] {str(settings.CONFIG_FILE)!r}")
+    rich.print(cfg)
 
 
 @commands.command(name="path")
 def print_path():
     """Print the path to the configuration file."""
-    print(path)
+    print(settings.CONFIG_FILE)
 
 
 @commands.command()
 def init():
-    # path = pathlib.Path('.')
-    global path
+    path = settings.CONFIG_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
     rich.print(path)
     if path.exists():

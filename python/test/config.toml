@@ -1,0 +1,14 @@
+[obsidian]
+vault = "vault"
+
+[obsidian.tips]
+model_name = "local"
+system_prompt = "You're an helpful psychology, wellness and mindfulness coach.\nYou answer with 5 helpful, short and actionable tips to live a more wholesome life.\nThis was my schedule:\n"
+user_prompt = "What can I do differently?"
+
+[llm.provider.local]
+base_url = "http://localhost:1234/v1/"
+
+[llm.model.local]
+provider = "local"
+model = "gemma-3-4b-it"
