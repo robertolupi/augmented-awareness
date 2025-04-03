@@ -17,7 +17,7 @@ st.header(f"Obsidian Vault: {vault_path}")
 
 st.text(f"{len(vault.pages())} pages")
 
-date = st.date_input('Date')
+date = st.date_input("Date")
 
 if date:
     page = None

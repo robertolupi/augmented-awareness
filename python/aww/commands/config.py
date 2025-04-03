@@ -14,6 +14,7 @@ path: pathlib.Path
 configuration: tomlkit.TOMLDocument = tomlkit.document()
 filesystem: fs.FileSystem
 
+
 @click.group(name="config")
 def commands():
     """Show or edit the configuration file."""
@@ -36,7 +37,7 @@ def show():
     rich.print(configuration)
 
 
-@commands.command(name='path')
+@commands.command(name="path")
 def print_path():
     """Print the path to the configuration file."""
     print(path)
