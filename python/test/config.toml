@@ -1,5 +1,5 @@
 [obsidian]
-vault = "vault"
+vault = "vault"  # path to the Obsidian vault (e.g. ~/Documents/Obsidian Vault)
 
 [obsidian.tips]
 model_name = "local"

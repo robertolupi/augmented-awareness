@@ -46,7 +46,7 @@ class ObsidianTips(BaseModel):
 
 class Obsidian(BaseModel):
     tips: ObsidianTips = ObsidianTips()
-    vault: pathlib.Path
+    vault: pathlib.Path = "~/Documents/Obsidian Vault"
 
     @field_validator("vault", mode="before")
     def expand_path(cls, v):
