@@ -6,9 +6,11 @@ import rich
 import rich.markdown
 
 from aww.observe.obsidian import Vault
+import aww.settings
 
 test_dir = pathlib.Path(__file__).parent
 test_vault_dir = test_dir / "vault"
+aww.settings.CONFIG_FILE = test_dir / "config.toml"
 
 
 def test_invalid_vault():
@@ -21,6 +23,11 @@ def test_invalid_vault():
 
 def test_valid_vault():
     v = Vault(test_vault_dir)
+    assert v.path.name == "vault"
+
+
+def test_valid_vault_default():
+    v = Vault()
     assert v.path.name == "vault"
 
 
@@ -61,8 +68,8 @@ def test_markdown():
     v = Vault(test_vault_dir)
     page = v.pages()["index"]
     assert (
-        page.content()
-        == "# Obsidian Test Vault\n\nJust a simple page.\n\n---\n\nThis page has no frontmatter.\n"
+            page.content()
+            == "# Obsidian Test Vault\n\nJust a simple page.\n\n---\n\nThis page has no frontmatter.\n"
     )
     assert isinstance(page.content().__rich__(), rich.markdown.Markdown)
 

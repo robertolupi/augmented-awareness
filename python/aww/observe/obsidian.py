@@ -14,6 +14,8 @@ import rich.markdown
 import yaml
 from pydantic import BaseModel, Field
 
+from aww.settings import Settings
+
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
 TAGS_RE = re.compile(r"\B#([-/a-zA-Z0-9_]*)")
@@ -234,7 +236,9 @@ class Vault:
 
     path: pathlib.Path
 
-    def __init__(self, path: pathlib.Path | str):
+    def __init__(self, path: pathlib.Path | str | None = None):
+        if path is None:
+            path = Settings().obsidian.vault.resolve()
         self.path = pathlib.Path(path)
         if not self.path.is_dir():
             raise ValueError(f"Path {self.path} is not a directory.")
