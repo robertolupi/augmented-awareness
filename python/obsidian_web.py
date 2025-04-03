@@ -28,4 +28,7 @@ if date:
         st.stop()
 
     st.header(page.name)
+    tags = set(page.tags())
+    st.markdown(" ".join(f":blue-badge[{t}]" for t in tags))
+    
     st.markdown(page.content())
