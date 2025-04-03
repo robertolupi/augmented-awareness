@@ -25,40 +25,6 @@ DATE_SCHEDULED_RE = re.compile(r"⏳\s+(\d{4}-\d{2}-\d{2})")
 RECURRENCE_RE = re.compile(r"🔁\s+(.+)")
 
 
-class Vault:
-    """An Obsidian vault."""
-
-    path: pathlib.Path
-
-    def __init__(self, path: pathlib.Path | str):
-        self.path = pathlib.Path(path)
-        if not self.path.is_dir():
-            raise ValueError(f"Path {self.path} is not a directory.")
-        if not (self.path / ".obsidian").is_dir():
-            raise ValueError(f"Path {self.path} is not an Obsidian vault.")
-
-    def pages(self) -> dict[str, "Page"]:
-        """Get the pages in the vault."""
-        pages = {}
-        for root, _, files in os.walk(self.path):
-            for file in files:
-                if file.endswith(".md"):
-                    page_path = pathlib.Path(root) / file
-                    page = Page(page_path)
-                    pages[page.name] = page
-        return pages
-
-    def journal(self) -> collections.OrderedDict[datetime.date, "Page"]:
-        """Get the pages corresponding to dates in the vault."""
-        pages = []
-        for name, page in self.pages().items():
-            if DATE_RE.match(name):
-                date = datetime.datetime.strptime(name, "%Y-%m-%d").date()
-                pages.append((date, page))
-        pages.sort(key=lambda x: x[0])
-        return collections.OrderedDict(pages)
-
-
 class Markdown(str):
     """A Markdown string."""
 
@@ -244,3 +210,55 @@ def _get_tags(tokens: list) -> Iterable[str]:
             yield from TAGS_RE.findall(tok["raw"])
         elif "children" in tok:
             yield from _get_tags(tok["children"])
+
+
+class Journal(collections.OrderedDict[datetime.date, "Page"]):
+    """An Obsidian journal.
+    
+    The pages are ordered by date.
+    """
+    
+    def subrange(self, start: datetime.date, end: datetime.date) -> "Journal":
+        """Get a subrange of the journal."""
+        journal = Journal()
+        for date, page in self.items():
+            if start <= date <= end:
+                journal[date] = page
+            if date > end:
+                break
+        return journal
+    
+
+
+class Vault:
+    """An Obsidian vault."""
+
+    path: pathlib.Path
+
+    def __init__(self, path: pathlib.Path | str):
+        self.path = pathlib.Path(path)
+        if not self.path.is_dir():
+            raise ValueError(f"Path {self.path} is not a directory.")
+        if not (self.path / ".obsidian").is_dir():
+            raise ValueError(f"Path {self.path} is not an Obsidian vault.")
+
+    def pages(self) -> dict[str, Page]:
+        """Get the pages in the vault."""
+        pages = {}
+        for root, _, files in os.walk(self.path):
+            for file in files:
+                if file.endswith(".md"):
+                    page_path = pathlib.Path(root) / file
+                    page = Page(page_path)
+                    pages[page.name] = page
+        return pages
+
+    def journal(self) -> Journal:
+        """Get the pages corresponding to dates in the vault."""
+        pages = []
+        for name, page in self.pages().items():
+            if DATE_RE.match(name):
+                date = datetime.datetime.strptime(name, "%Y-%m-%d").date()
+                pages.append((date, page))
+        pages.sort(key=lambda x: x[0])
+        return Journal(pages)
