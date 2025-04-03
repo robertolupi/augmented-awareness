@@ -229,6 +229,10 @@ class Journal(collections.OrderedDict[datetime.date, "Page"]):
             if date > end:
                 break
         return journal
+    
+    def __repr__(self):
+        dates = list(self.keys())
+        return f"Journal(min={dates[0]}, max={dates[-1]}, count={len(dates)})"
 
 
 class Vault:
