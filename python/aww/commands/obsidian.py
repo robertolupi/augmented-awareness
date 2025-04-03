@@ -1,22 +1,23 @@
-import collections
 import datetime
-
-import click
-import rich
-import rich.columns
-import rich.table
-import rich.markdown
 import os
 import subprocess
 
-from pydantic_ai.providers.openai import OpenAIProvider
-from pydantic_ai.models.openai import OpenAIModel
+import click
+import pyarrow as pa
+import rich
+import rich.columns
+import rich.markdown
+import rich.table
 from pydantic_ai.agent import Agent
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from aww import settings
 from aww.observe.obsidian import Vault
+from aww.orient.schedule import Schedule
 
 vault: Vault
+schedule: Schedule
 config: settings.Settings
 
 
@@ -26,12 +27,39 @@ config: settings.Settings
     "--vault",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True),
 )
-def commands(vault_path=None):
+@click.option(
+    "date_start",
+    "--date-start",
+    "-s",
+    type=click.DateTime(),
+    default=(datetime.date.today() - datetime.timedelta(days=8)).strftime("%Y-%m-%d"),
+)
+@click.option(
+    "date_end",
+    "--date-end",
+    "-e",
+    type=click.DateTime(),
+    default=(datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
+)
+@click.option("today", "-t", "--today", is_flag=True, help="Set dates to today.")
+def commands(
+    date_start: datetime.date | datetime.datetime,
+    date_end: datetime.date | datetime.datetime,
+    today: bool = False,
+    vault_path=None,
+):
     """Observe the content of an Obsidian vault."""
     global vault
+    global schedule
     global config
     config = settings.Settings()
-    vault = Vault(config.obsidian.vault)
+    vault = Vault(vault_path or config.obsidian.vault)
+    date_start = date_start.date()
+    date_end = date_end.date()
+    if today:
+        date_start = datetime.date.today()
+        date_end = datetime.date.today()
+    schedule = Schedule(date_start, date_end, vault=vault)
 
 
 @commands.command()
@@ -54,6 +82,7 @@ def get_model(model_name: str) -> OpenAIModel:
 @click.option("model_name", "--model", "-m", default="local", help="LLM Model.")
 def tips(model_name: str | None = None):
     global config
+    global schedule
     model_name = model_name or config.obsidian.tips.model_name
     system_prompt = config.obsidian.tips.system_prompt
     user_prompt = config.obsidian.tips.user_prompt
@@ -61,22 +90,13 @@ def tips(model_name: str | None = None):
     model = get_model(model_name)
     agent = Agent(model=model, system_prompt=system_prompt)
 
-    global vault
-    date_end = datetime.date.today()
-    date_start = date_end - datetime.timedelta(days=7)
-    journal = vault.journal()
-
-    date = date_start
     full_user_prompt = []
-    while date <= date_end:
-        if date in journal:
-            page = journal[date]
-            full_user_prompt.append("")
-            full_user_prompt.append("# " + date.strftime("On %A, %B %d:"))
-            for ev in page.events():
-                full_user_prompt.append(" " + str(ev))
-            full_user_prompt.append("")
-        date = date + datetime.timedelta(days=1)
+    for date, page in schedule.journal.items():
+        full_user_prompt.append("")
+        full_user_prompt.append("# " + date.strftime("On %A, %B %d:"))
+        for ev in page.events():
+            full_user_prompt.append(" " + str(ev))
+        full_user_prompt.append("")
 
     full_user_prompt.append("# Question")
     full_user_prompt.append(user_prompt)
@@ -88,65 +108,34 @@ def tips(model_name: str | None = None):
 
 @commands.command()
 @click.option(
-    "date_start",
-    "-s",
-    type=click.DateTime(),
-    default=(datetime.date.today() - datetime.timedelta(days=8)).strftime("%Y-%m-%d"),
-)
-@click.option(
-    "date_end",
-    "-e",
-    type=click.DateTime(),
-    default=(datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
-)
-@click.option("today", "-t", "--today", is_flag=True, help="Set dates to today.")
-@click.option(
     "verbose", "-v", is_flag=True, help="Verbose output. Print dates and events."
 )
-def busy(
-    date_start: datetime.date | datetime.datetime,
-    date_end: datetime.date | datetime.datetime,
-    verbose: bool = False,
-    today: bool = False,
-):
+def busy(verbose: bool = False):
     """Print schedule information for a date range.
 
     Obtains the events, then compute the time spent between each event and the next, compute sums by tags.
     """
-    global vault
-    journal = vault.journal()
-    date_start = date_start.date()
-    date_end = date_end.date()
-    if today:
-        date_start = datetime.date.today()
-        date_end = datetime.date.today()
-    date = date_start
-    tag_durations = collections.defaultdict(lambda: datetime.timedelta())
-    while date <= date_end:
-        if verbose:
-            rich.print(date)
-        if date in journal:
-            page = journal[date]
+    global schedule
+
+    if verbose:
+        for date, page in schedule.journal.items():
             events = page.events()
-            for ev in events:
-                if ev.duration is not None:
-                    for tag in ev.tags:
-                        tag_durations[tag] += ev.duration
-                if verbose:
-                    rich.print(
-                        f"  [bold]{ev.time}[/] {ev.name} {ev.tags} ({ev.duration})"
-                    )
-        date = date + datetime.timedelta(days=1)
+            if events:
+                rich.print(f"[b]{date}[/]")
+                for ev in events:
+                    rich.print(f"  {ev.time} ({ev.duration}) {ev.name} {ev.tags}")
 
-    durations = list(tag_durations.items())
-    durations.sort(key=lambda x: x[1], reverse=True)
+    print_table(schedule.total_duration_by_tag())
 
-    table = rich.table.Table()
-    table.add_column("tag")
-    table.add_column("duration")
-    for tag, duration in durations:
-        table.add_row(tag, str(duration))
-    rich.print(table)
+
+def print_table(table: pa.Table):
+    """Print a pyarrow table as a rich table."""
+    t = rich.table.Table()
+    for col in table.column_names:
+        t.add_column(col)
+    for row in table.to_pylist():
+        t.add_row(*(str(row[col]) for col in table.column_names))
+    rich.print(t)
 
 
 @commands.command()

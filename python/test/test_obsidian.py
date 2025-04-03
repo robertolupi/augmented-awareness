@@ -68,8 +68,8 @@ def test_markdown():
     v = Vault(test_vault_dir)
     page = v.pages()["index"]
     assert (
-            page.content()
-            == "# Obsidian Test Vault\n\nJust a simple page.\n\n---\n\nThis page has no frontmatter.\n"
+        page.content()
+        == "# Obsidian Test Vault\n\nJust a simple page.\n\n---\n\nThis page has no frontmatter.\n"
     )
     assert isinstance(page.content().__rich__(), rich.markdown.Markdown)
 
