@@ -18,6 +18,12 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
 TAGS_RE = re.compile(r"\B#([-/a-zA-Z0-9_]*)")
 
+DATE_CREATED_RE = re.compile(r"➕\s+(\d{4}-\d{2}-\d{2})")
+DATE_DUE_RE = re.compile(r"📅\s+(\d{4}-\d{2}-\d{2})")
+DATE_STARTED_RE = re.compile(r"🛫\s+(\d{4}-\d{2}-\d{2})")
+DATE_SCHEDULED_RE = re.compile(r"⏳\s+(\d{4}-\d{2}-\d{2})")
+RECURRENCE_RE = re.compile(r"🔁\s+(.+)")
+
 
 class Vault:
     """An Obsidian vault."""
@@ -71,13 +77,43 @@ class Task(BaseModel):
 
     name: str = Field(description="name of the task")
     done: bool = Field(description="whether the task is done or not completed yet")
+    created: datetime.date | None = Field(
+        description="date the task was created", default=None
+    )
+    due: datetime.date | None = Field(description="date the task is due", default=None)
+    started: datetime.date | None = Field(
+        description="date the task was started", default=None
+    )
+    scheduled: datetime.date | None = Field(
+        description="date the task was scheduled", default=None
+    )
+    recurrence: str | None = Field(description="recurrence of the task", default=None)
+
+    def _string_repr(self, name: str, captions: list):
+        x = "x" if self.done else " "
+        details = []
+        for prefix, field_name in captions:
+            if getattr(self, field_name):
+                details.append(f"{prefix} {getattr(self, field_name)}")
+        details_str = ", ".join(details)
+        return f"- [{x}] {name}" + f" ({details_str})" if details else ""
 
     def __str__(self):
-        x = "x" if self.done else " "
-        return f"- [{x}] {self.name}"
+        return self._string_repr(
+            self.name,
+            [
+                ("created", "created"),
+                ("scheduled", "scheduled"),
+                ("started", "started"),
+                ("due", "due"),
+            ],
+        )
 
     def __rich__(self):
-        return str(self)
+        return self._string_repr(
+            f"[b]{self.name}[/]",
+            [("➕", "created"), ("⏳", "scheduled"), ("🛫", "started"), ("📅", "due")],
+        )
 
 
 class Event(BaseModel):
@@ -141,10 +177,34 @@ class Page:
             if tok["type"] == "list":
                 for item in tok["children"]:
                     if item["type"] == "task_list_item":
+                        raw_text = item["children"][0]["children"][0]["raw"]
+                        kwargs_re = {
+                            "created": DATE_CREATED_RE,
+                            "due": DATE_DUE_RE,
+                            "started": DATE_STARTED_RE,
+                            "scheduled": DATE_SCHEDULED_RE,
+                        }
+                        kwargs = {}
+                        for key, re in kwargs_re.items():
+                            match = re.search(raw_text)
+                            if match:
+                                kwargs[key] = datetime.datetime.strptime(
+                                    match.group(1), "%Y-%m-%d"
+                                ).date()
+                                raw_text = raw_text.replace(match.group(0), "")
+                        recurrence = None
+                        match = RECURRENCE_RE.search(raw_text)
+                        if match:
+                            recurrence = match.group(1).strip()
+                            raw_text = raw_text.replace(match.group(0), "")
+                        raw_text = raw_text.strip()
+
                         tasks.append(
                             Task(
-                                name=item["children"][0]["children"][0]["raw"],
+                                name=raw_text,
                                 done=item["attrs"]["checked"],
+                                recurrence=recurrence,
+                                **kwargs,
                             )
                         )
         return tasks
