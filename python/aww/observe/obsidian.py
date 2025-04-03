@@ -214,10 +214,10 @@ def _get_tags(tokens: list) -> Iterable[str]:
 
 class Journal(collections.OrderedDict[datetime.date, "Page"]):
     """An Obsidian journal.
-    
+
     The pages are ordered by date.
     """
-    
+
     def subrange(self, start: datetime.date, end: datetime.date) -> "Journal":
         """Get a subrange of the journal."""
         journal = Journal()
@@ -227,7 +227,6 @@ class Journal(collections.OrderedDict[datetime.date, "Page"]):
             if date > end:
                 break
         return journal
-    
 
 
 class Vault:

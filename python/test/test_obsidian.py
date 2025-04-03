@@ -40,6 +40,7 @@ def test_journal():
     assert datetime.date(2025, 3, 30) in journal
     assert datetime.date(2025, 4, 1) in journal
 
+
 def test_journal_subrange():
     v = Vault(test_vault_dir)
     journal = v.journal()
@@ -48,7 +49,6 @@ def test_journal_subrange():
     assert len(subrange) == 1
     assert datetime.date(2025, 3, 30) in subrange
     assert datetime.date(2025, 4, 1) not in subrange
-
 
 
 def test_frontmatter():

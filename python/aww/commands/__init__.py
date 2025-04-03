@@ -16,9 +16,7 @@ from aww import settings
     ),
 )
 @click.option("show_config", "--show-config", is_flag=True)
-def main(
-        config_file: str | None, show_config: bool = False
-):
+def main(config_file: str | None, show_config: bool = False):
     if config_file:
         settings.CONFIG_FILE = config_file
 

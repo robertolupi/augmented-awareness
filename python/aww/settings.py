@@ -19,8 +19,10 @@ def config_file():
         pathlib.Path(platformdirs.user_config_dir(APP_NAME, APP_AUTHOR)) / "config.toml"
     )
 
+
 # Overridden in tests and by CLI argument
 CONFIG_FILE = config_file()
+
 
 class ExpandedDirectoryPath(DirectoryPath):
     @classmethod

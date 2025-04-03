@@ -17,7 +17,8 @@ from aww import settings
 from aww.observe.obsidian import Vault
 
 vault: Vault
-config : settings.Settings
+config: settings.Settings
+
 
 @click.group(name="obsidian")
 @click.option(
