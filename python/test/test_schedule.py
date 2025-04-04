@@ -79,8 +79,13 @@ def test_total_duration_by_tag():
     date_start = datetime.date(2025, 3, 1)
     date_end = datetime.date(2025, 4, 1)
     schedule = Schedule(Vault(test_vault_dir).journal().subrange(date_start, date_end))
-    table = schedule.total_duration_by_tag()
-    assert table["tag"].to_pylist() == ["aww"]
+    table = schedule.total_duration_by_tag().sort_by("tag")
+    assert table["tag"].to_pylist() == ["aww", "work"]
     assert table["duration"].to_pylist() == [
         datetime.timedelta(seconds=90 * 60),
+        datetime.timedelta(seconds=0),
+    ]
+    assert table["histogram"].to_pylist() == [
+        [0] * 14 + [1, 1, 1, 1] + [0] * 30,
+        [0] * 14 + [0, 0, 0, 1] + [0] * 30,
     ]

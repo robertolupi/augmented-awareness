@@ -1,5 +1,6 @@
 import collections
-from datetime import datetime, timedelta
+import math
+from datetime import timedelta
 
 import pyarrow as pa
 
@@ -9,10 +10,7 @@ from aww.observe.obsidian import Vault, Journal
 class Schedule:
     journal: Journal
 
-    def __init__(
-        self,
-        journal : Journal | None = None,    
-    ):
+    def __init__(self, journal: Journal | None = None):
         self.journal = journal or Vault().journal()
 
     def __repr__(self):
@@ -88,19 +86,47 @@ class Schedule:
             ),
         )
 
-    def total_duration_by_tag(self) -> pa.Table:
+    def total_duration_by_tag(
+        self, histogram_resolution: timedelta = timedelta(minutes=30)
+    ) -> pa.Table:
         totals = collections.defaultdict(lambda: timedelta(seconds=0))
+        n_buckets = int(
+            math.ceil(
+                timedelta(days=1).total_seconds() / histogram_resolution.total_seconds()
+            )
+        )
+        histograms = collections.defaultdict(lambda: [0] * n_buckets)
         for page in self.journal.values():
             for event in page.events():
                 for tag in event.tags:
+                    t = event.time.time()
+                    offset = (
+                        t.hour * 3600 + t.minute * 60 + t.second
+                    ) / histogram_resolution.total_seconds()
+                    histograms[tag][int(offset)] += 1
                     if event.duration is not None:
                         totals[tag] += event.duration
+                        d = event.duration
+                        while d.total_seconds() > 0:
+                            d -= histogram_resolution
+                            offset += 1
+                            histograms[tag][int(offset)] += 1
+                    else:
+                        totals[tag] += timedelta(
+                            seconds=0
+                        )  # ensure the tag exists in the table
+
         tag_list = list(totals.keys())
         duration_list = list(totals.values())
+        histogram_list = list(histograms.values())
         tag_durations = pa.Table.from_arrays(
-            [pa.array(tag_list), pa.array(duration_list)],
+            [pa.array(tag_list), pa.array(duration_list), pa.array(histogram_list)],
             schema=pa.schema(
-                [pa.field("tag", pa.string()), pa.field("duration", pa.duration("s"))]
+                [
+                    pa.field("tag", pa.string()),
+                    pa.field("duration", pa.duration("s")),
+                    pa.field("histogram", pa.list_(pa.int64())),
+                ]
             ),
         )
         return tag_durations.sort_by([("duration", "descending")])
