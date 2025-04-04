@@ -35,7 +35,7 @@ def test_bucket_id_by_type(mocker):
 
 
 def test_get_afk(mocker):
-    mock_client = mocker.patch(
+    mocker.patch(
         "aww.observe.activitywatch.ActivityWatchClient",
         return_value=mocker.Mock(
             get_buckets=mocker.Mock(return_value={"afk_bucket": {"type": "afkstatus"}}),
@@ -44,50 +44,56 @@ def test_get_afk(mocker):
                     Event(
                         timestamp=datetime(2025, 3, 25, 4, 54, 20, 101000),
                         duration=timedelta(seconds=1627, microseconds=632556),
-                        data={"status": "afk"}
+                        data={"status": "afk"},
                     )
                 ]
-            )
-        )
+            ),
+        ),
     )
     activity_watch = ActivityWatch()
     result = activity_watch.get_afk()
     assert isinstance(result, pa.Table)
-    assert result.schema == pa.schema([
-        pa.field("timestamp", pa.timestamp("s")),
-        pa.field("duration", pa.duration("s")),
-        pa.field("afk", pa.bool_())
-    ])
+    assert result.schema == pa.schema(
+        [
+            pa.field("timestamp", pa.timestamp("s")),
+            pa.field("duration", pa.duration("s")),
+            pa.field("afk", pa.bool_()),
+        ]
+    )
     assert result["timestamp"][0].as_py() == datetime(2025, 3, 25, 4, 54, 20)
     assert result["duration"][0].as_py() == timedelta(seconds=1627)
-    assert result["afk"][0].as_py() == True
+    assert result["afk"][0].as_py()
 
 
 def test_get_currentwindow(mocker):
-    mock_client = mocker.patch(
+    mocker.patch(
         "aww.observe.activitywatch.ActivityWatchClient",
         return_value=mocker.Mock(
-            get_buckets=mocker.Mock(return_value={"window_bucket": {"type": "currentwindow"}}),
+            get_buckets=mocker.Mock(
+                return_value={"window_bucket": {"type": "currentwindow"}}
+            ),
             get_events=mocker.Mock(
                 return_value=[
                     Event(
                         timestamp=datetime(2025, 4, 1, 8, 14, 40, 896000),
                         duration=timedelta(seconds=2, microseconds=795000),
-                        data={"title": "Home", "app": "Arc"}
+                        data={"title": "Home", "app": "Arc"},
                     )
                 ]
-            )
-        )
+            ),
+        ),
     )
     activity_watch = ActivityWatch()
     result = activity_watch.get_currentwindow()
     assert isinstance(result, pa.Table)
-    assert result.schema == pa.schema([
-        pa.field("timestamp", pa.timestamp("s")),
-        pa.field("duration", pa.duration("s")),
-        pa.field("title", pa.string()),
-        pa.field("app", pa.dictionary(pa.int16(), pa.string()))
-    ])
+    assert result.schema == pa.schema(
+        [
+            pa.field("timestamp", pa.timestamp("s")),
+            pa.field("duration", pa.duration("s")),
+            pa.field("title", pa.string()),
+            pa.field("app", pa.dictionary(pa.int16(), pa.string())),
+        ]
+    )
     assert result["timestamp"][0].as_py() == datetime(2025, 4, 1, 8, 14, 40)
     assert result["duration"][0].as_py() == timedelta(seconds=2)
     assert result["title"][0].as_py() == "Home"
@@ -95,10 +101,12 @@ def test_get_currentwindow(mocker):
 
 
 def test_get_web_history(mocker):
-    mock_client = mocker.patch(
+    mocker.patch(
         "aww.observe.activitywatch.ActivityWatchClient",
         return_value=mocker.Mock(
-            get_buckets=mocker.Mock(return_value={"web_bucket": {"type": "web.tab.current"}}),
+            get_buckets=mocker.Mock(
+                return_value={"web_bucket": {"type": "web.tab.current"}}
+            ),
             get_events=mocker.Mock(
                 return_value=[
                     Event(
@@ -108,30 +116,32 @@ def test_get_web_history(mocker):
                             "url": "https://hallodeutschschule.ch/en/",
                             "title": "German Course in Zurich - Learn German at Hallo Deutschschule",
                             "audible": False,
-                            "incognito": False
-                        }
+                            "incognito": False,
+                        },
                     )
                 ]
-            )
-        )
+            ),
+        ),
     )
     activity_watch = ActivityWatch()
     result = activity_watch.get_web_history()
     assert isinstance(result, pa.Table)
-    assert result.schema == pa.schema([
-        pa.field("timestamp", pa.timestamp("s")),
-        pa.field("duration", pa.duration("s")),
-        pa.field("title", pa.string()),
-        pa.field("url", pa.string()),
-        pa.field("incognito", pa.bool_()),
-        pa.field("audible", pa.bool_())
-    ])
+    assert result.schema == pa.schema(
+        [
+            pa.field("timestamp", pa.timestamp("s")),
+            pa.field("duration", pa.duration("s")),
+            pa.field("title", pa.string()),
+            pa.field("url", pa.string()),
+            pa.field("incognito", pa.bool_()),
+            pa.field("audible", pa.bool_()),
+        ]
+    )
     assert result["timestamp"][0].as_py() == datetime(2025, 2, 24, 18, 43, 39)
     assert result["duration"][0].as_py() == timedelta(seconds=14)
-    assert result["title"][0].as_py() == "German Course in Zurich - Learn German at Hallo Deutschschule"
+    assert (
+        result["title"][0].as_py()
+        == "German Course in Zurich - Learn German at Hallo Deutschschule"
+    )
     assert result["url"][0].as_py() == "https://hallodeutschschule.ch/en/"
-    assert result["incognito"][0].as_py() == False
-    assert result["audible"][0].as_py() == False
-
-
-
+    assert not result["incognito"][0].as_py()
+    assert not result["audible"][0].as_py()
