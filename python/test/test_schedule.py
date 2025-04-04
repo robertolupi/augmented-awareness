@@ -50,6 +50,30 @@ def test_event_table():
     ]
 
 
+def test_task_table():
+    date_start = datetime.date(2025, 3, 1)
+    date_end = datetime.date(2025, 4, 1)
+    schedule = Schedule(date_start, date_end)
+    table = schedule.tasks_table()
+    assert len(table) == 4
+    assert table["name"].to_pylist() == [
+        "task 1",
+        "task 2",
+        "task 3",
+        "some task #tag3/with-parts",
+    ]
+    assert table["done"].to_pylist() == [False, True, False, False]
+    assert table["created"].to_pylist() == [None, None, datetime.date(2025, 4, 3), None]
+    assert table["due"].to_pylist() == [None, None, datetime.date(2025, 4, 6), None]
+    assert table["started"].to_pylist() == [None, None, datetime.date(2025, 4, 4), None]
+    assert table["scheduled"].to_pylist() == [
+        None,
+        None,
+        datetime.date(2025, 4, 3),
+        None,
+    ]
+
+
 def test_total_duration_by_tag():
     date_start = datetime.date(2025, 3, 1)
     date_end = datetime.date(2025, 4, 1)
