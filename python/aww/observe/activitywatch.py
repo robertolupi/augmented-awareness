@@ -53,6 +53,39 @@ class ActivityWatch:
             start: datetime.datetime | None = None,
             end: datetime.datetime | None = None,
     ) -> pa.Table:
+        # Example:
+        # {'id': 76392,
+        #  'timestamp': datetime.datetime(2025, 3, 25, 4, 54, 20, 101000, tzinfo=datetime.timezone.utc),
+        #  'duration': datetime.timedelta(seconds=1627, microseconds=632556),
+        #  'data': {'status': 'afk'}},
         bucket = next(self.get_buckets_by_type("afkstatus"))
         return self.get_events(bucket, start, end,
                                (pa.field("afk", pa.bool_()), lambda data: data['status'] == "afk"))
+
+    def get_currentwindow(self, start: datetime.datetime | None = None, end: datetime.datetime | None = None):
+        # Example:
+        # {'id': 96028,
+        #  'timestamp': datetime.datetime(2025, 4, 1, 8, 14, 40, 896000, tzinfo=datetime.timezone.utc),
+        #  'duration': datetime.timedelta(seconds=2, microseconds=795000),
+        #  'data': {'title': 'Home', 'app': 'Arc'}},
+        bucket = next(self.get_buckets_by_type("currentwindow"))
+        return self.get_events(bucket, start, end,
+                               (pa.field("title", pa.string()), lambda data: data['title']),
+                               (pa.field("app", pa.dictionary(pa.int16(), pa.string())), lambda data: data['app']))
+
+    def get_web_history(self, start: datetime.datetime | None = None, end: datetime.datetime | None = None):
+        bucket = next(self.get_buckets_by_type("web.tab.current"))
+        # Example:
+        # {'id': 28001,
+        #  'timestamp': datetime.datetime(2025, 2, 24, 18, 43, 39, 815000, tzinfo=datetime.timezone.utc),
+        #  'duration': datetime.timedelta(seconds=14, microseconds=285000),
+        #  'data': {'url': 'https://hallodeutschschule.ch/en/',
+        #           'title': 'German Course in Zurich - Learn German at Hallo Deutschschule',
+        #           'audible': False,
+        #           'incognito': False,
+        #           'tabCount': 68}},
+        return self.get_events(bucket, start, end,
+                               (pa.field("title", pa.string()), lambda data: data['title']),
+                               (pa.field("url", pa.string()), lambda data: data['url']),
+                               (pa.field("incognito", pa.bool_()), lambda data: data['incognito']),
+                               (pa.field("audible", pa.bool_()), lambda data: data['audible']))
