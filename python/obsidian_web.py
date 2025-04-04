@@ -5,6 +5,7 @@
 import streamlit as st
 import os
 from aww.observe.obsidian import Vault
+from aww.orient.schedule import Schedule
 
 
 vault_path = os.environ.get("OBSIDIAN_VAULT")
@@ -13,22 +14,24 @@ if not vault_path:
 
 vault = Vault(vault_path)
 
-st.header(f"Obsidian Vault: {vault_path}")
+date_start = st.date_input("Date start")
+date_end = st.date_input("Date end")
 
-st.text(f"{len(vault.pages())} pages")
+journal = vault.journal().subrange(date_start, date_end)
+schedule = Schedule(journal)
 
-date = st.date_input("Date")
 
-if date:
-    page = None
-    try:
-        page = vault.journal()[date]
-    except KeyError:
-        st.error("Date not found")
-        st.stop()
+st.text(f"{len(journal)} pages")
 
-    st.header(page.name)
-    tags = set(page.tags())
-    st.markdown(" ".join(f":blue-badge[{t}]" for t in tags))
+tag_durations = schedule.total_duration_by_tag().to_pandas()
 
-    st.markdown(page.content())
+st.dataframe(
+    tag_durations,
+    column_config={
+        "tag": st.column_config.TextColumn("Tag"),
+        "histogram": st.column_config.BarChartColumn("Histogram")
+    }
+)
+
+tasks = schedule.tasks_table().to_pandas()
+tasks
