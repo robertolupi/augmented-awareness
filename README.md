@@ -1,5 +1,5 @@
 # augmented-awareness
-Augmented Awareness (short name: *Aww* [^1]) will eventually contain a toolset for local-first, quantified self projects.
+Augmented Awareness (short name: *Aww* [^1]) will eventually contain a toolset for offline-first, and later local-first, quantified self projects.
 
 It aims to support several data sources, analyses and processes ([see here for a list of ideas](https://rlupi.com/how-augmented-awareness-evolved-over-time)), and currently it can:
 
