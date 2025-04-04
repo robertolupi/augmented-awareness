@@ -11,12 +11,9 @@ class Schedule:
 
     def __init__(
         self,
-        date_start: datetime.date,
-        date_end: datetime.date,
-        vault: Vault | None = None,
+        journal : Journal | None = None,    
     ):
-        vault = vault or Vault()
-        self.journal = vault.journal().subrange(date_start, date_end)
+        self.journal = journal or Vault().journal()
 
     def __repr__(self):
         return f"Schedule({self.journal})"
