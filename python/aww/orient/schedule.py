@@ -1,6 +1,7 @@
 import collections
 import math
-from datetime import timedelta
+from datetime import timedelta, time
+from typing import Iterable
 
 import pyarrow as pa
 
@@ -99,22 +100,11 @@ class Schedule:
         for page in self.journal.values():
             for event in page.events():
                 for tag in event.tags:
-                    t = event.time.time()
-                    offset = (
-                        t.hour * 3600 + t.minute * 60 + t.second
-                    ) / histogram_resolution.total_seconds()
-                    histograms[tag][int(offset)] += 1
-                    if event.duration is not None:
-                        totals[tag] += event.duration
-                        d = event.duration
-                        while d.total_seconds() > 0:
-                            d -= histogram_resolution
-                            offset += 1
-                            histograms[tag][int(offset)] += 1
-                    else:
-                        totals[tag] += timedelta(
-                            seconds=0
-                        )  # ensure the tag exists in the table
+                    totals[tag] += event.duration or timedelta(seconds=0)
+                    for n in histogram_bins(
+                        event.time.time(), event.duration, n_buckets
+                    ):
+                        histograms[tag][n] += 1
 
         tag_list = list(totals.keys())
         duration_list = list(totals.values())
@@ -130,3 +120,18 @@ class Schedule:
             ),
         )
         return tag_durations.sort_by([("duration", "descending")])
+
+
+def histogram_bins(
+    start_time: time, duration: timedelta | None, n_buckets: int
+) -> Iterable[int]:
+    delta = timedelta(days=1) / n_buckets
+    duration = duration or delta  # mark at least one bucket
+    start = timedelta(
+        hours=start_time.hour, minutes=start_time.minute, seconds=start_time.second
+    )
+    t = timedelta(seconds=0)
+    for i in range(n_buckets):
+        if start <= t < start + duration:
+            yield i
+        t += delta
