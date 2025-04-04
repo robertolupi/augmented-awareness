@@ -19,7 +19,6 @@ class Schedule:
         self.journal = vault.journal().subrange(date_start, date_end)
 
     def __repr__(self):
-        dates = list(self.journal.keys())
         return f"Schedule({self.journal})"
 
     def event_table(self) -> pa.Table:

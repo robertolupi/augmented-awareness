@@ -43,10 +43,10 @@ config: settings.Settings
 )
 @click.option("today", "-t", "--today", is_flag=True, help="Set dates to today.")
 def commands(
-        date_start: datetime.date | datetime.datetime,
-        date_end: datetime.date | datetime.datetime,
-        today: bool = False,
-        vault_path=None,
+    date_start: datetime.date | datetime.datetime,
+    date_end: datetime.date | datetime.datetime,
+    today: bool = False,
+    vault_path=None,
 ):
     """Observe the content of an Obsidian vault."""
     global vault
