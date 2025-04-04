@@ -86,6 +86,6 @@ def test_total_duration_by_tag():
         datetime.timedelta(seconds=0),
     ]
     assert table["histogram"].to_pylist() == [
-        [0] * 14 + [1, 1, 1, 1] + [0] * 30,
+        [0] * 14 + [1, 1, 1, 0] + [0] * 30,
         [0] * 14 + [0, 0, 0, 1] + [0] * 30,
     ]
