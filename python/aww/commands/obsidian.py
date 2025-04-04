@@ -59,7 +59,7 @@ def commands(
     if today:
         date_start = datetime.date.today()
         date_end = datetime.date.today()
-    schedule = Schedule(date_start, date_end, vault=vault)
+    schedule = Schedule(vault.journal().subrange(date_start, date_end))
 
 
 @commands.command()
