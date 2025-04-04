@@ -1,5 +1,6 @@
+import collections
 import datetime
-from typing import Iterable
+from typing import Iterable, Callable
 
 import pyarrow as pa
 from aw_client import ActivityWatchClient
@@ -13,7 +14,7 @@ class ActivityWatch:
     client: ActivityWatchClient
 
     def __init__(
-        self, client_name: str | None = None, client: ActivityWatchClient | None = None
+            self, client_name: str | None = None, client: ActivityWatchClient | None = None
     ):
         self.client = client or ActivityWatchClient(
             client_name or Settings().activitywatch.client_name
@@ -26,33 +27,32 @@ class ActivityWatch:
             if bucket_dict["type"] == type_name:
                 yield bucket_id
 
-    def get_afk(
-        self,
-        bucket_id: str | None = None,
-        start: datetime.datetime | None = None,
-        end: datetime.datetime | None = None,
-    ) -> pa.Table:
-        if bucket_id is None:
-            buckets = list(self.get_buckets_by_type("afkstatus"))
-            if len(buckets) != 1:
-                raise ValueError(f"Expecting one afkstatus buckets, got: {buckets}")
-            bucket_id = buckets[0]
-
-        events = self.client.get_events(bucket_id, start=start, end=end)
-        timestamp_arr = []
-        duration_arr = []
-        status_arr = []
+    def get_events(self, bucket: str, start: datetime.datetime | None = None, end: datetime.datetime | None = None,
+                   *fields: tuple[pa.Field, Callable]):
+        events = self.client.get_events(bucket, start=start, end=end)
+        timestamp_array = []
+        duration_array = []
+        data_arrays = collections.OrderedDict()
+        for f, _ in fields:
+            data_arrays[f.name] = []
         for event in events:
-            timestamp_arr.append(event.timestamp)
-            duration_arr.append(event.duration)
-            status_arr.append(event.data["status"] == "afk")
+            timestamp_array.append(event.timestamp)
+            duration_array.append(event.duration)
+            for f, convert in fields:
+                data_arrays[f.name].append(convert(event.data))
         return pa.Table.from_arrays(
-            arrays=[timestamp_arr, duration_arr, status_arr],
-            schema=pa.schema(
-                [
-                    pa.field("timestamp", pa.timestamp("s")),
-                    pa.field("duration", pa.duration("s")),
-                    pa.field("afk", pa.bool_()),
-                ]
-            ),
+            arrays=[timestamp_array, duration_array] + list(data_arrays.values()),
+            schema=(pa.schema([
+                                  pa.field("timestamp", pa.timestamp("s")),
+                                  pa.field("duration", pa.duration("s")),
+                              ] + list(f for f, _ in fields))),
         )
+
+    def get_afk(
+            self,
+            start: datetime.datetime | None = None,
+            end: datetime.datetime | None = None,
+    ) -> pa.Table:
+        bucket = next(self.get_buckets_by_type("afkstatus"))
+        return self.get_events(bucket, start, end,
+                               (pa.field("afk", pa.bool_()), lambda data: data['status'] == "afk"))
