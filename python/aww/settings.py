@@ -69,9 +69,14 @@ class Llm(BaseModel):
     provider: dict[str, LlmProvider]
 
 
+class ActivityWatch(BaseModel):
+    client_name: str = "aww"
+
+
 class Settings(BaseSettings):
     obsidian: Obsidian
     llm: Llm
+    activitywatch: ActivityWatch = ActivityWatch()
 
     @classmethod
     def settings_customise_sources(
