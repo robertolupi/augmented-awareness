@@ -156,7 +156,7 @@ class Page:
             if tok["type"] == "list":
                 for item in tok["children"]:
                     if item["type"] == "task_list_item":
-                        raw_text = item["children"][0]["children"][0]["raw"]
+                        raw_text = _get_raw_text(item)
                         kwargs_re = {
                             "created": DATE_CREATED_RE,
                             "due": DATE_DUE_RE,
@@ -281,3 +281,21 @@ class Vault:
                 pages.append((date, page))
         pages.sort(key=lambda x: x[0])
         return Journal(pages)
+
+
+def _get_raw_text(item: dict):
+    """Returns the raw text (e.g. of a task) from a mistune token."""
+    match item["type"]:
+        case "text":
+            return item["raw"]
+        case "codespan":
+            return f"`{item['raw']}`"
+        case "blank_line" | "softbreak":
+            return "\n"
+        case _:
+            if "children" in item:
+                children_text = []
+                for child in item["children"]:
+                    children_text.append(_get_raw_text(child))
+                return "".join(children_text)
+    return repr(item)

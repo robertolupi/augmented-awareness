@@ -61,7 +61,7 @@ def test_task_table():
         "task 1",
         "task 2",
         "task 3",
-        "some task #tag3/with-parts",
+        "some task #tag3/with-parts and `some code`",
     ]
     assert table["done"].to_pylist() == [False, True, True, False]
     assert table["created"].to_pylist() == [None, None, datetime.date(2025, 4, 3), None]
