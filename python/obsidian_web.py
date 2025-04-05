@@ -29,9 +29,13 @@ st.dataframe(
     tag_durations,
     column_config={
         "tag": st.column_config.TextColumn("Tag"),
-        "histogram": st.column_config.BarChartColumn("Histogram")
-    }
+        "histogram": st.column_config.BarChartColumn("Histogram"),
+    },
 )
 
-tasks = schedule.tasks_table().to_pandas()
-tasks
+for page in journal.values():
+    tasks = page.tasks()
+    if len(tasks) > 0:
+        st.header(page.name)
+        for task in tasks:
+            st.markdown(str(task))
