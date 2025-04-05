@@ -109,11 +109,12 @@ def test_tasks():
     assert tasks[1].name == "task 2"
     assert tasks[1].done
     assert tasks[2].name == "task 3"
-    assert not tasks[2].done
+    assert tasks[2].done
     assert tasks[2].created == datetime.date(2025, 4, 3)
     assert tasks[2].due == datetime.date(2025, 4, 6)
     assert tasks[2].started == datetime.date(2025, 4, 4)
     assert tasks[2].scheduled == datetime.date(2025, 4, 3)
+    assert tasks[2].completed == datetime.date(2025, 4, 4)
     assert tasks[2].recurrence == "every day when done"
     if len(tasks) != 3:
         rich.print(page.content().parse())

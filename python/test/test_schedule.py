@@ -63,7 +63,7 @@ def test_task_table():
         "task 3",
         "some task #tag3/with-parts",
     ]
-    assert table["done"].to_pylist() == [False, True, False, False]
+    assert table["done"].to_pylist() == [False, True, True, False]
     assert table["created"].to_pylist() == [None, None, datetime.date(2025, 4, 3), None]
     assert table["due"].to_pylist() == [None, None, datetime.date(2025, 4, 6), None]
     assert table["started"].to_pylist() == [None, None, datetime.date(2025, 4, 4), None]
@@ -71,6 +71,12 @@ def test_task_table():
         None,
         None,
         datetime.date(2025, 4, 3),
+        None,
+    ]
+    assert table["completed"].to_pylist() == [
+        None,
+        None,
+        datetime.date(2025, 4, 4),
         None,
     ]
 

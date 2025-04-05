@@ -18,42 +18,46 @@ class Schedule:
         return f"Schedule({self.journal})"
 
     def tasks_table(self) -> pa.Table:
-        name_list = []
         done_list = []
+        name_list = []
         created_list = []
         due_list = []
         started_list = []
         scheduled_list = []
+        completed_list = []
         recurrence_list = []
 
         for page in self.journal.values():
             for task in page.tasks():
-                name_list.append(task.name)
                 done_list.append(task.done)
+                name_list.append(task.name)
                 created_list.append(task.created)
                 due_list.append(task.due)
                 started_list.append(task.started)
                 scheduled_list.append(task.scheduled)
+                completed_list.append(task.completed)
                 recurrence_list.append(task.recurrence)
 
         return pa.Table.from_arrays(
             arrays=[
-                pa.array(name_list),
                 pa.array(done_list),
+                pa.array(name_list),
                 pa.array(created_list),
                 pa.array(due_list),
                 pa.array(started_list),
                 pa.array(scheduled_list),
+                pa.array(completed_list),
                 pa.array(recurrence_list),
             ],
             schema=pa.schema(
                 [
-                    pa.field("name", pa.string()),
                     pa.field("done", pa.bool_()),
+                    pa.field("name", pa.string()),
                     pa.field("created", pa.date32()),
                     pa.field("due", pa.date32()),
                     pa.field("started", pa.date32()),
                     pa.field("scheduled", pa.date32()),
+                    pa.field("completed", pa.date32()),
                     pa.field("recurrence", pa.string()),
                 ]
             ),

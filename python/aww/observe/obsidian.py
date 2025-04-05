@@ -20,6 +20,7 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
 TAGS_RE = re.compile(r"\B#([-/a-zA-Z0-9_]*)")
 
+DATE_COMPLETED_RE = re.compile(r"✅\s+(\d{4}-\d{2}-\d{2})")
 DATE_CREATED_RE = re.compile(r"➕\s+(\d{4}-\d{2}-\d{2})")
 DATE_DUE_RE = re.compile(r"📅\s+(\d{4}-\d{2}-\d{2})")
 DATE_STARTED_RE = re.compile(r"🛫\s+(\d{4}-\d{2}-\d{2})")
@@ -55,6 +56,9 @@ class Task(BaseModel):
     scheduled: datetime.date | None = Field(
         description="date the task was scheduled", default=None
     )
+    completed: datetime.date | None = Field(
+        description="date the task was completed", default=None
+    )
     recurrence: str | None = Field(description="recurrence of the task", default=None)
 
     def _string_repr(self, name: str, captions: list):
@@ -74,13 +78,20 @@ class Task(BaseModel):
                 ("scheduled", "scheduled"),
                 ("started", "started"),
                 ("due", "due"),
+                ("completed", "completed"),
             ],
         )
 
     def __rich__(self):
         return self._string_repr(
             f"[b]{self.name}[/]",
-            [("➕", "created"), ("⏳", "scheduled"), ("🛫", "started"), ("📅", "due")],
+            [
+                ("➕", "created"),
+                ("⏳", "scheduled"),
+                ("🛫", "started"),
+                ("📅", "due"),
+                ("✅", "completed"),
+            ],
         )
 
 
@@ -151,6 +162,7 @@ class Page:
                             "due": DATE_DUE_RE,
                             "started": DATE_STARTED_RE,
                             "scheduled": DATE_SCHEDULED_RE,
+                            "completed": DATE_COMPLETED_RE,
                         }
                         kwargs = {}
                         for key, re in kwargs_re.items():
