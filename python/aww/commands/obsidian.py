@@ -7,6 +7,7 @@ import pyarrow as pa
 import rich
 import rich.columns
 import rich.markdown
+import rich.padding
 import rich.table
 from pydantic_ai.agent import Agent
 from pydantic_ai.models.openai import OpenAIModel
@@ -41,10 +42,19 @@ config: settings.Settings
     type=click.DateTime(),
     default=(datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),
 )
+@click.option(
+    "date",
+    "--date",
+    "-d",
+    help="Specify a single date (overrides date_start and date_end)",
+    type=click.DateTime(),
+    default=None,
+)
 @click.option("today", "-t", "--today", is_flag=True, help="Set dates to today.")
 def commands(
     date_start: datetime.date | datetime.datetime,
     date_end: datetime.date | datetime.datetime,
+    date: datetime.date | datetime.datetime,
     today: bool = False,
     vault_path=None,
 ):
@@ -56,7 +66,10 @@ def commands(
     vault = Vault(vault_path or config.obsidian.vault)
     date_start = date_start.date()
     date_end = date_end.date()
-    if today:
+    if date:
+        date_start = date.date()
+        date_end = date.date()
+    elif today:
         date_start = datetime.date.today()
         date_end = datetime.date.today()
     schedule = Schedule(vault.journal().subrange(date_start, date_end))
@@ -146,25 +159,29 @@ def print_table(table: pa.Table):
 @click.argument("page_name", type=str, required=False)
 def info(verbose, page_name=None):
     """Print general information about a page."""
-    global vault
-    rich.print(vault.path)
-    pages = vault.pages()
-    journal = vault.journal()
+    global schedule
+    journal = schedule.journal
+    pages = journal.values()
 
     rich.print(f"Total Pages: {len(pages)}")
     rich.print(f"Journal pages: {len(journal)}")
-    if not page_name:
-        entry = list(journal.values())[-1]
-    else:
-        entry = pages.get(page_name)
-    if not entry:
-        rich.print("[bold red]Page not found[/bold red]")
-        return
-    rich.print("\n")
-    rich.print(f"Page: {entry.name}")
-    rich.print("Frontmatter:", entry.frontmatter())
-    rich.print("Events:", rich.columns.Columns(entry.events()))
-    rich.print("Tasks:", rich.columns.Columns(entry.tasks()))
-    rich.print("Tags:", rich.columns.Columns(entry.tags()))
-    if verbose:
-        rich.print(entry.content())
+    for entry in pages:
+        rich.print(f"Page: {entry.name}")
+        rich.print("Frontmatter:", entry.frontmatter())
+        rich.print("Events:", rich.columns.Columns(entry.events()))
+        rich.print("Tasks:", rich.columns.Columns(entry.tasks()))
+        rich.print("Tags:", rich.columns.Columns(entry.tags()))
+        if verbose:
+            rich.print(rich.padding.Padding(entry.content(), 1))
+            rich.print("\n")
+
+
+@commands.command()
+def tasks():
+    global schedule
+    for page in schedule.journal.values():
+        tasks = page.tasks()
+        if tasks:
+            rich.print(page.name)
+            for t in tasks:
+                rich.print("  ", t)
