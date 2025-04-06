@@ -94,16 +94,19 @@ class Schedule:
     def total_duration_by_tag(
         self, histogram_resolution: timedelta = timedelta(minutes=30)
     ) -> pa.Table:
-        totals = collections.defaultdict(lambda: timedelta(seconds=0))
+        totals = {}
+        histograms = {}
         n_buckets = int(
             math.ceil(
                 timedelta(days=1).total_seconds() / histogram_resolution.total_seconds()
             )
         )
-        histograms = collections.defaultdict(lambda: [0] * n_buckets)
         for page in self.journal.values():
             for event in page.events():
                 for tag in event.tags:
+                    if tag not in totals:
+                        totals[tag] = timedelta(seconds=0)
+                        histograms[tag] = [0] * n_buckets
                     totals[tag] += event.duration or timedelta(seconds=0)
                     for n in histogram_bins(
                         event.time.time(), event.duration, n_buckets
