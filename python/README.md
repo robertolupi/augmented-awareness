@@ -1,3 +1,5 @@
+![](aww-screenshot.png)
+
 The code is organized according to the most fitting phase of the Observe-Orient-Direct-Act (OODA) loop.
 
 1. **Observe:** Gather raw data from sensors or external sources.
