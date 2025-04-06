@@ -68,7 +68,7 @@ We'll define the main entities and their relationships. I'll use a conceptual re
         - `FUTURE_PROJECTED`: Predicted or forecasted to happen based on models or trends (e.g., projected sleep time, predicted arrival time).
         - `HYPOTHETICAL_ALTERNATIVE`: Represents a what-if scenario, a counterfactual, or an alternative plan not taken.
         - `HYPOTHETICAL_POSSIBILITY`: Represents a potential future or past event whose occurrence is/was conditional or uncertain.
-    - `confidence`: **Float (0.0 to 1.0, Nullable)**. Quantifies the certainty, especially useful for `_UNCERTAIN`, `_INFERRED`, `_PROJECTED`, `_POSSIBILITY` modalities.
+    - `confidence`: **Float (0.0 to 1.0, Nullable)**. Quantifies the certainty, especially useful for `_UNCERTAIN`, `_INFERRED`, `_PROJECTED`, `_POSSIBILITY` modalities. Can be derived from temporal_distribution when available.
     - `data_payload`: **Flexible Data Type (JSON, Dictionary, specific types)**. Contains the actual value(s) or descriptive data for the event.
         - For time series: `{ "value": 75.5, "unit": "%" }`
         - For activity log: `{ "window_title": "TAQS Model Design", "app_name": "Obsidian" }`
@@ -187,3 +187,69 @@ This model provides a robust foundation. The specific implementation details and
 - **Consistency:** Maintaining consistency between the SQLite metadata and the Parquet event data requires careful application logic, especially if updates/deletions occur (though much QS data is append-only).
     
 - **Schema Evolution:** Plan how schema changes (e.g., adding fields to `data_payload`) will be handled in the Parquet files over time.
+
+
+#### Areas for Improvement
+
+1. Temporal Edge Cases
+   
+   - No explicit handling of recurring events (e.g., daily routines, weekly meetings)
+   - Missing handling of events with uncertain start/end times
+
+2. Data Validation
+   
+   - No explicit constraints on data_payload structure per concept type
+   - Missing schema validation mechanisms for JSON/Dictionary data
+   - Could benefit from explicit data quality indicators beyond confidence
+
+3. Relationship Modeling
+   
+   - Only hierarchical relationships are modeled ( parent_concept_id , parent_event_id )
+   - Missing lateral relationships between events (e.g., "blocked by", "triggered by")
+   - No explicit modeling of causal relationships
+
+4. Performance Considerations
+   
+   - Deep hierarchies might lead to expensive recursive queries
+   - No explicit partitioning strategy for high-volume streams
+   - Missing indexing recommendations for data_payload contents
+
+**1. `Concept`**
+- Add attributes:
+    - `payload_schema`: JSON Schema for validating data_payload
+    - `validation_rules`: Custom validation rules
+    - `quality_metrics`: Required data quality indicators
+
+**3. `Stream`**
+- Add attributes:
+    - `partition_strategy`: How to partition high-volume data
+    - `retention_policy`: Data lifecycle management
+    - `index_fields`: Array of data_payload fields to index
+    
+**4. `Event`**
+- Add attributes:
+    - `recurrence_pattern`: For recurring events (iCal RRule format)
+    - `timezone`: Explicit timezone handling
+    - `temporal_distribution`: Statistical representation of temporal uncertainty. Can be:
+        - Gaussian mixture (mean, stddev, weights)
+        - Von Mises (for circular/periodic time)
+        - Fuzzy set (membership function parameters)
+        - Human-readable description (for manual entries)
+    - `distribution_origin`: How the distribution was derived:
+        - `INFERRED`: From probabilistic programming/modeling
+        - `OBSERVED`: From statistical analysis of past events
+        - `HUMAN_ESTIMATED`: From fuzzy human judgment
+        - `LLM_GENERATED`: From language model reasoning
+
+New Entity: **`EventRelation`**
+- **Probabilistic Links:**
+    - Add `causal_probability` field (0.0 to 1.0)
+    - Add `temporal_constraint` field (e.g., "before", "during", "after" with distribution)
+    - Add `evidence_source` field (tracking what supports this relation)
+- **Attributes:**
+    - `relation_id`: Unique identifier
+    - `source_event_id`: From Event
+    - `target_event_id`: To Event
+    - `relation_type`: Enum (BLOCKS, TRIGGERS, CORRELATES, etc.)
+    - `strength`: Float (0.0 to 1.0) for correlation strength
+    - `metadata`: Additional relationship context
