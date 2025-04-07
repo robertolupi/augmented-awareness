@@ -26,7 +26,7 @@ We'll define the main entities and their relationships. I'll use a conceptual re
     - `description`: Optional longer description.
     - `parent_concept_id`: Foreign key to `Concept` (self-referencing) to establish hierarchy (nullable for root concepts).
     - `type`: (Optional) Enum like `ACTIVITY`, `METRIC`, `STATE`, `LOCATION`, etc.
-    - `metadata`: JSON/Dictionary for additional properties (e.g., expected units for metrics like '%', 'bpm', 'count'; default visualization hints).
+    - `meta`: JSON/Dictionary for additional properties (e.g., expected units for metrics like '%', 'bpm', 'count'; default visualization hints).
 
 **2. `Source`**
 
@@ -36,7 +36,7 @@ We'll define the main entities and their relationships. I'll use a conceptual re
     - `name`: Human-readable name (e.g., "Manual Diary Entry", "ActivityWatch", "Oura Ring", "Weather API")
     - `type`: Enum like `MANUAL`, `SENSOR`, `APPLICATION`, `API`, `PLUGIN`.
     - `description`: Optional details about the source.
-    - `metadata`: JSON/Dictionary for source-specific details (e.g., device ID, API version, configuration).
+    - `meta`: JSON/Dictionary for source-specific details (e.g., device ID, API version, configuration).
 
 **3. `Stream`**
 
@@ -47,7 +47,7 @@ We'll define the main entities and their relationships. I'll use a conceptual re
     - `source_id`: Foreign key to `Source`. (Where the data comes from).
     - `name`: (Optional) Specific name for this stream instance (e.g., "My Laptop ActivityWatch Window Titles").
     - `description`: (Optional) Further details.
-    - `metadata`: JSON/Dictionary for stream-specific settings (e.g., sampling rate if applicable, retention policy).
+    - `meta`: JSON/Dictionary for stream-specific settings (e.g., sampling rate if applicable, retention policy).
 
 **4. `Event`** (The core data point)
 
@@ -76,7 +76,7 @@ We'll define the main entities and their relationships. I'll use a conceptual re
     - `parent_event_id`: Foreign key to `Event` (self-referencing, nullable). Establishes hierarchical links between events. E.g., multiple detailed `ActivityWatch` events could be children of a single high-level "Work on Project X" diary span event.
     - `scenario_id`: **UUID/String (Nullable)**. Groups related `HYPOTHETICAL_` events together to represent a single alternative scenario or "branch" of reality/planning.
     - `recorded_at`: **Timestamp with Timezone**. When the event was actually inserted into the system (distinct from `timestamp` which is occurrence time). Useful for auditing and understanding data latency.
-    - `metadata`: JSON/Dictionary for event-specific context not fitting elsewhere.
+    - `meta`: JSON/Dictionary for event-specific context not fitting elsewhere.
 
 ---
 
@@ -252,4 +252,4 @@ New Entity: **`EventRelation`**
     - `target_event_id`: To Event
     - `relation_type`: Enum (BLOCKS, TRIGGERS, CORRELATES, etc.)
     - `strength`: Float (0.0 to 1.0) for correlation strength
-    - `metadata`: Additional relationship context
+    - `meta`: Additional relationship context
