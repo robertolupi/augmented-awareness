@@ -163,7 +163,7 @@ class Page:
             _, _, content = content.split("---\n", 2)
         return Markdown(content)
 
-    def tasks(self) -> [Task]:
+    def tasks(self) -> list[Task]:
         """Get the tasks in the page."""
         parsed = self.content().parse()
         tasks = []
@@ -204,7 +204,7 @@ class Page:
                         )
         return tasks
 
-    def events(self) -> [Event]:
+    def events(self) -> list[Event]:
         parsed = self.content().parse()
         events = []
         page_date = datetime.datetime.strptime(self.name, "%Y-%m-%d").date()
