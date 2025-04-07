@@ -139,7 +139,17 @@ def busy(verbose: bool = False):
                 for ev in events:
                     rich.print(f"  {ev.time} ({ev.duration}) {ev.name} {ev.tags}")
 
-    print_table(schedule.total_duration_by_tag())
+    t = rich.table.Table()
+    t.add_column("Tag", justify="left", style="cyan", no_wrap=True)
+    t.add_column("Total", justify="right", style="magenta")
+    t.add_column("Histogram", justify="right", style="green", no_wrap=True)
+    for row in schedule.total_duration_by_tag().to_pylist():
+        t.add_row(
+            row["tag"],
+            str(row["duration"]),
+            generate_sparkline(row["histogram"]),
+        )
+    rich.print(t)
 
 
 def print_table(table: pa.Table):
@@ -185,3 +195,35 @@ def tasks():
             rich.print(page.name)
             for t in tasks:
                 rich.print("  ", t)
+
+
+def generate_sparkline(numbers: list[int]) -> rich.text.Text:
+    """Generate a sparkline from a list of numbers using Unicode block characters.
+
+    Args:
+        numbers: List of integers to visualize
+
+    Returns:
+        A Rich Text object containing the sparkline
+    """
+    if not numbers:
+        return ""
+
+    min_val = min(numbers)
+    max_val = max(numbers)
+
+    # Normalize values to 0-7 range for block characters
+    normalized = []
+    if max_val != min_val:
+        normalized = [int(7 * (x - min_val) / (max_val - min_val)) for x in numbers]
+    else:
+        normalized = [0 for _ in numbers]
+
+    # Unicode block characters from lower to higher
+    blocks = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"]
+
+    spark_text = ""
+    for level in normalized:
+        spark_text += blocks[level]
+
+    return spark_text
