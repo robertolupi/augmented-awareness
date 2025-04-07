@@ -131,6 +131,21 @@ class Page:
         """Get the name of the page."""
         return self.path.stem
 
+    @property
+    def modified_time(self) -> datetime.datetime:
+        """Get the last modified date of the page."""
+        return datetime.datetime.fromtimestamp(self.path.stat().st_mtime)
+
+    @property
+    def created_time(self) -> datetime.datetime:
+        """Get the creation date of the page."""
+        return datetime.datetime.fromtimestamp(self.path.stat().st_ctime)
+
+    @property
+    def access_time(self) -> datetime.datetime:
+        """Get the last access date of the page."""
+        return datetime.datetime.fromtimestamp(self.path.stat().st_atime)
+
     def frontmatter(self) -> dict:
         """Get the frontmatter of the page."""
         with open(self.path, "r", encoding="utf-8") as f:

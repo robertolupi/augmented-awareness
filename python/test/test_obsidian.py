@@ -64,6 +64,14 @@ def test_frontmatter():
     assert page.frontmatter() == {"stress": 4}
 
 
+def test_file_times():
+    v = Vault(test_vault_dir)
+    page = v.pages()["2025-03-30"]
+    assert page.created_time is not None
+    assert page.modified_time is not None
+    assert page.access_time is not None
+
+
 def test_markdown():
     v = Vault(test_vault_dir)
     page = v.pages()["index"]
