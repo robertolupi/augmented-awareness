@@ -78,6 +78,17 @@ class Settings(BaseSettings):
     llm: Llm
     activitywatch: ActivityWatch = ActivityWatch()
 
+    sqlite_db: pathlib.Path = (
+        pathlib.Path(platformdirs.user_data_dir(APP_NAME, APP_AUTHOR)) / "aww.db"
+    )
+    data_path: pathlib.Path = (
+        pathlib.Path(platformdirs.user_data_dir(APP_NAME, APP_AUTHOR)) / "data"
+    )
+
+    @property
+    def sqlite_url(self) -> str:
+        return "sqlite:///" + str(self.sqlite_db)
+
     @classmethod
     def settings_customise_sources(
         cls,
