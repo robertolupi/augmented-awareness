@@ -28,15 +28,15 @@ class Concept(SQLModel, table=True):
         default=None, foreign_key="concept.concept_id"
     )
     type: Optional[ConceptType] = None
-    metadata: str = Field(default="{}", sa_type=AutoString)
+    meta_json: str = Field(default="{}", sa_type=AutoString)
 
     @property
-    def metadata_dict(self) -> dict:
-        return json.loads(self.metadata)
+    def meta(self) -> dict:
+        return json.loads(self.meta_json)
 
-    @metadata_dict.setter
-    def metadata_dict(self, value: dict):
-        self.metadata = json.dumps(value)
+    @meta.setter
+    def meta(self, value: dict):
+        self.meta_json = json.dumps(value)
 
 
 class Source(SQLModel, table=True):
@@ -44,15 +44,15 @@ class Source(SQLModel, table=True):
     name: str
     type: SourceType
     description: Optional[str] = None
-    metadata: str = Field(default="{}", sa_type=AutoString)
+    meta_json: str = Field(default="{}", sa_type=AutoString)
 
     @property
-    def metadata_dict(self) -> dict:
-        return json.loads(self.metadata)
+    def meta(self) -> dict:
+        return json.loads(self.meta_json)
 
-    @metadata_dict.setter
-    def metadata_dict(self, value: dict):
-        self.metadata = json.dumps(value)
+    @meta.setter
+    def meta(self, value: dict):
+        self.meta_json = json.dumps(value)
 
 
 class Stream(SQLModel, table=True):
@@ -61,12 +61,12 @@ class Stream(SQLModel, table=True):
     source_id: str = Field(foreign_key="source.source_id")
     name: Optional[str] = None
     description: Optional[str] = None
-    metadata: str = Field(default="{}", sa_type=AutoString)
+    meta_json: str = Field(default="{}", sa_type=AutoString)
 
     @property
-    def metadata_dict(self) -> dict:
-        return json.loads(self.metadata)
+    def meta(self) -> dict:
+        return json.loads(self.meta_json)
 
-    @metadata_dict.setter
-    def metadata_dict(self, value: dict):
-        self.metadata = json.dumps(value)
+    @meta.setter
+    def meta(self, value: dict):
+        self.meta_json = json.dumps(value)
