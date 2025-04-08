@@ -29,7 +29,7 @@ def test_event_table():
         "breakfast & shower",
         "yoga",
         "woke up",
-        "#aww did some work",
+        "#aww did some personal development",
         "#work",
     ]
     assert table["time"].to_pylist() == [

@@ -26,7 +26,7 @@ def test_valid_vault():
     assert v.path.name == "vault"
 
 
-def test_valid_vault_default():
+def test_valid_vault_default(mocker):
     v = Vault()
     assert v.path.name == "vault"
 
@@ -155,7 +155,7 @@ def test_events_tags():
         rich.print(page.content().parse())
     assert events[0].name == "woke up"
     assert events[0].time == datetime.datetime(2025, 4, 1, 6, 4)
-    assert events[1].name == "#aww did some work"
+    assert events[1].name == "#aww did some personal development"
     assert events[1].tags == ["aww"]
     assert events[1].time == datetime.datetime(2025, 4, 1, 7, 0)
     assert events[2].name == "#work"
@@ -173,7 +173,9 @@ def test_tags():
         assert "tag3/with-parts" in tags
         assert "aww" in tags
         assert "work" in tags
-        assert len(tags) == 5
+        assert "create/write/blog" in tags
+        assert "work" in tags
+        assert len(tags) == 8
     except:
         rich.print(page.content().parse())
         raise
