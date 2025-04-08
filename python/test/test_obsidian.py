@@ -128,6 +128,7 @@ def test_tasks():
     assert tasks[2].completed == datetime.date(2025, 4, 4)
     assert tasks[2].recurrence == "every day when done"
 
+
 def test_events():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-03-30"]
@@ -155,12 +156,15 @@ def test_events_2025_04_01():
     assert len(events) == 3
     assert events[0].name == "woke up"
     assert events[0].time == datetime.datetime(2025, 4, 1, 6, 4)
+    assert events[0].duration == datetime.timedelta(minutes=56)
     assert events[1].name == "#aww did some personal development"
     assert events[1].tags == ["aww"]
     assert events[1].time == datetime.datetime(2025, 4, 1, 7, 0)
+    assert events[1].duration == datetime.timedelta(hours=1, minutes=30)
     assert events[2].name == "#work"
     assert events[2].tags == ["work"]
     assert events[2].time == datetime.datetime(2025, 4, 1, 8, 30)
+    assert events[2].duration == datetime.timedelta(hours=1)
 
 
 def test_tags():
@@ -168,14 +172,16 @@ def test_tags():
     page = v.pages()["2025-04-01"]
     tags = page.tags()
     try:
-        assert "tag1" in tags
-        assert "tag2" in tags
-        assert "tag3/with-parts" in tags
-        assert "aww" in tags
-        assert "work" in tags
-        assert "create/write/blog" in tags
-        assert "work" in tags
-        assert len(tags) == 8
+        assert tags == [
+            "tag1",
+            "tag2",
+            "tag3/with-parts",
+            "aww",
+            "work",
+            "work",
+            "work",
+            "create/write/blog",
+        ]
     except:
         rich.print(page.content().parse())
         raise

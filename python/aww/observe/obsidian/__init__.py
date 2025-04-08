@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from aww.settings import Settings
 
 from .events import events_plugin
+from .task_lists import task_lists_plugin
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
@@ -37,9 +38,7 @@ class Markdown(str):
         return rich.markdown.Markdown(self)
 
     def parse(self) -> list[dict]:
-        from mistune.plugins.task_lists import task_lists
-
-        md = mistune.Markdown(renderer=None, plugins=[events_plugin, task_lists])
+        md = mistune.Markdown(renderer=None, plugins=[events_plugin, task_lists_plugin])
         return md(self)
 
 
@@ -173,34 +172,21 @@ class Page:
             if tok["type"] == "list":
                 for item in tok["children"]:
                     if item["type"] == "task_list_item":
-                        raw_text = _get_raw_text(item)
-                        kwargs_re = {
-                            "created": DATE_CREATED_RE,
-                            "due": DATE_DUE_RE,
-                            "started": DATE_STARTED_RE,
-                            "scheduled": DATE_SCHEDULED_RE,
-                            "completed": DATE_COMPLETED_RE,
-                        }
                         kwargs = {}
-                        for key, re in kwargs_re.items():
-                            match = re.search(raw_text)
-                            if match:
-                                kwargs[key] = datetime.datetime.strptime(
-                                    match.group(1), "%Y-%m-%d"
-                                ).date()
-                                raw_text = raw_text.replace(match.group(0), "")
-                        recurrence = None
-                        match = RECURRENCE_RE.search(raw_text)
-                        if match:
-                            recurrence = match.group(1).strip()
-                            raw_text = raw_text.replace(match.group(0), "")
-                        raw_text = raw_text.strip()
-
+                        for key in (
+                            "created",
+                            "due",
+                            "started",
+                            "scheduled",
+                            "completed",
+                            "recurrence",
+                        ):
+                            if date := item["attrs"].get(key):
+                                kwargs[key] = date
                         tasks.append(
                             Task(
-                                name=raw_text,
+                                name=item["attrs"]["name"],
                                 done=item["attrs"]["checked"],
-                                recurrence=recurrence,
                                 **kwargs,
                             )
                         )
@@ -213,14 +199,24 @@ class Page:
 
         for event in _get_all(parsed, "event"):
             time_str = event["attrs"]["time"]
+            end_time_str = event["attrs"]["end_time"]
             name = event["attrs"]["name"]
             tags = event["attrs"]["tags"]
             dt = datetime.datetime.combine(
-                page_date, datetime.datetime.strptime(time_str, "%H:%M").time())
-            events_list.append(Event(name=name, time=dt, tags=tags))
+                page_date, datetime.datetime.strptime(time_str, "%H:%M").time()
+            )
+            if end_time_str:
+                de = datetime.datetime.combine(
+                    page_date, datetime.datetime.strptime(end_time_str, "%H:%M").time()
+                )
+                duration = de - dt
+            else:
+                duration = None
+            events_list.append(Event(name=name, time=dt, tags=tags, duration=duration))
 
         for event, prev_event in zip(events_list[1:], events_list):
-            prev_event.duration = event.time - prev_event.time
+            if prev_event.duration is None:
+                prev_event.duration = event.time - prev_event.time
         return events_list
 
     def tags(self) -> list[str]:
@@ -244,7 +240,7 @@ def _get_tags(tokens: list) -> Iterable[str]:
                 yield from TAGS_RE.findall(tok["raw"])
             case "event":
                 yield from tok["attrs"]["tags"]
-        
+
         if "children" in tok:
             yield from _get_tags(tok["children"])
 

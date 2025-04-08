@@ -47,7 +47,7 @@ def test_event_table():
         None,
         datetime.timedelta(seconds=56 * 60),
         datetime.timedelta(seconds=90 * 60),
-        None,
+        datetime.timedelta(seconds=60 * 60),
     ]
 
 
@@ -89,9 +89,9 @@ def test_total_duration_by_tag():
     assert table["tag"].to_pylist() == ["aww", "work"]
     assert table["duration"].to_pylist() == [
         datetime.timedelta(seconds=90 * 60),
-        datetime.timedelta(seconds=0),
+        datetime.timedelta(seconds=60 * 60),
     ]
     assert table["histogram"].to_pylist() == [
         [0] * 14 + [1, 1, 1, 0] + [0] * 30,
-        [0] * 14 + [0, 0, 0, 1] + [0] * 30,
+        [0] * 14 + [0, 0, 0, 1, 1] + [0] * 29,
     ]
