@@ -112,6 +112,9 @@ def test_tasks():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-03-30"]
     tasks = page.tasks()
+    if len(tasks) != 3:
+        rich.print(page.content().parse())
+    assert len(tasks) == 3
     assert tasks[0].name == "task 1"
     assert not tasks[0].done
     assert tasks[1].name == "task 2"
@@ -124,10 +127,6 @@ def test_tasks():
     assert tasks[2].scheduled == datetime.date(2025, 4, 3)
     assert tasks[2].completed == datetime.date(2025, 4, 4)
     assert tasks[2].recurrence == "every day when done"
-    if len(tasks) != 3:
-        rich.print(page.content().parse())
-        assert False
-
 
 def test_events():
     v = Vault(test_vault_dir)
@@ -135,7 +134,7 @@ def test_events():
     events = page.events()
     if len(events) != 3:
         rich.print(page.content().parse())
-        assert False
+    assert len(events) == 3
     assert events[0].name == "wake up"
     assert events[0].time == datetime.datetime(2025, 3, 30, 6, 15)
     assert events[1].name == "breakfast & shower"
@@ -147,12 +146,13 @@ def test_events():
     assert events[2].duration is None
 
 
-def test_events_tags():
+def test_events_2025_04_01():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-04-01"]
     events = page.events()
     if len(events) != 3:
         rich.print(page.content().parse())
+    assert len(events) == 3
     assert events[0].name == "woke up"
     assert events[0].time == datetime.datetime(2025, 4, 1, 6, 4)
     assert events[1].name == "#aww did some personal development"

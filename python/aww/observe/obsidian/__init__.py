@@ -6,7 +6,7 @@ import os
 import pathlib
 import re
 import time
-from typing import Iterable
+from typing import Iterable, Dict, Any
 
 import mistune
 import rich
@@ -15,6 +15,8 @@ import yaml
 from pydantic import BaseModel, Field
 
 from aww.settings import Settings
+
+from .events import events_plugin
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
@@ -37,7 +39,7 @@ class Markdown(str):
     def parse(self) -> list[dict]:
         from mistune.plugins.task_lists import task_lists
 
-        md = mistune.Markdown(renderer=None, plugins=[task_lists])
+        md = mistune.Markdown(renderer=None, plugins=[events_plugin, task_lists])
         return md(self)
 
 
@@ -206,26 +208,20 @@ class Page:
 
     def events(self) -> list[Event]:
         parsed = self.content().parse()
-        events = []
+        events_list = []
         page_date = datetime.datetime.strptime(self.name, "%Y-%m-%d").date()
 
-        for tok in parsed:
-            if tok["type"] == "paragraph":
-                for child in tok["children"]:
-                    if child["type"] == "text":
-                        match = TIME_RE.match(child["raw"])
-                        if match:
-                            time_str, name = match.groups()
-                            dt = datetime.datetime.combine(
-                                page_date,
-                                datetime.datetime.strptime(time_str, "%H:%M").time(),
-                            )
-                            tags = TAGS_RE.findall(name)
-                            events.append(Event(name=name, time=dt, tags=tags))
+        for event in _get_all(parsed, "event"):
+            time_str = event["attrs"]["time"]
+            name = event["attrs"]["name"]
+            tags = event["attrs"]["tags"]
+            dt = datetime.datetime.combine(
+                page_date, datetime.datetime.strptime(time_str, "%H:%M").time())
+            events_list.append(Event(name=name, time=dt, tags=tags))
 
-        for event, prev_event in zip(events[1:], events):
+        for event, prev_event in zip(events_list[1:], events_list):
             prev_event.duration = event.time - prev_event.time
-        return events
+        return events_list
 
     def tags(self) -> list[str]:
         """Get the tags in the page."""
@@ -233,11 +229,23 @@ class Page:
         return list(_get_tags(parsed))
 
 
+def _get_all(token: Iterable[Dict[str, Any]], typ: str) -> Iterable[Dict[str, Any]]:
+    for tok in token:
+        if tok["type"] == typ:
+            yield tok
+        elif "children" in tok:
+            yield from _get_all(tok["children"], typ)
+
+
 def _get_tags(tokens: list) -> Iterable[str]:
     for tok in tokens:
-        if tok["type"] == "text":
-            yield from TAGS_RE.findall(tok["raw"])
-        elif "children" in tok:
+        match tok["type"]:
+            case "text":
+                yield from TAGS_RE.findall(tok["raw"])
+            case "event":
+                yield from tok["attrs"]["tags"]
+        
+        if "children" in tok:
             yield from _get_tags(tok["children"])
 
 
