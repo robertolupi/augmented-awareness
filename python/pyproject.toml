@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "aw-client>=0.5.12",
     "click>=8.1.8",
+    "freezegun>=1.5.1",
     "mistune>=3.1.3",
     "platformdirs>=4.3.7",
     "pyarrow>=19.0.1",
