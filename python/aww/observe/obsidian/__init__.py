@@ -105,7 +105,10 @@ class Event(BaseModel):
     duration: datetime.timedelta | None = Field(
         description="duration of the event", default=None
     )
-    status: str = Field(description="event status or type ('<'=scheduled, '-'=cancelled, ''=normal, etc.)", default="")
+    status: str = Field(
+        description="event status or type ('<'=scheduled, '-'=cancelled, ''=normal, etc.)",
+        default="",
+    )
 
     def __str__(self):
         time_str = time.strftime(
@@ -165,10 +168,9 @@ class Page:
             _, _, content = content.split("---\n", 2)
         return Markdown(content)
 
-    def tasks(self) -> list[Task]:
+    def tasks(self) -> Iterable[Task]:
         """Get the tasks in the page."""
         parsed = self.content().parse()
-        tasks = []
         for tok in parsed:
             if tok["type"] == "list":
                 for item in tok["children"]:
@@ -184,18 +186,15 @@ class Page:
                         ):
                             if date := item["attrs"].get(key):
                                 kwargs[key] = date
-                        tasks.append(
-                            Task(
-                                name=item["attrs"]["name"],
-                                done=item["attrs"]["checked"],
-                                **kwargs,
-                            )
-                        )
-        return tasks
 
-    def events(self) -> list[Event]:
+                        yield Task(
+                            name=item["attrs"]["name"],
+                            done=item["attrs"]["checked"],
+                            **kwargs,
+                        )
+
+    def events(self) -> Iterable[Event]:
         parsed = self.content().parse()
-        events_list = []
         page_date = datetime.datetime.strptime(self.name, "%Y-%m-%d").date()
 
         for event in _get_all(parsed, "event"):
@@ -214,9 +213,7 @@ class Page:
                 duration = de - dt
             else:
                 duration = None
-            events_list.append(Event(name=name, time=dt, tags=tags, duration=duration, status=status))
-
-        return events_list
+            yield Event(name=name, time=dt, tags=tags, duration=duration, status=status)
 
     def tags(self) -> list[str]:
         """Get the tags in the page."""

@@ -112,7 +112,7 @@ def test_markdown_parse():
 def test_tasks():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-03-30"]
-    tasks = page.tasks()
+    tasks = list(page.tasks())
     if len(tasks) != 3:
         rich.print(page.content().parse())
     assert len(tasks) == 3
@@ -139,7 +139,7 @@ def test_events_re():
 def test_events():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-03-30"]
-    page_events = page.events()
+    page_events = list(page.events())
     if len(page_events) != 3:
         rich.print(page.content().parse())
     assert len(page_events) == 3
@@ -157,7 +157,7 @@ def test_events():
 def test_events_2025_04_01():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-04-01"]
-    page_events = page.events()
+    page_events = list(page.events())
     if len(page_events) != 8:
         rich.print(page.content().parse())
     expected_events = [
@@ -184,35 +184,35 @@ def test_events_2025_04_01():
             time=datetime.datetime(2025, 4, 1, 11, 0),
             tags=[],
             duration=datetime.timedelta(hours=2),
-            status="-"
+            status="-",
         ),
         Event(
             name="#work",
             time=datetime.datetime(2025, 4, 1, 9, 0),
             tags=["work"],
             duration=datetime.timedelta(hours=3),
-            status="<"
+            status="<",
         ),
         Event(
             name='lunch with @someone (reference to a "person:someone" concept in Aww)',
             time=datetime.datetime(2025, 4, 1, 12, 00),
             tags=[],
             duration=datetime.timedelta(hours=2),
-            status="<"
+            status="<",
         ),
         Event(
             name="more #work",
             time=datetime.datetime(2025, 4, 1, 14, 0),
             tags=["work"],
             duration=datetime.timedelta(hours=3),
-            status="<"
+            status="<",
         ),
         Event(
             name="#create/write/blog (tags are references to concepts in Aww)",
             time=datetime.datetime(2025, 4, 1, 19, 0),
             tags=["create/write/blog"],
             duration=datetime.timedelta(hours=2),
-            status="<"
+            status="<",
         ),
     ]
     assert page_events == expected_events
