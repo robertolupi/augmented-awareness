@@ -105,6 +105,7 @@ class Event(BaseModel):
     duration: datetime.timedelta | None = Field(
         description="duration of the event", default=None
     )
+    status: str = Field(description="event status or type ('<'=scheduled, '-'=cancelled, ''=normal, etc.)", default="")
 
     def __str__(self):
         time_str = time.strftime(
@@ -202,6 +203,7 @@ class Page:
             end_time_str = event["attrs"]["end_time"]
             name = event["attrs"]["name"]
             tags = event["attrs"]["tags"]
+            status = event["attrs"]["status"]
             dt = datetime.datetime.combine(
                 page_date, datetime.datetime.strptime(time_str, "%H:%M").time()
             )
@@ -212,11 +214,8 @@ class Page:
                 duration = de - dt
             else:
                 duration = None
-            events_list.append(Event(name=name, time=dt, tags=tags, duration=duration))
+            events_list.append(Event(name=name, time=dt, tags=tags, duration=duration, status=status))
 
-        for event, prev_event in zip(events_list[1:], events_list):
-            if prev_event.duration is None:
-                prev_event.duration = event.time - prev_event.time
         return events_list
 
     def tags(self) -> list[str]:
