@@ -34,7 +34,7 @@ st.dataframe(
 )
 
 for page in journal.values():
-    tasks = page.tasks()
+    tasks = list(page.tasks())
     if len(tasks) > 0:
         st.header(page.name)
         for task in tasks:
