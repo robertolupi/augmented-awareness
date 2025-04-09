@@ -1,7 +1,6 @@
 import math
 from datetime import timedelta, time
 from typing import Iterable
-import collections
 
 import pyarrow as pa
 
@@ -35,7 +34,6 @@ class Schedule:
                 for i, name in enumerate(schema.names):
                     arrays[i].append(getattr(event, name))
         return pa.Table.from_arrays(arrays=arrays, schema=schema)
-
 
     def total_duration_by_tag(
         self, histogram_resolution: timedelta = timedelta(minutes=30)
