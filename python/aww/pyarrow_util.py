@@ -17,6 +17,7 @@ _PYDANTIC_TO_PYARROW_TYPE_MAP = {
     datetime.datetime: pa.timestamp('us'),
     datetime.date: pa.date32(),
     datetime.time: pa.time64('us'),
+    datetime.timedelta: pa.duration('us'),
     decimal.Decimal: pa.string(), # Safest default for Decimal without precision/scale
     uuid.UUID: pa.string(),
 }
