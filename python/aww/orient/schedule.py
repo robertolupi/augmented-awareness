@@ -18,14 +18,10 @@ class Schedule:
         return f"Schedule({self.journal})"
 
     def tasks_table(self) -> pa.Table:
-        all_tasks = [task for page in self.journal.values() for task in page.tasks()]
-        return pydantic_to_pyarrow_table(all_tasks, Task)
+        return self.journal.tasks_table()
 
     def event_table(self) -> pa.Table:
-        all_events = [
-            event for page in self.journal.values() for event in page.events()
-        ]
-        return pydantic_to_pyarrow_table(all_events, Event)
+        return self.journal.event_table()
 
     def total_duration_by_tag(
         self, histogram_resolution: timedelta = timedelta(minutes=30)

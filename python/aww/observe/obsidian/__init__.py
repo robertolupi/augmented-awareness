@@ -15,6 +15,8 @@ import yaml
 from pydantic import BaseModel, Field
 
 from aww.settings import Settings
+from aww.pyarrow_util import pydantic_to_pyarrow_table
+import pyarrow as pa
 
 from .events import events_plugin
 from .task_lists import task_lists_plugin
@@ -260,6 +262,14 @@ class Journal(collections.OrderedDict[datetime.date, "Page"]):
     def __repr__(self):
         dates = list(self.keys())
         return f"Journal(min={dates[0]}, max={dates[-1]}, count={len(dates)})"
+        
+    def tasks_table(self) -> pa.Table:
+        all_tasks = [task for page in self.values() for task in page.tasks()]
+        return pydantic_to_pyarrow_table(all_tasks, Task)
+        
+    def event_table(self) -> pa.Table:
+        all_events = [event for page in self.values() for event in page.events()]
+        return pydantic_to_pyarrow_table(all_events, Event)
 
 
 class Vault:
