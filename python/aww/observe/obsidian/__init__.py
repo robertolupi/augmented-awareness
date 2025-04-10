@@ -204,7 +204,7 @@ class Page:
             end_time_str = event["attrs"]["end_time"]
             name = event["attrs"]["name"]
             tags = event["attrs"]["tags"]
-            status = event["attrs"]["status"]
+            status = event["attrs"]["status"] or ""
             dt = datetime.datetime.combine(
                 page_date, datetime.datetime.strptime(time_str, "%H:%M").time()
             )
