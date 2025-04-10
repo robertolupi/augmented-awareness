@@ -4,8 +4,7 @@ from typing import Iterable
 
 import pyarrow as pa
 
-from aww.observe.obsidian import Vault, Journal, Task, Event
-from aww.pyarrow_util import pydantic_to_pyarrow_table
+from aww.observe.obsidian import Vault, Journal
 
 
 class Schedule:
