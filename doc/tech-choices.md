@@ -19,7 +19,7 @@
 
 - Apache Arrow for data intercharge
 - Apache Parquet for data storage, local data lake
-- SQLite for metadata storage
+- SQLite or DuckDB for metadata storage and querying
 
 ## Protocols
 
