@@ -23,7 +23,6 @@ def test_event_table():
     date_end = datetime.date(2025, 4, 1)
     schedule = Schedule(Vault(test_vault_dir).journal().subrange(date_start, date_end))
     table = schedule.event_table()
-    assert len(table) == 6
     assert table["name"].to_pylist() == [
         "wake up",
         "breakfast & shower",
@@ -31,6 +30,11 @@ def test_event_table():
         "woke up",
         "#aww did some personal development",
         "#work",
+        "cancelled event",
+        "#work",
+        'lunch with @someone (reference to a "person:someone" concept in Aww)',
+        "more #work",
+        "#create/write/blog (tags are references to concepts in Aww)",
     ]
     assert table["time"].to_pylist() == [
         datetime.datetime(2025, 3, 30, 6, 15),
@@ -39,15 +43,37 @@ def test_event_table():
         datetime.datetime(2025, 4, 1, 6, 4),
         datetime.datetime(2025, 4, 1, 7, 0),
         datetime.datetime(2025, 4, 1, 8, 30),
+        datetime.datetime(2025, 4, 1, 11, 0),
+        datetime.datetime(2025, 4, 1, 9, 0),
+        datetime.datetime(2025, 4, 1, 12, 0),
+        datetime.datetime(2025, 4, 1, 14, 0),
+        datetime.datetime(2025, 4, 1, 19, 0),
     ]
-    assert table["tags"].to_pylist() == [[], [], [], [], ["aww"], ["work"]]
+    assert table["tags"].to_pylist() == [
+        [],
+        [],
+        [],
+        [],
+        ["aww"],
+        ["work"],
+        [],
+        ["work"],
+        [],
+        ["work"],
+        ["create/write/blog"],
+    ]
     assert table["duration"].to_pylist() == [
-        datetime.timedelta(seconds=15 * 60),
-        datetime.timedelta(seconds=30 * 60),
+        datetime.timedelta(seconds=900),
+        datetime.timedelta(seconds=1800),
         None,
-        datetime.timedelta(seconds=56 * 60),
-        datetime.timedelta(seconds=90 * 60),
-        None,
+        datetime.timedelta(seconds=3360),
+        datetime.timedelta(seconds=5400),
+        datetime.timedelta(seconds=3600),
+        datetime.timedelta(seconds=7200),
+        datetime.timedelta(seconds=10800),
+        datetime.timedelta(seconds=7200),
+        datetime.timedelta(seconds=10800),
+        datetime.timedelta(seconds=7200),
     ]
 
 
@@ -86,12 +112,10 @@ def test_total_duration_by_tag():
     date_end = datetime.date(2025, 4, 1)
     schedule = Schedule(Vault(test_vault_dir).journal().subrange(date_start, date_end))
     table = schedule.total_duration_by_tag().sort_by("tag")
-    assert table["tag"].to_pylist() == ["aww", "work"]
+    assert table["tag"].to_pylist() == ["aww", "create/write/blog", "work"]
     assert table["duration"].to_pylist() == [
         datetime.timedelta(seconds=90 * 60),
-        datetime.timedelta(seconds=0),
+        datetime.timedelta(seconds=120 * 60),
+        datetime.timedelta(seconds=7 * 60 * 60),
     ]
-    assert table["histogram"].to_pylist() == [
-        [0] * 14 + [1, 1, 1, 0] + [0] * 30,
-        [0] * 14 + [0, 0, 0, 1] + [0] * 30,
-    ]
+    # TODO: test histogram

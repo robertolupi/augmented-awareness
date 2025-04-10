@@ -108,6 +108,7 @@ def tips(user_prompt: str | None = None, model_name: str | None = None):
     for date, page in schedule.journal.items():
         full_user_prompt.append("")
         full_user_prompt.append("# " + date.strftime("On %A, %B %d:"))
+        full_user_prompt.append(str(page.frontmatter()))
         for ev in page.events():
             full_user_prompt.append(" " + str(ev))
         full_user_prompt.append("")

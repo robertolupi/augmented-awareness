@@ -5,7 +5,8 @@ import pytest
 import rich
 import rich.markdown
 
-from aww.observe.obsidian import Vault
+from aww.observe.obsidian import Vault, Event
+from aww.observe.obsidian import events
 import aww.settings
 
 test_dir = pathlib.Path(__file__).parent
@@ -111,7 +112,10 @@ def test_markdown_parse():
 def test_tasks():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-03-30"]
-    tasks = page.tasks()
+    tasks = list(page.tasks())
+    if len(tasks) != 3:
+        rich.print(page.content().parse())
+    assert len(tasks) == 3
     assert tasks[0].name == "task 1"
     assert not tasks[0].done
     assert tasks[1].name == "task 2"
@@ -124,43 +128,94 @@ def test_tasks():
     assert tasks[2].scheduled == datetime.date(2025, 4, 3)
     assert tasks[2].completed == datetime.date(2025, 4, 4)
     assert tasks[2].recurrence == "every day when done"
-    if len(tasks) != 3:
-        rich.print(page.content().parse())
-        assert False
+
+
+def test_events_re():
+    assert events.EVENT_RE.match("06:15 wake up")
+    assert events.EVENT_RE.match("08:15-10:30 brunch")
+    assert events.EVENT_RE.match("- 08:15-10:30 brunch")
 
 
 def test_events():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-03-30"]
-    events = page.events()
-    if len(events) != 3:
+    page_events = list(page.events())
+    if len(page_events) != 3:
         rich.print(page.content().parse())
-        assert False
-    assert events[0].name == "wake up"
-    assert events[0].time == datetime.datetime(2025, 3, 30, 6, 15)
-    assert events[1].name == "breakfast & shower"
-    assert events[1].time == datetime.datetime(2025, 3, 30, 6, 30)
-    assert events[0].duration == datetime.timedelta(minutes=15)
-    assert events[2].name == "yoga"
-    assert events[2].time == datetime.datetime(2025, 3, 30, 7, 0)
-    assert events[1].duration == datetime.timedelta(minutes=30)
-    assert events[2].duration is None
+    assert len(page_events) == 3
+    assert page_events[0].name == "wake up"
+    assert page_events[0].time == datetime.datetime(2025, 3, 30, 6, 15)
+    assert page_events[1].name == "breakfast & shower"
+    assert page_events[1].time == datetime.datetime(2025, 3, 30, 6, 30)
+    assert page_events[0].duration == datetime.timedelta(minutes=15)
+    assert page_events[2].name == "yoga"
+    assert page_events[2].time == datetime.datetime(2025, 3, 30, 7, 0)
+    assert page_events[1].duration == datetime.timedelta(minutes=30)
+    assert page_events[2].duration is None
 
 
-def test_events_tags():
+def test_events_2025_04_01():
     v = Vault(test_vault_dir)
     page = v.pages()["2025-04-01"]
-    events = page.events()
-    if len(events) != 3:
+    page_events = list(page.events())
+    if len(page_events) != 8:
         rich.print(page.content().parse())
-    assert events[0].name == "woke up"
-    assert events[0].time == datetime.datetime(2025, 4, 1, 6, 4)
-    assert events[1].name == "#aww did some personal development"
-    assert events[1].tags == ["aww"]
-    assert events[1].time == datetime.datetime(2025, 4, 1, 7, 0)
-    assert events[2].name == "#work"
-    assert events[2].tags == ["work"]
-    assert events[2].time == datetime.datetime(2025, 4, 1, 8, 30)
+    expected_events = [
+        Event(
+            name="woke up",
+            time=datetime.datetime(2025, 4, 1, 6, 4),
+            tags=[],
+            duration=datetime.timedelta(minutes=56),
+        ),
+        Event(
+            name="#aww did some personal development",
+            time=datetime.datetime(2025, 4, 1, 7, 0),
+            tags=["aww"],
+            duration=datetime.timedelta(hours=1, minutes=30),
+        ),
+        Event(
+            name="#work",
+            time=datetime.datetime(2025, 4, 1, 8, 30),
+            tags=["work"],
+            duration=datetime.timedelta(hours=1),
+        ),
+        Event(
+            name="cancelled event",
+            time=datetime.datetime(2025, 4, 1, 11, 0),
+            tags=[],
+            duration=datetime.timedelta(hours=2),
+            status="-",
+        ),
+        Event(
+            name="#work",
+            time=datetime.datetime(2025, 4, 1, 9, 0),
+            tags=["work"],
+            duration=datetime.timedelta(hours=3),
+            status="<",
+        ),
+        Event(
+            name='lunch with @someone (reference to a "person:someone" concept in Aww)',
+            time=datetime.datetime(2025, 4, 1, 12, 00),
+            tags=[],
+            duration=datetime.timedelta(hours=2),
+            status="<",
+        ),
+        Event(
+            name="more #work",
+            time=datetime.datetime(2025, 4, 1, 14, 0),
+            tags=["work"],
+            duration=datetime.timedelta(hours=3),
+            status="<",
+        ),
+        Event(
+            name="#create/write/blog (tags are references to concepts in Aww)",
+            time=datetime.datetime(2025, 4, 1, 19, 0),
+            tags=["create/write/blog"],
+            duration=datetime.timedelta(hours=2),
+            status="<",
+        ),
+    ]
+    assert page_events == expected_events
 
 
 def test_tags():
@@ -168,14 +223,16 @@ def test_tags():
     page = v.pages()["2025-04-01"]
     tags = page.tags()
     try:
-        assert "tag1" in tags
-        assert "tag2" in tags
-        assert "tag3/with-parts" in tags
-        assert "aww" in tags
-        assert "work" in tags
-        assert "create/write/blog" in tags
-        assert "work" in tags
-        assert len(tags) == 8
+        assert tags == [
+            "tag1",
+            "tag2",
+            "tag3/with-parts",
+            "aww",
+            "work",
+            "work",
+            "work",
+            "create/write/blog",
+        ]
     except:
         rich.print(page.content().parse())
         raise

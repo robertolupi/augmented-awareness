@@ -4,7 +4,8 @@ from typing import Iterable
 
 import pyarrow as pa
 
-from aww.observe.obsidian import Vault, Journal
+from aww.observe.obsidian import Vault, Journal, Task, Event
+from aww.pyarrow_util import pydantic_to_pyarrow_table
 
 
 class Schedule:
@@ -17,78 +18,10 @@ class Schedule:
         return f"Schedule({self.journal})"
 
     def tasks_table(self) -> pa.Table:
-        done_list = []
-        name_list = []
-        created_list = []
-        due_list = []
-        started_list = []
-        scheduled_list = []
-        completed_list = []
-        recurrence_list = []
-
-        for page in self.journal.values():
-            for task in page.tasks():
-                done_list.append(task.done)
-                name_list.append(task.name)
-                created_list.append(task.created)
-                due_list.append(task.due)
-                started_list.append(task.started)
-                scheduled_list.append(task.scheduled)
-                completed_list.append(task.completed)
-                recurrence_list.append(task.recurrence)
-
-        return pa.Table.from_arrays(
-            arrays=[
-                pa.array(done_list),
-                pa.array(name_list),
-                pa.array(created_list),
-                pa.array(due_list),
-                pa.array(started_list),
-                pa.array(scheduled_list),
-                pa.array(completed_list),
-                pa.array(recurrence_list),
-            ],
-            schema=pa.schema(
-                [
-                    pa.field("done", pa.bool_()),
-                    pa.field("name", pa.string()),
-                    pa.field("created", pa.date32()),
-                    pa.field("due", pa.date32()),
-                    pa.field("started", pa.date32()),
-                    pa.field("scheduled", pa.date32()),
-                    pa.field("completed", pa.date32()),
-                    pa.field("recurrence", pa.string()),
-                ]
-            ),
-        )
+        return self.journal.tasks_table()
 
     def event_table(self) -> pa.Table:
-        name_list = []
-        time_list = []
-        tags_list = []
-        durations_list = []
-        for page in self.journal.values():
-            for event in page.events():
-                name_list.append(event.name)
-                time_list.append(event.time)
-                tags_list.append(event.tags)
-                durations_list.append(event.duration)
-        return pa.Table.from_arrays(
-            arrays=[
-                pa.array(name_list),
-                pa.array(time_list),
-                pa.array(tags_list),
-                pa.array(durations_list),
-            ],
-            schema=pa.schema(
-                [
-                    pa.field("name", pa.string()),
-                    pa.field("time", pa.timestamp("s")),
-                    pa.field("tags", pa.list_(pa.dictionary(pa.int64(), pa.string()))),
-                    pa.field("duration", pa.duration("s")),
-                ]
-            ),
-        )
+        return self.journal.event_table()
 
     def total_duration_by_tag(
         self, histogram_resolution: timedelta = timedelta(minutes=30)

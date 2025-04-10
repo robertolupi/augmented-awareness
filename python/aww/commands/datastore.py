@@ -34,5 +34,6 @@ def init():
         rich.print(f"Creating data directory at [green]{settings.data_path}[/green]")
         settings.data_path.mkdir(parents=True, exist_ok=True)
     else:
-        rich.print(f"Data directory already exists at [yellow]{settings.data_path}[/yellow]")
-    
+        rich.print(
+            f"Data directory already exists at [yellow]{settings.data_path}[/yellow]"
+        )

@@ -6,7 +6,7 @@ import os
 import pathlib
 import re
 import time
-from typing import Iterable
+from typing import Iterable, Dict, Any
 
 import mistune
 import rich
@@ -15,6 +15,11 @@ import yaml
 from pydantic import BaseModel, Field
 
 from aww.settings import Settings
+from aww.pyarrow_util import pydantic_to_pyarrow_table
+import pyarrow as pa
+
+from .events import events_plugin
+from .task_lists import task_lists_plugin
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s+(.+)$")
@@ -35,9 +40,7 @@ class Markdown(str):
         return rich.markdown.Markdown(self)
 
     def parse(self) -> list[dict]:
-        from mistune.plugins.task_lists import task_lists
-
-        md = mistune.Markdown(renderer=None, plugins=[task_lists])
+        md = mistune.Markdown(renderer=None, plugins=[events_plugin, task_lists_plugin])
         return md(self)
 
 
@@ -104,6 +107,10 @@ class Event(BaseModel):
     duration: datetime.timedelta | None = Field(
         description="duration of the event", default=None
     )
+    status: str = Field(
+        description="event status or type ('<'=scheduled, '-'=cancelled, ''=normal, etc.)",
+        default="",
+    )
 
     def __str__(self):
         time_str = time.strftime(
@@ -163,69 +170,52 @@ class Page:
             _, _, content = content.split("---\n", 2)
         return Markdown(content)
 
-    def tasks(self) -> list[Task]:
+    def tasks(self) -> Iterable[Task]:
         """Get the tasks in the page."""
         parsed = self.content().parse()
-        tasks = []
         for tok in parsed:
             if tok["type"] == "list":
                 for item in tok["children"]:
                     if item["type"] == "task_list_item":
-                        raw_text = _get_raw_text(item)
-                        kwargs_re = {
-                            "created": DATE_CREATED_RE,
-                            "due": DATE_DUE_RE,
-                            "started": DATE_STARTED_RE,
-                            "scheduled": DATE_SCHEDULED_RE,
-                            "completed": DATE_COMPLETED_RE,
-                        }
                         kwargs = {}
-                        for key, re in kwargs_re.items():
-                            match = re.search(raw_text)
-                            if match:
-                                kwargs[key] = datetime.datetime.strptime(
-                                    match.group(1), "%Y-%m-%d"
-                                ).date()
-                                raw_text = raw_text.replace(match.group(0), "")
-                        recurrence = None
-                        match = RECURRENCE_RE.search(raw_text)
-                        if match:
-                            recurrence = match.group(1).strip()
-                            raw_text = raw_text.replace(match.group(0), "")
-                        raw_text = raw_text.strip()
+                        for key in (
+                            "created",
+                            "due",
+                            "started",
+                            "scheduled",
+                            "completed",
+                            "recurrence",
+                        ):
+                            if date := item["attrs"].get(key):
+                                kwargs[key] = date
 
-                        tasks.append(
-                            Task(
-                                name=raw_text,
-                                done=item["attrs"]["checked"],
-                                recurrence=recurrence,
-                                **kwargs,
-                            )
+                        yield Task(
+                            name=item["attrs"]["name"],
+                            done=item["attrs"]["checked"],
+                            **kwargs,
                         )
-        return tasks
 
-    def events(self) -> list[Event]:
+    def events(self) -> Iterable[Event]:
         parsed = self.content().parse()
-        events = []
         page_date = datetime.datetime.strptime(self.name, "%Y-%m-%d").date()
 
-        for tok in parsed:
-            if tok["type"] == "paragraph":
-                for child in tok["children"]:
-                    if child["type"] == "text":
-                        match = TIME_RE.match(child["raw"])
-                        if match:
-                            time_str, name = match.groups()
-                            dt = datetime.datetime.combine(
-                                page_date,
-                                datetime.datetime.strptime(time_str, "%H:%M").time(),
-                            )
-                            tags = TAGS_RE.findall(name)
-                            events.append(Event(name=name, time=dt, tags=tags))
-
-        for event, prev_event in zip(events[1:], events):
-            prev_event.duration = event.time - prev_event.time
-        return events
+        for event in _get_all(parsed, "event"):
+            time_str = event["attrs"]["time"]
+            end_time_str = event["attrs"]["end_time"]
+            name = event["attrs"]["name"]
+            tags = event["attrs"]["tags"]
+            status = event["attrs"]["status"] or ""
+            dt = datetime.datetime.combine(
+                page_date, datetime.datetime.strptime(time_str, "%H:%M").time()
+            )
+            if end_time_str:
+                de = datetime.datetime.combine(
+                    page_date, datetime.datetime.strptime(end_time_str, "%H:%M").time()
+                )
+                duration = de - dt
+            else:
+                duration = None
+            yield Event(name=name, time=dt, tags=tags, duration=duration, status=status)
 
     def tags(self) -> list[str]:
         """Get the tags in the page."""
@@ -233,11 +223,23 @@ class Page:
         return list(_get_tags(parsed))
 
 
+def _get_all(token: Iterable[Dict[str, Any]], typ: str) -> Iterable[Dict[str, Any]]:
+    for tok in token:
+        if tok["type"] == typ:
+            yield tok
+        elif "children" in tok:
+            yield from _get_all(tok["children"], typ)
+
+
 def _get_tags(tokens: list) -> Iterable[str]:
     for tok in tokens:
-        if tok["type"] == "text":
-            yield from TAGS_RE.findall(tok["raw"])
-        elif "children" in tok:
+        match tok["type"]:
+            case "text":
+                yield from TAGS_RE.findall(tok["raw"])
+            case "event":
+                yield from tok["attrs"]["tags"]
+
+        if "children" in tok:
             yield from _get_tags(tok["children"])
 
 
@@ -260,6 +262,14 @@ class Journal(collections.OrderedDict[datetime.date, "Page"]):
     def __repr__(self):
         dates = list(self.keys())
         return f"Journal(min={dates[0]}, max={dates[-1]}, count={len(dates)})"
+        
+    def tasks_table(self) -> pa.Table:
+        all_tasks = [task for page in self.values() for task in page.tasks()]
+        return pydantic_to_pyarrow_table(all_tasks, Task)
+        
+    def event_table(self) -> pa.Table:
+        all_events = [event for page in self.values() for event in page.events()]
+        return pydantic_to_pyarrow_table(all_events, Event)
 
 
 class Vault:
