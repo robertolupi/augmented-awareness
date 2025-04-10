@@ -5,7 +5,7 @@ from typing import Iterable
 import pyarrow as pa
 
 from aww.observe.obsidian import Vault, Journal, Task, Event
-from aww.pyarrow_util import pydantic_to_pyarrow_schema
+from aww.pyarrow_util import pydantic_to_pyarrow_table
 
 
 class Schedule:
@@ -18,22 +18,14 @@ class Schedule:
         return f"Schedule({self.journal})"
 
     def tasks_table(self) -> pa.Table:
-        schema = pydantic_to_pyarrow_schema(Task)
-        arrays = [[] for _ in schema.names]
-        for page in self.journal.values():
-            for task in page.tasks():
-                for i, name in enumerate(schema.names):
-                    arrays[i].append(getattr(task, name))
-        return pa.Table.from_arrays(arrays=arrays, schema=schema)
+        all_tasks = [task for page in self.journal.values() for task in page.tasks()]
+        return pydantic_to_pyarrow_table(all_tasks, Task)
 
     def event_table(self) -> pa.Table:
-        schema = pydantic_to_pyarrow_schema(Event)
-        arrays = [[] for _ in schema.names]
-        for page in self.journal.values():
-            for event in page.events():
-                for i, name in enumerate(schema.names):
-                    arrays[i].append(getattr(event, name))
-        return pa.Table.from_arrays(arrays=arrays, schema=schema)
+        all_events = [
+            event for page in self.journal.values() for event in page.events()
+        ]
+        return pydantic_to_pyarrow_table(all_events, Event)
 
     def total_duration_by_tag(
         self, histogram_resolution: timedelta = timedelta(minutes=30)

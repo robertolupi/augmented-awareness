@@ -4,7 +4,17 @@ import datetime
 import decimal
 import uuid
 import enum
-from typing import Type, get_origin, get_args, Union, List, Dict, Any, Literal
+from typing import (
+    Type,
+    get_origin,
+    get_args,
+    Union,
+    List,
+    Dict,
+    Any,
+    Literal,
+    TypeVar,
+)
 
 # Mapping from Python types to PyArrow types
 # We handle complex types like List, Optional, Union, BaseModel recursively
@@ -201,3 +211,51 @@ def pydantic_to_pyarrow_schema(model_class: Type[pydantic.BaseModel]) -> pa.Sche
             ) from e
 
     return pa.schema(arrow_fields)
+
+
+T = TypeVar("T", bound=pydantic.BaseModel)
+
+
+def pydantic_to_pyarrow_table(data: list[T], klass: Type[T] | None = None) -> pa.Table:
+    """
+    Converts a list of Pydantic model instances to a PyArrow Table.
+
+    Nested models are not yet supported.
+
+    Args:
+        data: A list of Pydantic model instances to convert. All elements must be
+              instances of the class specified by the klass parameter.
+        klass: The Pydantic BaseModel class that defines the schema. This must
+               match the type of elements in the data list. If not specified, the
+               first element's type will be used.
+
+    Returns:
+        A PyArrow Table containing the data from the Pydantic models, with a schema
+        derived from the model's field types.
+
+    Raises:
+        ValueError: If neither data nor klass is provided.
+        TypeError: If klass is not a Pydantic BaseModel class or if elements in data
+                  don't match the klass type.
+    """
+    if not data and not klass:
+        raise ValueError("Either non-empty data or klass must be provided.")
+
+    if data and klass is None:
+        klass = type(data[0])
+
+    if data:
+        if not isinstance(klass, type) or not issubclass(klass, pydantic.BaseModel):
+            raise TypeError("klass must be a Pydantic BaseModel class")
+
+    schema = pydantic_to_pyarrow_schema(klass)
+    arrays = [[] for _ in schema.names]
+    try:
+        for item in data:
+            for i, name in enumerate(schema.names):
+                arrays[i].append(getattr(item, name))
+    except AttributeError as e:
+        raise TypeError(
+            f"Error converting data to PyArrow table ({type(item)} != {klass}): {e}"
+        ) from e
+    return pa.Table.from_arrays(arrays=arrays, schema=schema)
