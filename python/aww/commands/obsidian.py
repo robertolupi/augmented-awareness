@@ -93,12 +93,17 @@ def get_model(model_name: str) -> OpenAIModel:
 
 @commands.command()
 @click.option("model_name", "--model", "-m", default="local", help="LLM Model.")
+@click.option("system_prompt", "--system", "-s", help="System prompt.")
 @click.argument("user_prompt", type=str, required=False)
-def tips(user_prompt: str | None = None, model_name: str | None = None):
+def tips(
+    system_prompt: str | None = None,
+    user_prompt: str | None = None,
+    model_name: str | None = None,
+):
     global config
     global schedule
     model_name = model_name or config.obsidian.tips.model_name
-    system_prompt = config.obsidian.tips.system_prompt
+    system_prompt = system_prompt or config.obsidian.tips.system_prompt
     user_prompt = user_prompt or config.obsidian.tips.user_prompt
 
     model = get_model(model_name)
