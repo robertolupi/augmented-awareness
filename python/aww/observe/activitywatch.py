@@ -50,8 +50,8 @@ class ActivityWatch:
             schema=(
                 pa.schema(
                     [
-                        pa.field("timestamp", pa.timestamp("s")),
-                        pa.field("duration", pa.duration("s")),
+                        pa.field("timestamp", pa.timestamp("us")),
+                        pa.field("duration", pa.duration("us")),
                     ]
                     + list(f for f, _ in fields)
                 )
