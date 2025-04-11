@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import datetime
 
-from aww.orient.timeseries import consolidate_rolling_window
+from aww.orient.timeseries import consolidate_timestamp_duration
 
 # --- Fixtures for Test Data ---
 
@@ -96,7 +96,7 @@ def single_row_pa_table():
 def test_consolidate_with_grouping(sample_pa_table):
     """Tests consolidation with specified group_by_columns."""
     group_cols = ["label", "value"]
-    result_table = consolidate_rolling_window(
+    result_table = consolidate_timestamp_duration(
         sample_pa_table, group_by_columns=group_cols
     )
 
@@ -133,7 +133,7 @@ def test_consolidate_with_grouping(sample_pa_table):
 
 def test_consolidate_no_grouping(sample_pa_table):
     """Tests consolidation when group_by_columns is None (uses all non-required cols)."""
-    result_table = consolidate_rolling_window(sample_pa_table, group_by_columns=None)
+    result_table = consolidate_timestamp_duration(sample_pa_table, group_by_columns=None)
 
     # Expected result is the same as grouping by ['label', 'value'] in this specific sample data
     expected_data = {
@@ -181,7 +181,7 @@ def test_consolidate_only_required_columns():
         ),
     }
     input_table = pa.Table.from_pandas(pd.DataFrame(data))
-    result_table = consolidate_rolling_window(input_table, group_by_columns=None)
+    result_table = consolidate_timestamp_duration(input_table, group_by_columns=None)
 
     # Without grouping columns, all rows are consolidated into one
     expected_data = {
@@ -201,10 +201,10 @@ def test_consolidate_only_required_columns():
 def test_consolidate_unsorted_data(sample_pa_table_unsorted, sample_pa_table):
     """Tests that unsorted input data is correctly sorted and processed."""
     group_cols = ["label", "value"]
-    result_table_unsorted = consolidate_rolling_window(
+    result_table_unsorted = consolidate_timestamp_duration(
         sample_pa_table_unsorted, group_by_columns=group_cols
     )
-    result_table_sorted = consolidate_rolling_window(
+    result_table_sorted = consolidate_timestamp_duration(
         sample_pa_table, group_by_columns=group_cols
     )  # Use sorted fixture for expected
 
@@ -214,7 +214,7 @@ def test_consolidate_unsorted_data(sample_pa_table_unsorted, sample_pa_table):
 
 def test_consolidate_empty_table(empty_pa_table):
     """Tests consolidation with an empty input table."""
-    result_table = consolidate_rolling_window(
+    result_table = consolidate_timestamp_duration(
         empty_pa_table, group_by_columns=["label", "value"]
     )
 
@@ -230,7 +230,7 @@ def test_consolidate_empty_table(empty_pa_table):
 def test_consolidate_single_row(single_row_pa_table):
     """Tests consolidation with a single row input table."""
     group_cols = ["label", "value"]
-    result_table = consolidate_rolling_window(
+    result_table = consolidate_timestamp_duration(
         single_row_pa_table, group_by_columns=group_cols
     )
 
@@ -251,7 +251,7 @@ def test_missing_timestamp_column(sample_pa_table):
     with pytest.raises(
         ValueError, match="Input table must contain columns:.*'timestamp'"
     ):
-        consolidate_rolling_window(table_missing_ts, group_by_columns=["label"])
+        consolidate_timestamp_duration(table_missing_ts, group_by_columns=["label"])
 
 
 def test_missing_duration_column(sample_pa_table):
@@ -260,4 +260,4 @@ def test_missing_duration_column(sample_pa_table):
     with pytest.raises(
         ValueError, match="Input table must contain columns:.*'duration'"
     ):
-        consolidate_rolling_window(table_missing_dur, group_by_columns=["label"])
+        consolidate_timestamp_duration(table_missing_dur, group_by_columns=["label"])

@@ -1,10 +1,10 @@
 import pyarrow as pa
 
 
-def consolidate_rolling_window(
+def consolidate_timestamp_duration(
     data: pa.Table, group_by_columns: list[str] | None = None
 ) -> pa.Table:
-    """Consolidates a table of timeseries data into a table of expanding window data.
+    """Consolidates a table of timeseries data.
 
     The timeseries data should contain a column named 'duration' which is a timedelta64[ns] type.
     The table should also contain a column named 'timestamp' which is a datetime64[ns] type.
