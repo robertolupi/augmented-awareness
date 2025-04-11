@@ -133,7 +133,9 @@ def test_consolidate_with_grouping(sample_pa_table):
 
 def test_consolidate_no_grouping(sample_pa_table):
     """Tests consolidation when group_by_columns is None (uses all non-required cols)."""
-    result_table = consolidate_timestamp_duration(sample_pa_table, group_by_columns=None)
+    result_table = consolidate_timestamp_duration(
+        sample_pa_table, group_by_columns=None
+    )
 
     # Expected result is the same as grouping by ['label', 'value'] in this specific sample data
     expected_data = {
