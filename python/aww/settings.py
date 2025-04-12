@@ -1,7 +1,6 @@
 import pathlib
 
 from pydantic import BaseModel, DirectoryPath, field_validator
-import textwrap
 import platformdirs
 
 from pydantic_settings import (
@@ -35,19 +34,7 @@ class ExpandedDirectoryPath(DirectoryPath):
         return value.expanduser()
 
 
-class ObsidianTips(BaseModel):
-    model_name: str = "local"
-    system_prompt: str = textwrap.dedent(
-        """You're an helpful psychology, wellness and mindfulness coach.
-        You answer with 5 helpful, short and actionable tips to live a more wholesome life.
-        This was my schedule:
-        """
-    )
-    user_prompt: str = "What can I do differently?"
-
-
 class Obsidian(BaseModel):
-    tips: ObsidianTips = ObsidianTips()
     vault: pathlib.Path = "~/Documents/Obsidian Vault"
 
     @field_validator("vault", mode="before")
@@ -61,12 +48,21 @@ class LlmModel(BaseModel):
 
 
 class LlmProvider(BaseModel):
-    base_url: str
+    base_url: str | None = None
+    api_key: str | None = None
+
+
+class LlmAgent(BaseModel):
+    model_name: str = "local"
+    system_prompt: str = ""
+    user_prompt: str = ""
+    settings: dict | None = None
 
 
 class Llm(BaseModel):
     model: dict[str, LlmModel]
     provider: dict[str, LlmProvider]
+    agent: dict[str, LlmAgent]
 
 
 class ActivityWatch(BaseModel):

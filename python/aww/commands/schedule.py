@@ -5,11 +5,9 @@ import pyarrow as pa
 import rich
 import rich.markdown
 import rich.table
-from pydantic_ai.agent import Agent
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.providers.openai import OpenAIProvider
 
 from aww import settings
+from aww.llm import get_agent
 from aww.observe.obsidian import Vault
 from aww.orient.schedule import Schedule
 
@@ -71,32 +69,17 @@ def commands(
     schedule = Schedule(vault.journal().subrange(date_start, date_end))
 
 
-def get_model(model_name: str) -> OpenAIModel:
-    global config
-    model_config = config.llm.model[model_name]
-    provider_name = model_config.provider
-    provider_config = config.llm.provider[provider_name]
-    provider = OpenAIProvider(base_url=provider_config.base_url)
-    return OpenAIModel(model_name=model_config.model, provider=provider)
-
-
 @commands.command()
-@click.option("model_name", "--model", "-m", default="local", help="LLM Model.")
-@click.option("system_prompt", "--system", "-s", help="System prompt.")
+@click.option("agent_name", "--agent", "-a", default="tips", help="LLM Agent config.")
+@click.option("model_name", "--model", "-m", default=None, help="LLM Model.")
 @click.argument("user_prompt", type=str, required=False)
 def tips(
-    system_prompt: str | None = None,
-    user_prompt: str | None = None,
-    model_name: str | None = None,
+    user_prompt: str | None,
+    model_name: str | None,
+    agent_name: str | None,
 ):
-    global config
     global schedule
-    model_name = model_name or config.obsidian.tips.model_name
-    system_prompt = system_prompt or config.obsidian.tips.system_prompt
-    user_prompt = user_prompt or config.obsidian.tips.user_prompt
-
-    model = get_model(model_name)
-    agent = Agent(model=model, system_prompt=system_prompt)
+    agent, default_user_prompt = get_agent(agent_name, model_name)
 
     full_user_prompt = []
     for date, page in schedule.journal.items():
@@ -108,7 +91,7 @@ def tips(
         full_user_prompt.append("")
 
     full_user_prompt.append("# Question")
-    full_user_prompt.append(user_prompt)
+    full_user_prompt.append(user_prompt or default_user_prompt)
 
     result = agent.run_sync("\n".join(full_user_prompt))
     md = rich.markdown.Markdown(result.data)
