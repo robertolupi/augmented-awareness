@@ -73,7 +73,7 @@ def commands(
 @click.option("agent_name", "--agent", "-a", default="tips", help="LLM Agent config.")
 @click.option("model_name", "--model", "-m", default=None, help="LLM Model.")
 @click.argument("user_prompt", type=str, required=False)
-def tips(
+def ask(
     user_prompt: str | None,
     model_name: str | None,
     agent_name: str | None,
