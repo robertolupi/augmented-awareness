@@ -2,8 +2,9 @@ import click
 import rich
 
 from aww.commands import config
-from aww.commands import obsidian
 from aww.commands import datastore
+from aww.commands import obsidian
+from aww.commands import schedule
 from aww import settings
 
 
@@ -27,8 +28,9 @@ def main(config_file: str | None, show_config: bool = False):
 
 
 main.add_command(config.commands)
-main.add_command(obsidian.commands)
 main.add_command(datastore.commands)
+main.add_command(obsidian.commands)
+main.add_command(schedule.commands)
 
 if __name__ == "__main__":
     main()
