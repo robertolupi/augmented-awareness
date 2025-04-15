@@ -16,15 +16,24 @@ class Schedule:
     def __repr__(self):
         return f"Schedule({self.journal})"
 
-    def tasks_table(self) -> pa.Table:
-        return self.journal.tasks_table()
-
-    def event_table(self) -> pa.Table:
-        return self.journal.event_table()
-
     def total_duration_by_tag(
         self, histogram_resolution: timedelta = timedelta(minutes=30)
     ) -> pa.Table:
+        """
+        Calculates the total duration spent on events for each tag and
+        generates a time-of-day histogram for tag occurrences.
+
+        Args:
+            histogram_resolution: The time duration each histogram bucket represents.
+                                  Defaults to 30 minutes.
+
+        Returns:
+            A PyArrow Table sorted by duration descending, containing:
+            - 'tag': The tag string.
+            - 'duration': The total duration associated with the tag.
+            - 'histogram': A list representing the count of events starting
+                           within each time bucket across a 24-hour period.
+        """
         totals = {}
         histograms = {}
         n_buckets = int(
@@ -63,6 +72,17 @@ class Schedule:
 def histogram_bins(
     start_time: time, duration: timedelta | None, n_buckets: int
 ) -> Iterable[int]:
+    """
+    Determines which histogram bins an event falls into based on its start time and duration.
+
+    Args:
+        start_time: The time the event started.
+        duration: The duration of the event. If None, it defaults to the size of one bin.
+        n_buckets: The total number of bins dividing a 24-hour period.
+
+    Yields:
+        The index of each bin the event overlaps with.
+    """
     delta = timedelta(days=1) / n_buckets
     duration = duration or delta  # mark at least one bucket
     start = timedelta(

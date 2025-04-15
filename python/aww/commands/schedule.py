@@ -1,4 +1,5 @@
 import datetime
+from typing import List
 
 import click
 import pyarrow as pa
@@ -8,7 +9,7 @@ import rich.table
 
 from aww import settings
 from aww.llm import get_agent
-from aww.observe.obsidian import Vault
+from aww.observe.obsidian import Vault, Event, Task
 from aww.orient.schedule import Schedule
 
 vault: Vault
@@ -81,19 +82,17 @@ def ask(
     global schedule
     agent, default_user_prompt = get_agent(agent_name, model_name)
 
-    full_user_prompt = []
-    for date, page in schedule.journal.items():
-        full_user_prompt.append("")
-        full_user_prompt.append("# " + date.strftime("On %A, %B %d:"))
-        full_user_prompt.append(str(page.frontmatter()))
-        for ev in page.events():
-            full_user_prompt.append(" " + str(ev))
-        full_user_prompt.append("")
+    @agent.tool_plain
+    def read_schedule() -> List[Event]:
+        """Read the user schedule."""
+        return [event for page in schedule.journal.values() for event in page.events()]
 
-    full_user_prompt.append("# Question")
-    full_user_prompt.append(user_prompt or default_user_prompt)
+    @agent.tool_plain
+    def read_tasks() -> List[Task]:
+        """Read the user tasks."""
+        return [task for page in schedule.journal.values() for task in page.tasks()]
 
-    result = agent.run_sync("\n".join(full_user_prompt))
+    result = agent.run_sync(user_prompt or default_user_prompt)
     md = rich.markdown.Markdown(result.data)
     rich.print(md)
 
