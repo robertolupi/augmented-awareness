@@ -8,7 +8,7 @@ from pydantic_ai.providers.google_gla import GoogleGLAProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from .settings import Settings
-    
+
 
 def get_agent(agent_name: str, model_name: str | None = None) -> Tuple[Agent, str]:
     """
@@ -47,7 +47,7 @@ def get_agent(agent_name: str, model_name: str | None = None) -> Tuple[Agent, st
     )
 
 
-def get_model(model_name : str, settings : Settings | None = None) -> Model:
+def get_model(model_name: str, settings: Settings | None = None) -> Model:
     """Creates and configures an LLM model based on the provided settings."""
     settings = settings or Settings()
     model_config = settings.llm.model[model_name]
