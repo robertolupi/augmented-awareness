@@ -82,16 +82,6 @@ def ask(
     global schedule
     agent, default_user_prompt = get_agent(agent_name, model_name)
 
-    @agent.tool_plain
-    def read_schedule() -> List[Event]:
-        """Read the user schedule."""
-        return [event for page in schedule.journal.values() for event in page.events()]
-
-    @agent.tool_plain
-    def read_tasks() -> List[Task]:
-        """Read the user tasks."""
-        return [task for page in schedule.journal.values() for task in page.tasks()]
-
     result = agent.run_sync(user_prompt or default_user_prompt)
     md = rich.markdown.Markdown(result.data)
     rich.print(md)
@@ -126,7 +116,41 @@ def busy(verbose: bool = False):
             str(row["duration"]),
             generate_sparkline(row["histogram"]),
         )
-    rich.print(t)
+def read_schedule() -> List[Event]:
+    """Read the user schedule."""
+    global schedule
+    return [event for page in schedule.journal.values() for event in page.events()]
+
+
+def read_tasks() -> List[Task]:
+    """Read the user tasks."""
+    global schedule
+    return [task for page in schedule.journal.values() for task in page.tasks()]
+
+
+@commands.command()
+@click.option("agent_name", "--agent", "-a", default="tips", help="LLM Agent config.")
+@click.option("model_name", "--model", "-m", default=None, help="LLM Model.")
+@click.argument("user_prompt", type=str, required=False)
+def ask(
+    user_prompt: str | None,
+    model_name: str | None,
+    agent_name: str | None,
+):
+    global schedule
+    agent, default_user_prompt = get_agent(agent_name, model_name)
+
+    @agent.tool_plain
+    def _read_schedule() -> List[Event]:
+        return read_schedule()
+
+    @agent.tool_plain
+    def _read_tasks() -> List[Task]:
+        return read_tasks()
+
+    result = agent.run_sync(user_prompt or default_user_prompt)
+    md = rich.markdown.Markdown(result.data)
+    rich.print(md)
 
 
 def print_table(table: pa.Table):
