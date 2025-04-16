@@ -119,12 +119,14 @@ def busy(verbose: bool = False):
 def read_schedule() -> List[Event]:
     """Read the user schedule."""
     global schedule
+    rich.print("[blue]Agent called read_schedule[/blue]")
     return [event for page in schedule.journal.values() for event in page.events()]
 
 
 def read_tasks() -> List[Task]:
     """Read the user tasks."""
     global schedule
+    rich.print("[blue]Agent called read_tasks[/blue]")
     return [task for page in schedule.journal.values() for task in page.tasks()]
 
 
