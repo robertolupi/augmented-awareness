@@ -1,0 +1,26 @@
+[obsidian]
+vault = "test/vault"  # path to the Obsidian vault (e.g. ~/Documents/Obsidian Vault)
+
+[llm.provider.local]
+base_url = "http://localhost:1234/v1/"
+
+[llm.provider.google-gla]
+api_key = "ABCDEF"
+
+[llm.provider.openai]
+api_key = "..."
+
+[llm.model.local]
+provider = "local"
+model = "gemma-3-4b-it"
+
+[llm.model.gemini]
+provider = "google-gla"
+model = "gemini-2.0-flash"
+
+[llm.agent.tips]
+model_name = "local"
+system_prompt = """You're an helpful psychology, wellness and mindfulness coach.
+You answer with 5 helpful, short and actionable tips to live a more wholesome life.
+"""
+user_prompt = "What can I do differently?"
