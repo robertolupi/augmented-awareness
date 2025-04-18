@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.13"
 
 [[package]]
@@ -132,6 +131,15 @@ wheels = [
 ]
 
 [[package]]
+name = "astroid"
+version = "3.3.9"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/33/536530122a22a7504b159bccaf30a1f76aa19d23028bd8b5009eb9b2efea/astroid-3.3.9.tar.gz", hash = "sha256:622cc8e3048684aa42c820d9d218978021c3c3d174fb03a9f0d615921744f550", size = 398731 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/de/80/c749efbd8eef5ea77c7d6f1956e8fbfb51963b7f93ef79647afd4d9886e3/astroid-3.3.9-py3-none-any.whl", hash = "sha256:d05bfd0acba96a7bd43e222828b7d9bc1e138aaeb0649707908d3702a9831248", size = 275339 },
+]
+
+[[package]]
 name = "asttokens"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -210,7 +218,6 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
-    { name = "pytest-mock" },
     { name = "pyyaml" },
     { name = "rich" },
     { name = "sqlmodel" },
@@ -223,7 +230,9 @@ dependencies = [
 dev = [
     { name = "ipywidgets" },
     { name = "jupyter" },
+    { name = "pylint" },
     { name = "pytest" },
+    { name = "pytest-mock" },
 ]
 
 [package.metadata]
@@ -237,7 +246,6 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.1" },
     { name = "pydantic-ai", specifier = ">=0.0.48" },
     { name = "pydantic-settings", specifier = ">=2.8.1" },
-    { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "rich", specifier = ">=13.9.4" },
     { name = "sqlmodel", specifier = ">=0.0.24" },
@@ -250,7 +258,9 @@ requires-dist = [
 dev = [
     { name = "ipywidgets", specifier = ">=8.1.6" },
     { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "pylint", specifier = ">=3.3.6" },
     { name = "pytest", specifier = ">=8.3.5" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
 ]
 
 [[package]]
@@ -396,7 +406,7 @@ name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "platform_system == 'Windows'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593 }
 wheels = [
@@ -497,6 +507,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5a/d3/8ae2869247df154b64c1884d7346d412fed0c49df84db635aab2d1c40e62/deprecation-2.1.0.tar.gz", hash = "sha256:72b3bde64e5d778694b0cf68178aed03d15e15477116add3fb773e581f9518ff", size = 173788 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/02/c3/253a89ee03fc9b9682f1541728eb66db7db22148cd94f89ab22528cd1e1b/deprecation-2.1.0-py2.py3-none-any.whl", hash = "sha256:a10811591210e1fb0e768a8c25517cabeabcba6f0bf96564f8ff45189f90b14a", size = 11178 },
+]
+
+[[package]]
+name = "dill"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/12/80/630b4b88364e9a8c8c5797f4602d0f76ef820909ee32f0bacb9f90654042/dill-0.4.0.tar.gz", hash = "sha256:0633f1d2df477324f53a895b02c901fb961bdbf65a17122586ea7019292cbcf0", size = 186976 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/3d/9373ad9c56321fdab5b41197068e1d8c25883b3fea29dd361f9b55116869/dill-0.4.0-py3-none-any.whl", hash = "sha256:44f54bf6412c2c8464c14e8243eb163690a9800dbe2c367330883b19c7561049", size = 119668 },
 ]
 
 [[package]]
@@ -778,7 +797,7 @@ name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appnope", marker = "sys_platform == 'darwin'" },
+    { name = "appnope", marker = "platform_system == 'Darwin'" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython" },
@@ -865,6 +884,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7c/1a/3c8edc664e06e6bd06cce40c6b22da5f1429aa4224d0c590f3be21c91ead/isoduration-20.11.0.tar.gz", hash = "sha256:ac2f9015137935279eac671f94f89eb00584f940f5dc49462a0c4ee692ba1bd9", size = 11649 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/55/e5326141505c5d5e34c5e0935d2908a74e4561eca44108fbfb9c13d2911a/isoduration-20.11.0-py3-none-any.whl", hash = "sha256:b2904c2a4228c3d44f409c8ae8e2370eb21a26f7ac2ec5446df141dde3452042", size = 11321 },
+]
+
+[[package]]
+name = "isort"
+version = "6.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b8/21/1e2a441f74a653a144224d7d21afe8f4169e6c7c20bb13aec3a2dc3815e0/isort-6.0.1.tar.gz", hash = "sha256:1cb5df28dfbc742e490c5e41bad6da41b805b0a8be7bc93cd0fb2a8a890ac450", size = 821955 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c1/11/114d0a5f4dabbdcedc1125dee0888514c3c3b16d3e9facad87ed96fad97c/isort-6.0.1-py3-none-any.whl", hash = "sha256:2dc5d7f65c9678d94c88dfc29161a320eec67328bc97aad576874cb4be1e9615", size = 94186 },
 ]
 
 [[package]]
@@ -1239,6 +1267,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/99/5b/a36a337438a14116b16480db471ad061c36c3694df7c2084a0da7ba538b7/matplotlib_inline-0.1.7.tar.gz", hash = "sha256:8423b23ec666be3d16e16b60bdd8ac4e86e840ebd1dd11a30b9f117f2fa0ab90", size = 8159 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8f/8e/9ad090d3553c280a8060fbf6e24dc1c0c29704ee7d1c372f0c174aa59285/matplotlib_inline-0.1.7-py3-none-any.whl", hash = "sha256:df192d39a4ff8f21b1895d72e6a13f5fcc5099f00fa84384e0ea28c2cc0653ca", size = 9899 },
+]
+
+[[package]]
+name = "mccabe"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/ff/0ffefdcac38932a54d2b5eed4e0ba8a408f215002cd178ad1df0f2806ff8/mccabe-0.7.0.tar.gz", hash = "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325", size = 9658 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/27/1a/1f68f9ba0c207934b35b86a8ca3aad8395a3d6dd7921c0686e23853ff5a9/mccabe-0.7.0-py2.py3-none-any.whl", hash = "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e", size = 7350 },
 ]
 
 [[package]]
@@ -1767,7 +1804,7 @@ cli = [
     { name = "rich" },
 ]
 cohere = [
-    { name = "cohere", marker = "sys_platform != 'emscripten'" },
+    { name = "cohere", marker = "platform_system != 'Emscripten'" },
 ]
 evals = [
     { name = "pydantic-evals" },
@@ -1880,6 +1917,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7c/2d/c3338d48ea6cc0feb8446d8e6937e1408088a72a39937982cc6111d17f84/pygments-2.19.1.tar.gz", hash = "sha256:61c16d2a8576dc0649d9f39e089b5f02bcd27fba10d8fb4dcc28173f7a45151f", size = 4968581 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl", hash = "sha256:9ea1544ad55cecf4b8242fab6dd35a93bbce657034b0611ee383099054ab6d8c", size = 1225293 },
+]
+
+[[package]]
+name = "pylint"
+version = "3.3.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "astroid" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "dill" },
+    { name = "isort" },
+    { name = "mccabe" },
+    { name = "platformdirs" },
+    { name = "tomlkit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/69/a7/113d02340afb9dcbb0c8b25454e9538cd08f0ebf3e510df4ed916caa1a89/pylint-3.3.6.tar.gz", hash = "sha256:b634a041aac33706d56a0d217e6587228c66427e20ec21a019bc4cdee48c040a", size = 1519586 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/21/9537fc94aee9ec7316a230a49895266cf02d78aa29b0a2efbc39566e0935/pylint-3.3.6-py3-none-any.whl", hash = "sha256:8b7c2d3e86ae3f94fb27703d521dd0b9b6b378775991f504d7c3a6275aa0a6a6", size = 522462 },
 ]
 
 [[package]]
@@ -2284,7 +2339,7 @@ dependencies = [
     { name = "toml" },
     { name = "tornado" },
     { name = "typing-extensions" },
-    { name = "watchdog", marker = "sys_platform != 'darwin'" },
+    { name = "watchdog", marker = "platform_system != 'Darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b4/86/764e2079c58790f232bb5882853fe8a68302dfdd0e29a5cf6efeb3bbcd17/streamlit-1.44.0.tar.gz", hash = "sha256:da75933bae94595167f43822dea43fcdde0d747433f7d04989266d78967951bb", size = 9422437 }
 wheels = [
@@ -2422,7 +2477,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "platform_system == 'Windows'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
 wheels = [
