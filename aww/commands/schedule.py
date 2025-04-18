@@ -70,7 +70,6 @@ def commands(
     schedule = Schedule(vault.journal().subrange(date_start, date_end))
 
 
-
 @commands.command()
 @click.option(
     "verbose", "-v", is_flag=True, help="Verbose output. Print dates and events."
@@ -129,13 +128,8 @@ def ask(
     global schedule
     agent, default_user_prompt = get_agent(agent_name, model_name)
 
-    @agent.tool_plain
-    def _read_schedule() -> List[Event]:
-        return read_schedule()
-
-    @agent.tool_plain
-    def _read_tasks() -> List[Task]:
-        return read_tasks()
+    agent.tool_plain(read_schedule)
+    agent.tool_plain(read_tasks)
 
     result = agent.run_sync(user_prompt or default_user_prompt)
     md = rich.markdown.Markdown(result.data)
