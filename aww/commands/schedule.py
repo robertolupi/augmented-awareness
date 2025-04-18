@@ -116,6 +116,8 @@ def busy(verbose: bool = False):
             str(row["duration"]),
             generate_sparkline(row["histogram"]),
         )
+    rich.print(t)
+
 def read_schedule() -> List[Event]:
     """Read the user schedule."""
     global schedule
