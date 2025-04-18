@@ -128,6 +128,10 @@ def ask(
     global schedule
     agent, default_user_prompt = get_agent(agent_name, model_name)
 
+    @agent.system_prompt
+    def system_prompt():
+        return "You are a helpful assistant skilled in psychology and coaching. You can read the user schedule and tasks."
+
     agent.tool_plain(read_schedule)
     agent.tool_plain(read_tasks)
 
