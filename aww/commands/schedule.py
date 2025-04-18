@@ -70,22 +70,6 @@ def commands(
     schedule = Schedule(vault.journal().subrange(date_start, date_end))
 
 
-@commands.command()
-@click.option("agent_name", "--agent", "-a", default="tips", help="LLM Agent config.")
-@click.option("model_name", "--model", "-m", default=None, help="LLM Model.")
-@click.argument("user_prompt", type=str, required=False)
-def ask(
-    user_prompt: str | None,
-    model_name: str | None,
-    agent_name: str | None,
-):
-    global schedule
-    agent, default_user_prompt = get_agent(agent_name, model_name)
-
-    result = agent.run_sync(user_prompt or default_user_prompt)
-    md = rich.markdown.Markdown(result.data)
-    rich.print(md)
-
 
 @commands.command()
 @click.option(
@@ -117,6 +101,7 @@ def busy(verbose: bool = False):
             generate_sparkline(row["histogram"]),
         )
     rich.print(t)
+
 
 def read_schedule() -> List[Event]:
     """Read the user schedule."""
