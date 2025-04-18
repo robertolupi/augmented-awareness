@@ -1,14 +1,17 @@
-# augmented-awareness
-Augmented Awareness (short name: *Aww* [^1]) will eventually contain a toolset for offline-first, and later local-first, quantified self projects.
+![](aww-screenshot.png)
 
-It aims to support several data sources, analyses and processes ([see here for a list of ideas](https://rlupi.com/how-augmented-awareness-evolved-over-time)), and currently it can:
+The code is organized according to the most fitting phase of the Observe-Orient-Direct-Act (OODA) loop.
 
-- [x] Read Obsidian vault (Markdown files) and collect tasks, schedule (events), tags, raw page content (`aww.observe.obsidian`);
-- [x] Read ActivityWatch data: afk status, current window, web browsing history;
-- [x] Make Obsidian tasks, events (`aww.orient.schedule`), activitywatch (`aww.observe.activitywatch`) data available as a arrow table, which can be converted to pandas dataframes or exported to files (just create a Jupyter notebook and explore the API);
-- [x] Answer questions or provide tips about the schedule (`aww.py schedule tips` command) via local LLM;
-- [ ] Draft ideas about the overall architecture (`doc`). WIP.
+1. **Observe:** Gather raw data from sensors or external sources.
+2. **Orient:** Transform or interpret data into meaningful insights.
+3. **Decide:** Determine the best course of action.
+4. **Act:** Carry out decisions through actuators (e.g. notification, show info on a dashboard).
 
-It also contains an implementation for a cute IoT pomodoro timer (`iot/pomodoro`), which will be later integrated with the data collection system.
+## Data store as a whiteboard
 
-[^1]: Originally *AgAu*, renamed to avoid conflicts.
+The data store acts as a whiteboard for multiple kinds of agents:
+
+- **Observers** publish data.
+- **Orienters** read raw data, aggregate or summarize it, and write back insights.
+- **Deciders** read insights, generate decisions, and publish them.
+- **Actuators** read decisions and execute actions.
