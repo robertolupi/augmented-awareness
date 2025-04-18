@@ -27,6 +27,8 @@ def init():
             sys.exit(1)
             return
         settings.sqlite_db.unlink()
+    settings.sqlite_db.parent.mkdir(parents=True, exist_ok=True)
+    rich.print(f"Creating database at {settings.sqlite_db}")
     engine = create_engine(settings.sqlite_url)
     SQLModel.metadata.create_all(engine)
     rich.print(f"Database created at [green]{settings.sqlite_db}[/green]")
