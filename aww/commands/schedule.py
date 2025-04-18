@@ -1,4 +1,5 @@
 import datetime
+import textwrap
 from typing import List
 
 import click
@@ -7,10 +8,14 @@ import rich
 import rich.markdown
 import rich.table
 
+from pydantic_ai import Agent
+
 from aww import settings
-from aww.llm import get_agent
+from aww.llm import get_agent, get_model
 from aww.observe.obsidian import Vault, Event, Task
 from aww.orient.schedule import Schedule
+from aww.taqs.models import Concept
+
 
 vault: Vault
 schedule: Schedule
@@ -116,6 +121,10 @@ def read_tasks() -> List[Task]:
     return [task for page in schedule.journal.values() for task in page.tasks()]
 
 
+def current_datetime() -> str:
+    return f"The current date and time is {datetime.now()}"
+
+
 @commands.command()
 @click.option("agent_name", "--agent", "-a", default="tips", help="LLM Agent config.")
 @click.option("model_name", "--model", "-m", default=None, help="LLM Model.")
@@ -191,3 +200,33 @@ def generate_sparkline(numbers: list[int]) -> rich.text.Text:
         spark_text += blocks[level]
 
     return spark_text
+
+
+@commands.command()
+@click.option("model_name", "--model", "-m", default="local")
+def concepts(model_name: str):
+    """Extract concepts from schedule or tasks."""
+    global schedule
+    model = get_model(model_name)
+    agent = Agent(
+        model=model,
+        result_type=List[Concept],
+        system_prompt=textwrap.dedent(
+            """Extract concepts from the user schedule.
+            Concepts refer to the user physical, mental and emotional state, and the corresponding activities that generated them.
+            Concepts correspond to activities and can be hierarchically organized. Make sure to include a description of the activity in a complete phrase.
+            Concepts are generic and do not include specific details (e.g. "waking up early" is a good concept, "waking up at 4:05 AM" is a bad concept because it is too specific).
+            Hashtags always refer to concepts, an hashtag such as #consume/read/web refers to three concepts in a hierarchy: content consumption, reading, reading on the web. "reading on the web" has "reading" as parent concept, "reading" has "content consumption" as parent concept
+            The parent_concept_id refers to the name of the parent concept.
+            
+            Think step by step, first draft a list of concepts, then identify the hierarchical connections. If two concepts are very close, introduce a new parent concept. Remember that concepts refer to the user's states (physical, mental, and emotional) and activities.
+                      """
+        ),
+    )
+    agent.tool_plain(read_schedule)
+    agent.tool_plain(read_tasks)
+    agent.tool_plain(current_datetime)
+    result = agent.run_sync(
+        user_prompt="Extract concepts from the user schedule and tasks, and return them as JSON."
+    )
+    rich.print(result)
