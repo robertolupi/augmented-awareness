@@ -7,7 +7,7 @@ from sqlmodel import create_engine, SQLModel
 
 from aww.settings import Settings
 
-import aww.taqs.models  # noqa: F401
+import aww.datastore.models  # noqa: F401
 
 
 @click.group(name="datastore")

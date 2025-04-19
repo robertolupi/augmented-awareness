@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import datetime
 import textwrap
 from typing import List
@@ -14,7 +15,6 @@ from aww import settings
 from aww.llm import get_agent, get_model
 from aww.observe.obsidian import Vault, Event, Task
 from aww.orient.schedule import Schedule
-from aww.taqs.models import Concept
 
 
 vault: Vault
@@ -200,6 +200,13 @@ def generate_sparkline(numbers: list[int]) -> rich.text.Text:
         spark_text += blocks[level]
 
     return spark_text
+
+
+@dataclass
+class Concept:
+    concept_id: str
+    parent_concept_id: str
+    description: str
 
 
 @commands.command()
