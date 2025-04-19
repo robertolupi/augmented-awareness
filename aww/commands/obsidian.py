@@ -7,6 +7,7 @@ import rich.columns
 import rich.padding
 
 from aww import settings
+from aww import context
 from aww.observe.obsidian import Vault
 
 vault: Vault
@@ -23,16 +24,13 @@ def commands(
     vault_path=None,
 ):
     """Observe the content of an Obsidian vault."""
-    global vault
-    global config
-    config = settings.Settings()
-    vault = Vault(vault_path or config.obsidian.vault)
+    if vault_path:
+        context.vault = Vault(vault_path)
 
 
 @commands.command()
 def web():
-    global vault
-    os.environ["OBSIDIAN_VAULT"] = str(vault.path)
+    os.environ["OBSIDIAN_VAULT"] = str(context.vault.path)
     subprocess.run(["streamlit", "run", "obsidian_web.py"])
 
 
@@ -43,8 +41,7 @@ def web():
 @click.argument("page_name", type=str, required=False)
 def info(verbose, page_name):
     """Print general information about a page."""
-    global vault
-    page = vault.pages()[page_name]
+    page = context.vault.pages()[page_name]
     rich.print(f"Page: {page.name}")
     rich.print("Frontmatter:", page.frontmatter())
     rich.print("Events:", rich.columns.Columns(page.events()))

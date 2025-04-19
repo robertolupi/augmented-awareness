@@ -11,15 +11,13 @@ import rich.table
 
 from pydantic_ai import Agent
 
-from aww import settings
+from aww import context
 from aww.llm import get_agent, get_model
-from aww.observe.obsidian import Vault, Event, Task
+from aww.observe.obsidian import Event, Task
 from aww.orient.schedule import Schedule
 
 
-vault: Vault
 schedule: Schedule
-config: settings.Settings
 
 
 @click.group(name="schedule")
@@ -59,11 +57,7 @@ def commands(
     vault_path=None,
 ):
     """Observe the content of an Obsidian vault."""
-    global vault
     global schedule
-    global config
-    config = settings.Settings()
-    vault = Vault(vault_path or config.obsidian.vault)
     date_start = date_start.date()
     date_end = date_end.date()
     if date:
@@ -72,7 +66,7 @@ def commands(
     elif today:
         date_start = datetime.date.today()
         date_end = datetime.date.today()
-    schedule = Schedule(vault.journal().subrange(date_start, date_end))
+    schedule = Schedule(context.vault.journal().subrange(date_start, date_end))
 
 
 @commands.command()

@@ -8,6 +8,7 @@ from aww.commands import datastore
 from aww.commands import obsidian
 from aww.commands import schedule
 from aww import settings
+from aww import context
 
 import logfire
 
@@ -32,6 +33,8 @@ def main(config_file: str | None, show_config: bool = False):
     if show_config:
         cfg = settings.Settings()
         rich.print(cfg)
+
+    context.initialize()
 
 
 main.add_command(config.commands)

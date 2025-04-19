@@ -5,7 +5,7 @@ import rich
 import rich.prompt
 from sqlmodel import create_engine, SQLModel
 
-from aww.settings import Settings
+from aww import context
 
 import aww.datastore.models  # noqa: F401
 
@@ -19,7 +19,7 @@ def commands():
 @commands.command()
 def init():
     """Initialize the datastore."""
-    settings = Settings()
+    settings = context.settings
     if settings.sqlite_db.exists():
         rich.print(f"[red]Database already exists at {settings.sqlite_db}[/red]")
         ok = rich.prompt.Confirm.ask("Do you want to overwrite it?", default=False)
