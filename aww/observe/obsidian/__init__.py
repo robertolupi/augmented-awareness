@@ -71,7 +71,7 @@ class Task(BaseModel):
             if getattr(self, field_name):
                 details.append(f"{prefix} {getattr(self, field_name)}")
         details_str = ", ".join(details)
-        return f"- [{x}] {name}" + f" ({details_str})" if details else ""
+        return f"- [{x}] {name}" + (f" ({details_str})" if details else "")
 
     def __str__(self):
         return self._string_repr(
