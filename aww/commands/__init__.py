@@ -11,6 +11,7 @@ from aww import settings
 
 import logfire
 
+
 @click.group()
 @click.option(
     "config_file",
@@ -25,11 +26,8 @@ def main(config_file: str | None, show_config: bool = False):
     if config_file:
         settings.CONFIG_FILE = config_file
 
-    if 'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT' in os.environ:
-        logfire.configure(
-            service_name="aww",
-            send_to_logfire=False
-        )
+    if "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT" in os.environ:
+        logfire.configure(service_name="aww", send_to_logfire=False)
 
     if show_config:
         cfg = settings.Settings()
