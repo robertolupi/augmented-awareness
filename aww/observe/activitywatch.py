@@ -1,11 +1,36 @@
 import collections
 import datetime
-from typing import Iterable, Callable
+from typing import Iterable, Callable, Tuple
 
 import pyarrow as pa
 from aw_client import ActivityWatchClient
 
 from aww.settings import Settings
+
+
+def _events_to_pyarrow(events: list[dict], *fields: tuple[pa.Field, Callable]) -> pa.Table:
+    timestamp_array = []
+    duration_array = []
+    data_arrays = collections.OrderedDict()
+    for f, _ in fields:
+        data_arrays[f.name] = []
+    for event in events:
+        timestamp_array.append(event.timestamp)
+        duration_array.append(event.duration)
+        for f, convert in fields:
+            data_arrays[f.name].append(convert(event.data))
+    return pa.Table.from_arrays(
+        arrays=[timestamp_array, duration_array] + list(data_arrays.values()),
+        schema=(
+            pa.schema(
+                [
+                    pa.field("timestamp", pa.timestamp("s")),
+                    pa.field("duration", pa.duration("s")),
+                ]
+                + list(f for f, _ in fields)
+            )
+        ),
+    )
 
 
 class ActivityWatch:
@@ -33,30 +58,14 @@ class ActivityWatch:
         start: datetime.datetime | None = None,
         end: datetime.datetime | None = None,
         *fields: tuple[pa.Field, Callable],
-    ):
+    ) -> pa.Table:
         events = self.client.get_events(bucket, start=start, end=end)
-        timestamp_array = []
-        duration_array = []
-        data_arrays = collections.OrderedDict()
-        for f, _ in fields:
-            data_arrays[f.name] = []
-        for event in events:
-            timestamp_array.append(event.timestamp)
-            duration_array.append(event.duration)
-            for f, convert in fields:
-                data_arrays[f.name].append(convert(event.data))
-        return pa.Table.from_arrays(
-            arrays=[timestamp_array, duration_array] + list(data_arrays.values()),
-            schema=(
-                pa.schema(
-                    [
-                        pa.field("timestamp", pa.timestamp("s")),
-                        pa.field("duration", pa.duration("s")),
-                    ]
-                    + list(f for f, _ in fields)
-                )
-            ),
-        )
+        return _events_to_pyarrow(events, *fields)
+
+    def query(self, query:str, timeperiods: list[Tuple[datetime.datetime, datetime.datetime]], name : str,
+              *fields: tuple[pa.Field, Callable]) -> pa.Table:
+        events = self.client.query(query, timeperiods, name)
+        return _events_to_pyarrow(events, *fields)
 
     def get_afk(
         self,
