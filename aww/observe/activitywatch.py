@@ -8,7 +8,9 @@ from aw_client import ActivityWatchClient
 from aww.settings import Settings
 
 
-def _events_to_pyarrow(events: list[dict], *fields: tuple[pa.Field, Callable]) -> pa.Table:
+def _events_to_pyarrow(
+    events: list[dict], *fields: tuple[pa.Field, Callable]
+) -> pa.Table:
     timestamp_array = []
     duration_array = []
     data_arrays = collections.OrderedDict()
@@ -62,8 +64,13 @@ class ActivityWatch:
         events = self.client.get_events(bucket, start=start, end=end)
         return _events_to_pyarrow(events, *fields)
 
-    def query(self, query:str, timeperiods: list[Tuple[datetime.datetime, datetime.datetime]], name : str,
-              *fields: tuple[pa.Field, Callable]) -> pa.Table:
+    def query(
+        self,
+        query: str,
+        timeperiods: list[Tuple[datetime.datetime, datetime.datetime]],
+        name: str,
+        *fields: tuple[pa.Field, Callable],
+    ) -> pa.Table:
         events = self.client.query(query, timeperiods, name)
         return _events_to_pyarrow(events, *fields)
 
