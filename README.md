@@ -1,17 +1,8 @@
-![](aww-screenshot.png)
+A loose collection of experiments to build *quantified-self* tools for living a more wholesome life.
 
-The code is organized according to the most fitting phase of the Observe-Orient-Direct-Act (OODA) loop.
-
-1. **Observe:** Gather raw data from sensors or external sources.
-2. **Orient:** Transform or interpret data into meaningful insights.
-3. **Decide:** Determine the best course of action.
-4. **Act:** Carry out decisions through actuators (e.g. notification, show info on a dashboard).
-
-## Data store as a whiteboard
-
-The data store acts as a whiteboard for multiple kinds of agents:
-
-- **Observers** publish data.
-- **Orienters** read raw data, aggregate or summarize it, and write back insights.
-- **Deciders** read insights, generate decisions, and publish them.
-- **Actuators** read decisions and execute actions.
+The current focus is on:
+- Labeling user activity:
+  1) gathering labels, via journaling (in Obsidian)
+  2) gathering raw data, via activitywatch
+  3) (next step) Using ML to classify user activity via semisupervised learning
+- Experimenting with LLMs to implement an agent-based system that can interact with user input, data insights to provide the user with helpful tips and nudgesR
