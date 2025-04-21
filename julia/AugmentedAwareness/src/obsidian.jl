@@ -3,7 +3,7 @@ module Obsidian
 using Markdown
 using YAML
 
-export Vault, Page, pages, frontmatter, pagecontent
+export Vault, Page, pages, frontmatter, pagecontent, markdown
 
 """
 Access the Obsidian vault at the given path.
@@ -89,11 +89,27 @@ function frontmatter(page::Page) :: Dict{String, Any}
     result
 end
 
+"""
+pagecontent(page::Page) :: String
+
+    Extract and return the content (body) of a page.
+
+    This function reads the content of the given `Page` object and returns the body of the markdown file, 
+    excluding the frontmatter if it exists.
+"""
 function pagecontent(page::Page) :: String
     _, content = readpage(page)
     return content
 end
 
+"""
+markdown(page::Page) :: Markdown.MD
+
+    Parse and return the markdown content of a page as a `Markdown.MD` object.
+
+    This function reads the body content of the given `Page` object and parses it into a `Markdown.MD` object 
+    which will show a preview of the page when printed (e.g. in REPL).
+"""
 function markdown(page::Page) :: Markdown.MD
     Markdown.parse(pagecontent(page))
 end
