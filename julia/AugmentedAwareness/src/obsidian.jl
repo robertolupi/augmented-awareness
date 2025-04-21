@@ -1,5 +1,6 @@
 module Obsidian
 
+using Markdown
 using YAML
 
 export Vault, Page, pages, frontmatter, pagecontent
@@ -91,6 +92,10 @@ end
 function pagecontent(page::Page) :: String
     _, content = readpage(page)
     return content
+end
+
+function markdown(page::Page) :: Markdown.MD
+    Markdown.parse(pagecontent(page))
 end
 
 end

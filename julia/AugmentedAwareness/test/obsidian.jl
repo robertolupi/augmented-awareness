@@ -1,5 +1,6 @@
 using AugmentedAwareness.Obsidian
 using Test
+using Markdown
 
 @testset "obsidian.jl" begin
     @testset "Vault" begin
@@ -22,5 +23,6 @@ using Test
         @test AugmentedAwareness.Obsidian.frontmatter(pages["2025-04-01"]) == Dict("stress" => 5)
         @test AugmentedAwareness.Obsidian.frontmatter(pages["index"]) == Dict()
         @test !occursin("stress", AugmentedAwareness.Obsidian.pagecontent(pages["2025-04-01"])) 
+        @test AugmentedAwareness.Obsidian.markdown(pages["index"]) isa Markdown.MD
     end
 end
