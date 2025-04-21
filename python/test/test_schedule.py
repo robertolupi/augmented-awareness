@@ -6,7 +6,7 @@ from aww.observe.obsidian import Vault
 from aww.orient.schedule import Schedule
 
 test_dir = pathlib.Path(__file__).parent
-test_vault_dir = test_dir / "vault"
+test_vault_dir = test_dir.parent.parent / "test_vault"
 aww.settings.CONFIG_FILE = test_dir / "config.toml"
 
 

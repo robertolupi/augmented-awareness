@@ -1,5 +1,5 @@
 [obsidian]
-vault = "test/vault"  # path to the Obsidian vault (e.g. ~/Documents/Obsidian Vault)
+vault = "../../test_vault"  # path to the Obsidian vault (e.g. ~/Documents/Obsidian Vault)
 
 [llm.provider.local]
 base_url = "http://localhost:1234/v1/"

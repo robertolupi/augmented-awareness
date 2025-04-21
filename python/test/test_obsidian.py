@@ -10,7 +10,7 @@ from aww.observe.obsidian import events
 import aww.settings
 
 test_dir = pathlib.Path(__file__).parent
-test_vault_dir = test_dir / "vault"
+test_vault_dir = test_dir.parent.parent / "test_vault"
 aww.settings.CONFIG_FILE = test_dir / "config.toml"
 
 
@@ -24,12 +24,12 @@ def test_invalid_vault():
 
 def test_valid_vault():
     v = Vault(test_vault_dir)
-    assert v.path.name == "vault"
+    assert v.path.name == "test_vault"
 
 
 def test_valid_vault_default(mocker):
     v = Vault()
-    assert v.path.name == "vault"
+    assert v.path.name == "test_vault"
 
 
 def test_pages():
