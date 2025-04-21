@@ -4,12 +4,14 @@ authors = ["Roberto Lupi <roberto.lupi@gmail.com> and contributors"]
 version = "1.0.0-DEV"
 
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 
 [compat]
+Dates = "1.11.0"
 HTTP = "1.10.16"
 JSON = "0.21.4"
 Markdown = "1.11.0"

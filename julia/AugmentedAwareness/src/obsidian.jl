@@ -2,6 +2,7 @@ module Obsidian
 
 using Markdown
 using YAML
+using Dates
 
 export Vault, Page, pages, frontmatter, pagecontent, markdown
 
@@ -113,5 +114,50 @@ markdown(page::Page) :: Markdown.MD
 function markdown(page::Page) :: Markdown.MD
     Markdown.parse(pagecontent(page))
 end
+
+struct Event
+    date::Date
+    time_start::Time
+    time_end
+    name::String
+end
+
+"""
+events(page::Page) :: Vector{Event}
+
+    Extract and return a vector of events from a page.
+
+    This function reads the content of the given `Page` object and extracts events based on the specified format.
+    Each event is represented as an `Event` object containing the date, start time, end time, and name of the event.
+
+    Beware: this function doesn't fully check the markdown syntax (e.g. it doesn't check if events-like text is present in code blocks).
+    It assumes that the events are formatted in a specific way (e.g. "HH:MM - HH:MM Event Name" or ""HH:MM Event Name").
+"""
+function events(page::Page) :: Vector{Event}
+    datestr, _ = splitext(basename(page.path))
+    date = Date(datestr, dateformat"yyyy-mm-dd")
+    events = Vector{Event}()
+    time_starts = Vector{Time}()
+    time_ends = Vector()
+    names = Vector{String}()
+    for line in split(pagecontent(page), "\n")
+        m = match(r"^(\d{1,2}:\d{2})(?:\s*-\s*(\d{1,2}:\d{2}))?\s*(.*)$", line)
+        if m !== nothing
+            time_starts = push!(time_starts, Time(m.captures[1]))
+            time_ends = push!(time_ends, m.captures[2] === nothing ? nothing : Time(m.captures[2]))
+            names = push!(names, m.captures[3])
+        end
+    end
+    for i in 1:length(time_starts)-1
+        if time_ends[i] === nothing
+            time_ends[i] = time_starts[i+1]
+        end
+    end
+    for i in eachindex(time_starts)
+        push!(events, Event(date, time_starts[i], time_ends[i], names[i]))
+    end
+    events
+end
+
 
 end
