@@ -1,15 +1,17 @@
 import collections
 import datetime
-from typing import Iterable, Callable, Tuple
+from typing import Iterable, Callable, Tuple, Sequence, Dict, Any
 
 import pyarrow as pa
 from aw_client import ActivityWatchClient
 
 from aww.settings import Settings
 
+from sentence_transformers import SentenceTransformer
+
 
 def _events_to_pyarrow(
-    events: list[dict], *fields: tuple[pa.Field, Callable]
+    events: Sequence[Dict[str, Any]], *fields: Tuple[pa.Field, Callable]
 ) -> pa.Table:
     timestamp_array = []
     duration_array = []
@@ -31,6 +33,39 @@ def _events_to_pyarrow(
                 ]
                 + list(f for f, _ in fields)
             )
+        ),
+    )
+
+
+def _events_to_annotated_pyarrow(
+    events: Sequence[Dict[str, Any]],
+    model: SentenceTransformer,
+    *fields: Tuple[pa.Field, Callable],
+) -> pa.Table:
+    timestamp_array = []
+    duration_array = []
+    data_array = []
+    data_arrays = collections.OrderedDict()
+    for f, _ in fields:
+        data_arrays[f.name] = []
+    for event in events:
+        timestamp_array.append(event.timestamp)
+        duration_array.append(event.duration)
+        raw_data = [(f.name, convert(event.data)) for f, convert in fields]
+        encoded_data = model.encode(repr(raw_data))
+        data_array.append(encoded_data)
+        for f, convert in fields:
+            data_arrays[f.name].append(convert(event.data))
+    return pa.Table.from_arrays(
+        arrays=[timestamp_array, duration_array, data_array]
+        + list(data_arrays.values()),
+        schema=pa.schema(
+            [
+                pa.field("timestamp", pa.timestamp("s")),
+                pa.field("duration", pa.duration("s")),
+                pa.field("data", pa.list_(pa.float32())),
+            ]
+            + list(f for f, _ in fields)
         ),
     )
 
@@ -59,7 +94,7 @@ class ActivityWatch:
         bucket: str,
         start: datetime.datetime | None = None,
         end: datetime.datetime | None = None,
-        *fields: tuple[pa.Field, Callable],
+        *fields: Tuple[pa.Field, Callable],
     ) -> pa.Table:
         events = self.client.get_events(bucket, start=start, end=end)
         return _events_to_pyarrow(events, *fields)
@@ -73,6 +108,18 @@ class ActivityWatch:
     ) -> pa.Table:
         events = self.client.query(query, timeperiods, name)
         return _events_to_pyarrow(events, *fields)
+
+    def get_annotated_events(
+        self,
+        bucket: str,
+        model: str,
+        start: datetime.datetime | None = None,
+        end: datetime.datetime | None = None,
+        *fields: Tuple[pa.Field, Callable],
+    ):
+        events = self.client.get_events(bucket, start=start, end=end)
+        encoder_model = SentenceTransformer(model)
+        return _events_to_annotated_pyarrow(events, encoder_model, *fields)
 
     def get_afk(
         self,
