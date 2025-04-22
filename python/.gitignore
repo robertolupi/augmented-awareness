@@ -1,5 +1,5 @@
 .aider*
 .env
-scrap.ipynb
+scrap*.ipynb
 **/__pycache__
 .idea
