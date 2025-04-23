@@ -115,8 +115,10 @@ def read_tasks() -> List[Task]:
     return [task for page in schedule.journal.values() for task in page.tasks()]
 
 
-def current_datetime() -> str:
-    return f"The current date and time is {datetime.now()}"
+def get_current_date() -> str:
+    """Returns the current date."""
+    rich.print("[blue]Agent called get_current_date[/blue]")
+    return f"The current date is {datetime.date.today()}"
 
 
 @commands.command()
@@ -226,7 +228,7 @@ def concepts(model_name: str):
     )
     agent.tool_plain(read_schedule)
     agent.tool_plain(read_tasks)
-    agent.tool_plain(current_datetime)
+    agent.tool_plain(get_current_date)
     result = agent.run_sync(
         user_prompt="Extract concepts from the user schedule and tasks, and return them as JSON."
     )
