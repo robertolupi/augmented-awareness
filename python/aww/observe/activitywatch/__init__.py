@@ -43,6 +43,8 @@ def _events_to_annotated_pyarrow(
     *fields: Tuple[pa.Field, Callable],
 ) -> pa.Table:
     timestamp_array = []
+    day_of_week_array = []
+    time_of_day_array = []
     duration_array = []
     data_array = []
     data_arrays = collections.OrderedDict()
@@ -50,6 +52,8 @@ def _events_to_annotated_pyarrow(
         data_arrays[f.name] = []
     for event in events:
         timestamp_array.append(event.timestamp)
+        day_of_week_array.append(event.timestamp.weekday())
+        time_of_day_array.append(event.timestamp.time())
         duration_array.append(event.duration)
         raw_data = [(f.name, convert(event.data)) for f, convert in fields]
         encoded_data = model.encode(repr(raw_data))
@@ -57,12 +61,20 @@ def _events_to_annotated_pyarrow(
         for f, convert in fields:
             data_arrays[f.name].append(convert(event.data))
     return pa.Table.from_arrays(
-        arrays=[timestamp_array, duration_array, data_array]
+        arrays=[
+            timestamp_array,
+            day_of_week_array,
+            time_of_day_array,
+            duration_array,
+            data_array,
+        ]
         + list(data_arrays.values()),
         schema=pa.schema(
             [
-                pa.field("timestamp", pa.timestamp("s")),
-                pa.field("duration", pa.duration("s")),
+                pa.field("timestamp", pa.timestamp("us")),
+                pa.field("day_of_week", pa.int8()),
+                pa.field("time_of_day", pa.time64("us")),
+                pa.field("duration", pa.duration("us")),
                 pa.field("data", pa.list_(pa.float32())),
             ]
             + list(f for f, _ in fields)
