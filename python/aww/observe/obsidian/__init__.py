@@ -170,6 +170,31 @@ class Page:
             _, _, content = content.split("---\n", 2)
         return Markdown(content)
 
+    def get_section(self, header_re: re.Pattern[str] | str) -> str | None:
+        """Get the content of a section of the page, by the header name."""
+        with open(self.path, "r", encoding="utf-8") as f:
+            content = f.read()
+        if content.startswith("---\n"):
+            _, _, content = content.split("---\n", 2)
+        lines = content.split("\n")
+        start = None
+        end = None
+        prefix = None
+        if isinstance(header_re, str):
+            header_re = re.compile(header_re)
+        for n, line in enumerate(lines):
+            if start is None and (m := header_re.search(line)):
+                prefix = line[: -(len(m.group(0)))]
+                if not re.search(r"^#+\s$", prefix):
+                    continue
+                start = n
+            elif start is not None and line.startswith(prefix):
+                end = n
+                break
+        if start is not None and end is not None:
+            return "\n".join(lines[start:end])
+        return None
+
     def tasks(self) -> Iterable[Task]:
         """Get the tasks in the page."""
         parsed = self.content().parse()

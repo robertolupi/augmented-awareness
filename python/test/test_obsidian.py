@@ -83,6 +83,15 @@ def test_markdown():
     assert isinstance(page.content().__rich__(), rich.markdown.Markdown)
 
 
+def test_get_section():
+    v = Vault(test_vault_dir)
+    pages = v.pages()["2025-03-30"]
+    section = pages.get_section("Schedule")
+    assert section is not None
+    assert "06:15 wake up" in section
+    assert "task" not in section
+
+
 def test_markdown_parse():
     v = Vault(test_vault_dir)
     page = v.pages()["index"]
