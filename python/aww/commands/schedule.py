@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import datetime
 import textwrap
-from typing import List
+from typing import List, Dict
 
 import click
 import pyarrow as pa
@@ -13,7 +13,7 @@ from pydantic_ai import Agent
 
 from aww import context
 from aww.llm import get_agent, get_model
-from aww.observe.obsidian import Event, Task
+from aww.observe.obsidian import Task
 from aww.orient.schedule import Schedule
 
 
@@ -101,11 +101,11 @@ def busy(verbose: bool = False):
     rich.print(t)
 
 
-def read_schedule() -> List[Event]:
+def read_schedule() -> Dict[datetime.date, str]:
     """Read the user schedule."""
     global schedule
     rich.print("[blue]Agent called read_schedule[/blue]")
-    return [event for page in schedule.journal.values() for event in page.events()]
+    return schedule.read_schedule(header_re=context.settings.obsidian.journal_header_re)
 
 
 def read_tasks() -> List[Task]:

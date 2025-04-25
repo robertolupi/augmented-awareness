@@ -1,6 +1,8 @@
 import math
-from datetime import timedelta, time
-from typing import Iterable
+import re
+from datetime import timedelta, time, date
+from typing import Iterable, Dict
+from collections import OrderedDict
 
 import pyarrow as pa
 
@@ -15,6 +17,12 @@ class Schedule:
 
     def __repr__(self):
         return f"Schedule({self.journal})"
+
+    def read_schedule(self, header_re: re.Pattern | str) -> Dict[date, str]:
+        result = OrderedDict()
+        for d, page in self.journal.items():
+            result[d] = page.get_section(header_re)
+        return result
 
     def total_duration_by_tag(
         self, histogram_resolution: timedelta = timedelta(minutes=30)

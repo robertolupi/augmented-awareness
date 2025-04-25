@@ -1,5 +1,6 @@
 [obsidian]
 vault = "../test_vault"  # path to the Obsidian vault (e.g. ~/Documents/Obsidian Vault)
+schedule_header_re = "Journal and events"
 
 [llm.provider.local]
 base_url = "http://localhost:1234/v1/"
