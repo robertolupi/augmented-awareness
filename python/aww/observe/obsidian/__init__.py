@@ -274,9 +274,17 @@ class Journal(collections.OrderedDict[datetime.date, "Page"]):
     The pages are ordered by date.
     """
 
-    def subrange(self, start: datetime.date, end: datetime.date) -> "Journal":
+    def subrange(
+        self,
+        start: datetime.date | datetime.datetime,
+        end: datetime.date | datetime.datetime,
+    ) -> "Journal":
         """Get a subrange of the journal."""
         journal = Journal()
+        if isinstance(start, datetime.datetime):
+            start = start.date()
+        if isinstance(end, datetime.datetime):
+            end = end.date()
         for date, page in self.items():
             if start <= date <= end:
                 journal[date] = page
