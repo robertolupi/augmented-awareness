@@ -1,5 +1,8 @@
+import subprocess
+import tempfile
 from datetime import datetime, time, date
 import sys
+import os
 
 import click
 import rich
@@ -109,3 +112,58 @@ def record(text: str):
         new_event = Event(date=date.today(), time=datetime.now().time(), text=text)
         session.add(new_event)
         session.commit()
+
+
+@commands.command()
+@click.argument("dt", type=click.DateTime(), default=datetime.now())
+def edit(dt: datetime):
+    """Edit events for a given date."""
+    if "EDITOR" not in os.environ:
+        rich.print("[red]EDITOR environment variable not set[/red]")
+        sys.exit(1)
+    engine = create_engine(context.settings.sqlite_url)
+    with Session(engine) as session:
+        events = session.exec(select(Event).filter(Event.date == dt.date())).all()
+    # 1) Write events to a temporary file
+    f = tempfile.NamedTemporaryFile(mode="w", delete=False)
+    for e in events:
+        f.write(f"{e.as_string()}\n")  # "HH:MM text" or "HH:MM-HH:MM text"
+    f.flush()
+    # 2) Run the user selected os.environ['EDITOR'] to edit the temporary file
+    subprocess.run([os.environ["EDITOR"], f.name])
+    # 3) Parse events from the temporary file, if it has changed, and update the database
+    with open(f.name, "r") as fd:
+        new_events = []
+        for line in fd:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                new_event = Event.from_string(line, dt)
+                new_events.append(new_event)
+            except ValueError as e:
+                rich.print(f"[red]Error parsing line: {line}[/red]")
+                rich.print(f"[red]Error: {e}[/red]")
+                sys.exit(1)
+    if len(new_events) != len(events):
+        rich.print(
+            f"[yellow]Number of events changed from {len(events)} to {len(new_events)}[/yellow]"
+        )
+    else:
+        for i, e in enumerate(events):
+            if e.as_string() != new_events[i].as_string():
+                rich.print(
+                    f"[yellow]Event changed from {e.as_string()} to {new_events[i].as_string()}[/yellow]"
+                )
+                break
+        else:
+            rich.print("[green]No changes detected[/green]")
+            os.unlink(f.name)
+            return
+    with Session(engine) as session:
+        for e in events:
+            session.delete(e)
+        for e in new_events:
+            session.add(e)
+        session.commit()
+    os.unlink(f.name)

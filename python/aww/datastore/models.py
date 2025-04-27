@@ -1,6 +1,11 @@
 from datetime import datetime, date, time, timedelta
 from sqlmodel import SQLModel, Field
 from typing import Optional
+import re
+
+EVENT_RE = re.compile(
+    r"(?P<time>\d{1,2}:\d{2})(\s*-\s*(?P<end_time>\d{1,2}:\d{2}))?\s+(?P<name>.+)$"
+)
 
 
 class Event(SQLModel, table=True):
@@ -18,6 +23,20 @@ class Event(SQLModel, table=True):
             if self.duration
             else f"{start:%H:%M} {self.text}"
         )
+
+    @classmethod
+    def from_string(cls, text: str, dt: date):
+        """Parse an event from a string in the format "HH:MM text" or "HH:MM-HH:MM text"""
+        m = EVENT_RE.match(text)
+        if not m:
+            raise ValueError(f"Invalid event string: {text}")
+        start = time.fromisoformat(m.group("time"))
+        if m.group("end_time"):
+            end = time.fromisoformat(m.group("end_time"))
+            duration = datetime.combine(dt, end) - datetime.combine(dt, start)
+        else:
+            duration = None
+        return cls(date=dt, time=start, duration=duration, text=m.group("name"))
 
     def __str__(self):
         return f"{self.date} {self.as_string()}"
