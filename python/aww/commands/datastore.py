@@ -7,7 +7,7 @@ import os
 import click
 import rich
 import rich.prompt
-from sqlmodel import create_engine, SQLModel, Session, select, update
+from sqlmodel import create_engine, SQLModel, Session, select, update, delete
 
 from aww import context
 
@@ -70,9 +70,9 @@ def add(text: str, date: datetime, from_: str | None = None, until: str | None =
         session.commit()
 
 
-@commands.command()
+@commands.command(name="list")
 @click.option("date", "-d", "--date", type=click.DateTime(), default=datetime.now)
-def list(date: datetime):
+def list_events(date: datetime):
     """List events."""
     date = date.date()
     engine = create_engine(context.settings.sqlite_url)
@@ -155,7 +155,6 @@ def edit(dt: datetime):
                 rich.print(
                     f"[yellow]Event changed from {e.as_string()} to {new_events[i].as_string()}[/yellow]"
                 )
-                break
         else:
             rich.print("[green]No changes detected[/green]")
             os.unlink(f.name)
@@ -167,3 +166,34 @@ def edit(dt: datetime):
             session.add(e)
         session.commit()
     os.unlink(f.name)
+
+
+@commands.command()
+@click.option(
+    "start_date", "-s", "--start", type=click.DateTime(), default=datetime(1970, 1, 1)
+)
+@click.option(
+    "end_date", "-e", "--end", type=click.DateTime(), default=datetime(2100, 1, 1)
+)
+def import_events(start_date: datetime, end_date: datetime):
+    """Copy over events from Obsidian vault."""
+    rich.print(f"Importing events between {start_date:%H:%M} and {end_date:%H:%M}")
+    dates = context.journal.subrange(start_date.date(), end_date.date())
+    engine = create_engine(context.settings.sqlite_url)
+    with Session(engine) as session:
+        for dt, page in dates.items():
+            events = list(page.events())
+            if not events:
+                continue
+            rich.print(dt)
+            session.exec(delete(Event).where(Event.date == dt))
+            for ev in events:
+                rich.print("  ", ev)
+                event = Event(
+                    date=ev.time.date(),
+                    time=ev.time.time(),
+                    duration=ev.duration,
+                    text=ev.name,
+                )
+                session.add(event)
+            session.commit()
