@@ -1,6 +1,8 @@
+import math
 import subprocess
 import tempfile
-from datetime import datetime, time, date
+from collections import defaultdict
+from datetime import datetime, time, date, timedelta
 import sys
 import os
 
@@ -14,6 +16,9 @@ from aww import context
 import aww.datastore.models  # noqa: F401
 
 from aww.datastore.models import Event
+
+from aww.commands.schedule import generate_sparkline
+from aww.orient.schedule import histogram_bins
 
 
 @click.group(name="datastore")
@@ -197,3 +202,152 @@ def import_events(start_date: datetime, end_date: datetime):
                 )
                 session.add(event)
             session.commit()
+
+
+@commands.command()
+@click.option(
+    "date_start",
+    "--date-start",
+    "-s",
+    type=click.DateTime(),
+    default=(date.today() - timedelta(days=8)).strftime("%Y-%m-%d"),
+    help="Start date (YYYY-MM-DD).",
+)
+@click.option(
+    "date_end",
+    "--date-end",
+    "-e",
+    type=click.DateTime(),
+    default=(date.today() - timedelta(days=1)).strftime("%Y-%m-%d"),
+    help="End date (YYYY-MM-DD).",
+)
+@click.option(
+    "date_opt",  # Renamed to avoid conflict with date type
+    "--date",
+    "-d",
+    help="Specify a single date (overrides date_start and date_end, YYYY-MM-DD).",
+    type=click.DateTime(),
+    default=None,
+)
+@click.option(
+    "today_flag", "-t", "--today", is_flag=True, help="Set dates to today."
+)  # Renamed to avoid conflict
+@click.option(
+    "histogram_resolution_minutes",
+    "--resolution",
+    type=int,
+    default=30,
+    show_default=True,
+    help="Histogram resolution in minutes.",
+)
+def busy(
+    date_start: datetime,
+    date_end: datetime,
+    date_opt: datetime | None,
+    today_flag: bool,
+    histogram_resolution_minutes: int,
+):
+    """Reports the total time by tag using events from the datastore."""
+    start_d: date = date_start.date()
+    end_d: date = date_end.date()
+    if date_opt:
+        start_d = date_opt.date()
+        end_d = date_opt.date()
+    elif today_flag:
+        start_d = date.today()
+        end_d = date.today()
+
+    rich.print(f"Analyzing datastore events from {start_d} to {end_d}")
+
+    engine = create_engine(context.settings.sqlite_url)
+    # Use defaultdict for easier initialization
+    totals = defaultdict(lambda: timedelta(seconds=0))
+    histograms = defaultdict(list)
+    histogram_resolution = timedelta(minutes=histogram_resolution_minutes)
+
+    # Ensure resolution is positive
+    if histogram_resolution.total_seconds() <= 0:
+        rich.print("[red]Histogram resolution must be positive.[/red]")
+        sys.exit(1)
+
+    n_buckets = int(
+        math.ceil(
+            timedelta(days=1).total_seconds() / histogram_resolution.total_seconds()
+        )
+    )
+
+    with Session(engine) as session:
+        query = select(Event).filter(Event.date >= start_d, Event.date <= end_d)
+        events = session.exec(query).all()
+
+    if not events:
+        rich.print(
+            "[yellow]No events found in the datastore for the specified date range.[/yellow]"
+        )
+        return
+
+    for event in events:
+        # Extract tags using the imported regex
+        # Default duration to zero if None for calculations
+        duration = event.duration or timedelta(seconds=0)
+
+        for tag in event.tags:
+            # Ensure histogram list is initialized with the correct number of zeros
+            if tag not in histograms:
+                histograms[tag] = [0] * n_buckets
+
+            totals[tag] += duration
+
+            # Add to histogram only if event has a time
+            if event.time:
+                # histogram_bins needs a non-zero duration.
+                # If original duration is None or zero, use the resolution interval.
+                bin_duration = event.duration
+                if not bin_duration or bin_duration.total_seconds() <= 0:
+                    bin_duration = histogram_resolution
+
+                try:
+                    for n in histogram_bins(event.time, bin_duration, n_buckets):
+                        # Check bounds just in case, though histogram_bins should be correct
+                        if 0 <= n < n_buckets:
+                            histograms[tag][n] += 1
+                        else:
+                            rich.print(
+                                f"[yellow]Warning: histogram bin index {n} out of bounds (0-{n_buckets - 1}) for event '{event.text}'[/yellow]"
+                            )
+                except Exception as e:
+                    # Catch potential errors during histogram calculation for a specific event
+                    rich.print(
+                        f"[red]Error calculating histogram for event '{event.text}' ({event.time}, {bin_duration}): {e}[/red]"
+                    )
+
+    # Prepare data for table, sorting by total duration descending
+    sorted_tags = sorted(totals.items(), key=lambda item: item[1], reverse=True)
+
+    if not sorted_tags:
+        rich.print(
+            "[yellow]No tags found in the events for the specified date range.[/yellow]"
+        )
+        return
+
+    # Create and print the rich table
+    t = rich.table.Table(title=f"Time Spent by Tag (Datastore: {start_d} to {end_d})")
+    t.add_column("Tag", justify="left", style="cyan", no_wrap=True)
+    t.add_column("Total Duration", justify="right", style="magenta")
+    t.add_column(
+        f"Activity Histogram ({histogram_resolution_minutes}min bins)",
+        justify="left",
+        style="green",
+        no_wrap=True,
+    )
+
+    for tag, total_duration in sorted_tags:
+        # Get histogram data, default to zeros if tag somehow only existed in events without time
+        histogram_data = histograms.get(tag, [0] * n_buckets)
+        t.add_row(
+            f"#{tag}",  # Add '#' prefix back for display
+            str(total_duration),
+            generate_sparkline(histogram_data),
+        )
+
+    rich.print(t)
