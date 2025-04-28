@@ -16,8 +16,12 @@ def test_event_from_string():
     assert Event.from_string("08:30 aww", dt) == Event(
         date=date.today(), time=time(8, 30), duration=None, text="aww"
     )
-    assert Event.from_string("08:30-09:30 aww", dt) == Event(
-        date=date.today(), time=time(8, 30), duration=timedelta(hours=1), text="aww"
+    assert Event.from_string("08:30-09:30 #aww #consume/read/web", dt) == Event(
+        date=date.today(),
+        time=time(8, 30),
+        duration=timedelta(hours=1),
+        text="#aww #consume/read/web",
+        tags=["aww", "consume/read/web"],
     )
     assert Event.from_string("08:30 - 09:30  aww", dt) == Event(
         date=date.today(), time=time(8, 30), duration=timedelta(hours=1), text="aww"

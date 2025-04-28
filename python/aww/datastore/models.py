@@ -1,5 +1,6 @@
 from datetime import datetime, date, time, timedelta
 from sqlmodel import SQLModel, Field
+from sqlalchemy.types import JSON
 from typing import Optional
 import re
 
@@ -14,6 +15,11 @@ class Event(SQLModel, table=True):
     time: time
     duration: Optional[timedelta]
     text: str
+    tags: list[str] = Field(default=[], sa_type=JSON)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.tags = [t[1:].lower() for t in self.text.split() if t.startswith("#")]
 
     def as_string(self):
         start = datetime.combine(self.date, self.time)
