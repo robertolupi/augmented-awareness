@@ -158,8 +158,9 @@ def edit(dt: datetime):
         for i, e in enumerate(events):
             if e.as_string() != new_events[i].as_string():
                 rich.print(
-                    f"[yellow]Event changed from {e.as_string()} to {new_events[i].as_string()}[/yellow]"
+                    f"[yellow]At least, one event changed from {e.as_string()} to {new_events[i].as_string()}[/yellow]"
                 )
+                break
         else:
             rich.print("[green]No changes detected[/green]")
             os.unlink(f.name)
