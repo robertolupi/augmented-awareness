@@ -15,7 +15,7 @@ from aww import context
 from aww.llm import get_agent, get_model
 from aww.observe.obsidian import Task
 from aww.orient.schedule import Schedule
-
+from aww.datastore.models import Event
 
 schedule: Schedule
 
@@ -101,11 +101,18 @@ def busy(verbose: bool = False):
     rich.print(t)
 
 
-def read_schedule() -> Dict[datetime.date, str]:
-    """Read the user schedule."""
+def read_journal() -> Dict[datetime.date, str]:
+    """Read the user journal."""
     global schedule
     rich.print("[blue]Agent called read_schedule[/blue]")
-    return schedule.read_schedule(header_re=context.settings.obsidian.journal_header_re)
+    return schedule.read_journal(header_re=context.settings.obsidian.journal_header_re)
+
+
+def read_events() -> Dict[datetime.date, List[Event]]:
+    """Read past events from the user diary."""
+    global schedule
+    rich.print("[blue]Agent called read_events[/blue]")
+    return schedule.read_events()
 
 
 def read_tasks() -> List[Task]:
@@ -135,9 +142,10 @@ def ask(
 
     @agent.system_prompt
     def system_prompt():
-        return "You are a helpful assistant skilled in psychology and coaching. You can read the user schedule and tasks."
+        return "You are a helpful assistant skilled in psychology and coaching. You can read the user journal (read_journal), diary (read_events) and tasks (read_tasks)."
 
-    agent.tool_plain(read_schedule)
+    agent.tool_plain(read_journal)
+    agent.tool_plain(read_events)
     agent.tool_plain(read_tasks)
 
     result = agent.run_sync(user_prompt or default_user_prompt)
@@ -226,7 +234,8 @@ def concepts(model_name: str):
                       """
         ),
     )
-    agent.tool_plain(read_schedule)
+    agent.tool_plain(read_journal)
+    agent.tool_plain(read_events)
     agent.tool_plain(read_tasks)
     agent.tool_plain(get_current_date)
     result = agent.run_sync(

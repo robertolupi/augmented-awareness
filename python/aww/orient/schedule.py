@@ -1,12 +1,17 @@
 import math
 import re
 from datetime import timedelta, time, date
-from typing import Iterable, Dict
+from typing import Iterable, Dict, List
 from collections import OrderedDict
+
+from sqlmodel import create_engine, Session, select
 
 import pyarrow as pa
 
+import aww.context
+
 from aww.observe.obsidian import Vault, Journal
+from aww.datastore.models import Event
 
 
 class Schedule:
@@ -18,7 +23,14 @@ class Schedule:
     def __repr__(self):
         return f"Schedule({self.journal})"
 
-    def read_schedule(self, header_re: re.Pattern | str) -> Dict[date, str]:
+    def read_events(self) -> List[Event]:
+        engine = create_engine(aww.context.settings.sqlite_url)
+        dates = self.journal.keys()
+        with Session(engine) as session:
+            events = session.exec(select(Event).where(Event.date.in_(dates))).all()
+        return events
+
+    def read_journal(self, header_re: re.Pattern | str) -> Dict[date, str]:
         result = OrderedDict()
         for d, page in self.journal.items():
             result[d] = page.get_section(header_re)
