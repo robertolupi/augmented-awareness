@@ -1,3 +1,4 @@
+import collections
 from dataclasses import dataclass
 import datetime
 import textwrap
@@ -242,3 +243,25 @@ def concepts(model_name: str):
         user_prompt="Extract concepts from the user schedule and tasks, and return them as JSON."
     )
     rich.print(result)
+
+
+@commands.command()
+def meditation():
+    """Compute meditation stats from frontmatter."""
+    global schedule
+    # Compute the avg. number of days between meditations
+    meditations = collections.defaultdict(list)
+    for dt, page in schedule.journal.items():
+        fm = page.frontmatter()
+        if "meditation" in fm:
+            med = fm["meditation"]
+            if isinstance(med, str):
+                meditations[med].append(dt)
+            elif isinstance(med, list):
+                for m in med:
+                    meditations[m].append(dt)
+    for m, dt_list in meditations.items():
+        if len(dt_list) > 1:
+            delta = [(b - a).days for a, b in zip(dt_list[:-1], dt_list[1:])]
+            avg_delta = sum(delta) / len(delta)
+            rich.print(f"{m}: avg. delta {avg_delta} days")
