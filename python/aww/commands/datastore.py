@@ -352,3 +352,8 @@ def busy(
         )
 
     rich.print(t)
+
+
+@commands.command()
+def web():
+    subprocess.run(["streamlit", "run", "datastore_web.py"])
