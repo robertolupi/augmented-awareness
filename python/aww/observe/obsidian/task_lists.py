@@ -15,6 +15,7 @@ DATE_DUE_RE = re.compile(r"📅\s+(\d{4}-\d{2}-\d{2})")
 DATE_STARTED_RE = re.compile(r"🛫\s+(\d{4}-\d{2}-\d{2})")
 DATE_SCHEDULED_RE = re.compile(r"⏳\s+(\d{4}-\d{2}-\d{2})")
 RECURRENCE_RE = re.compile(r"🔁\s+(.+)")
+COMPLETION_ACTION_RE = re.compile(r"🏁 delete")
 
 
 def task_lists_hook(md: Markdown, state: BlockState) -> Iterable[Dict[str, Any]]:
@@ -98,6 +99,10 @@ def _rewrite_list_item(tok: Dict[str, Any]) -> None:
                 text = text.replace(match.group(0), "")
             else:
                 recurrence = None
+            match = COMPLETION_ACTION_RE.search(text)
+            if match:
+                text = text.replace(match.group(0), "")
+                tok["attrs"]["completion_action"] = "delete"
             tok["attrs"]["recurrence"] = recurrence
             text = text.strip()
             tok["attrs"]["name"] = text

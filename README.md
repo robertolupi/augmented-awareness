@@ -1,14 +1,8 @@
-# augmented-awareness
-Augmented Awareness (short name: *Aww* [^1]) will eventually contain a toolset for offline-first, and later local-first, quantified self projects.
+A loose collection of experiments to build *quantified-self* tools for living a more wholesome life.
 
-It aims to support several data sources, analyses and processes ([see here for a list of ideas](https://rlupi.com/how-augmented-awareness-evolved-over-time)), and currently it can:
-
-- [x] Read Obsidian vault (Markdown files) and collect tasks, schedule (events), tags, raw page content (`aww.observe.obsidian`);
-- [x] Read ActivityWatch data: afk status, current window, web browsing history;
-- [x] Make Obsidian tasks, events (`aww.orient.schedule`), activitywatch (`aww.observe.activitywatch`) data available as a arrow table, which can be converted to pandas dataframes or exported to files (just create a Jupyter notebook and explore the API);
-- [x] Answer questions or provide tips about the schedule (`aww.py schedule tips` command) via local LLM;
-- [ ] Draft ideas about the overall architecture (`doc`). WIP.
-
-It also contains an implementation for a cute IoT pomodoro timer (`iot/pomodoro`), which will be later integrated with the data collection system.
-
-[^1]: Originally *AgAu*, renamed to avoid conflicts.
+The current focus is on:
+- Labeling user activity:
+  1) gathering labels, via journaling (in Obsidian)
+  2) gathering raw data, via activitywatch
+  3) (next step) Using ML to classify user activity via semisupervised learning
+- Experimenting with LLMs to implement an agent-based system that can interact with user input, data insights to provide the user with helpful tips and nudges.

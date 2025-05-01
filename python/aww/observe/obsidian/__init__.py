@@ -71,7 +71,7 @@ class Task(BaseModel):
             if getattr(self, field_name):
                 details.append(f"{prefix} {getattr(self, field_name)}")
         details_str = ", ".join(details)
-        return f"- [{x}] {name}" + f" ({details_str})" if details else ""
+        return f"- [{x}] {name}" + (f" ({details_str})" if details else "")
 
     def __str__(self):
         return self._string_repr(
@@ -170,6 +170,31 @@ class Page:
             _, _, content = content.split("---\n", 2)
         return Markdown(content)
 
+    def get_section(self, header_re: re.Pattern[str] | str) -> str | None:
+        """Get the content of a section of the page, by the header name."""
+        with open(self.path, "r", encoding="utf-8") as f:
+            content = f.read()
+        if content.startswith("---\n"):
+            _, _, content = content.split("---\n", 2)
+        lines = content.split("\n")
+        start = None
+        end = None
+        prefix = None
+        if isinstance(header_re, str):
+            header_re = re.compile(header_re)
+        for n, line in enumerate(lines):
+            if start is None and (m := header_re.search(line)):
+                prefix = line[: -(len(m.group(0)))]
+                if not re.search(r"^#+\s$", prefix):
+                    continue
+                start = n
+            elif start is not None and line.startswith(prefix):
+                end = n
+                break
+        if start is not None and end is not None:
+            return "\n".join(lines[start:end])
+        return None
+
     def tasks(self) -> Iterable[Task]:
         """Get the tasks in the page."""
         parsed = self.content().parse()
@@ -249,9 +274,17 @@ class Journal(collections.OrderedDict[datetime.date, "Page"]):
     The pages are ordered by date.
     """
 
-    def subrange(self, start: datetime.date, end: datetime.date) -> "Journal":
+    def subrange(
+        self,
+        start: datetime.date | datetime.datetime,
+        end: datetime.date | datetime.datetime,
+    ) -> "Journal":
         """Get a subrange of the journal."""
         journal = Journal()
+        if isinstance(start, datetime.datetime):
+            start = start.date()
+        if isinstance(end, datetime.datetime):
+            end = end.date()
         for date, page in self.items():
             if start <= date <= end:
                 journal[date] = page

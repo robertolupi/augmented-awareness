@@ -36,6 +36,7 @@ class ExpandedDirectoryPath(DirectoryPath):
 
 class Obsidian(BaseModel):
     vault: pathlib.Path = "~/Documents/Obsidian Vault"
+    journal_header_re: str = "Journal and events"
 
     @field_validator("vault", mode="before")
     def expand_path(cls, v):

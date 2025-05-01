@@ -10,7 +10,7 @@ from aww.observe.obsidian import events
 import aww.settings
 
 test_dir = pathlib.Path(__file__).parent
-test_vault_dir = test_dir / "vault"
+test_vault_dir = test_dir.parent.parent / "test_vault"
 aww.settings.CONFIG_FILE = test_dir / "config.toml"
 
 
@@ -24,12 +24,12 @@ def test_invalid_vault():
 
 def test_valid_vault():
     v = Vault(test_vault_dir)
-    assert v.path.name == "vault"
+    assert v.path.name == "test_vault"
 
 
 def test_valid_vault_default(mocker):
     v = Vault()
-    assert v.path.name == "vault"
+    assert v.path.name == "test_vault"
 
 
 def test_pages():
@@ -81,6 +81,15 @@ def test_markdown():
         == "# Obsidian Test Vault\n\nJust a simple page.\n\n---\n\nThis page has no frontmatter.\n"
     )
     assert isinstance(page.content().__rich__(), rich.markdown.Markdown)
+
+
+def test_get_section():
+    v = Vault(test_vault_dir)
+    pages = v.pages()["2025-03-30"]
+    section = pages.get_section("Schedule")
+    assert section is not None
+    assert "06:15 wake up" in section
+    assert "task" not in section
 
 
 def test_markdown_parse():
