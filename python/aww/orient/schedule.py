@@ -1,5 +1,4 @@
 import math
-import re
 from datetime import timedelta, time, date
 from typing import Iterable, Dict, List
 from collections import OrderedDict
@@ -30,10 +29,10 @@ class Schedule:
             events = session.exec(select(Event).where(Event.date.in_(dates))).all()
         return events
 
-    def read_journal(self, header_re: re.Pattern | str) -> Dict[date, str]:
+    def read_journal(self, header_re: str) -> Dict[date, str]:
         result = OrderedDict()
         for d, page in self.journal.items():
-            result[d] = page.get_section(header_re)
+            result[d] = "\n".join(page.get_section(header_re).lines)
         return result
 
     def total_duration_by_tag(

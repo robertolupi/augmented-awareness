@@ -88,8 +88,8 @@ def test_get_section():
     pages = v.pages()["2025-03-30"]
     section = pages.get_section("Schedule")
     assert section is not None
-    assert "06:15 wake up" in section
-    assert "task" not in section
+    assert "06:15 wake up\n" in section.lines
+    assert all("task" not in line for line in section.lines)
 
 
 def test_markdown_parse():

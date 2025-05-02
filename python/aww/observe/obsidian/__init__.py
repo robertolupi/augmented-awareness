@@ -6,7 +6,7 @@ import os
 import pathlib
 import re
 import time
-from typing import Iterable, Dict, Any
+from typing import Iterable, Dict, Any, List
 
 import mistune
 import rich
@@ -125,6 +125,44 @@ class Event(BaseModel):
         return f"[b]{time_str}[/] {self.name} {self.tags} ({self.duration})"
 
 
+class Section:
+    """A section in an Obsidian page."""
+
+    def __init__(self, path: pathlib.Path, header_re: str):
+        self.path = path
+        self.header_re = header_re
+        lines = open(self.path, "r").readlines()
+        starts, ends = self.get_section(lines)
+        self.lines = lines[starts:ends]
+
+    def save(self):
+        lines = open(self.path, "r").readlines()
+        starts, ends = self.get_section(lines)
+        lines[starts:ends] = self.lines
+        with open(self.path, "w") as fd:
+            fd.write("".join(lines))
+
+    def get_section(self, lines: List[str]):
+        header_re = re.compile("^(#+)\\s+" + self.header_re + "$")
+        section_start = None
+        if not lines:
+            raise ValueError("page content is empty")
+        for n, line in enumerate(lines):
+            if m := header_re.match(line):
+                section_start = m.group(1) + " "
+                break
+        if not section_start:
+            raise ValueError(f"page doesn't contain the section: {self.header_re}")
+        section = None
+        for k in range(n + 1, len(lines)):
+            if lines[k].startswith(section_start):
+                section = (n + 1, k)
+                break
+        if not section:
+            section = (n + 1, len(lines))
+        return section
+
+
 class Page:
     """An Obsidian page."""
 
@@ -170,30 +208,12 @@ class Page:
             _, _, content = content.split("---\n", 2)
         return Markdown(content)
 
-    def get_section(self, header_re: re.Pattern[str] | str) -> str | None:
+    def get_section(self, header_re: str) -> Section | None:
         """Get the content of a section of the page, by the header name."""
-        with open(self.path, "r", encoding="utf-8") as f:
-            content = f.read()
-        if content.startswith("---\n"):
-            _, _, content = content.split("---\n", 2)
-        lines = content.split("\n")
-        start = None
-        end = None
-        prefix = None
-        if isinstance(header_re, str):
-            header_re = re.compile(header_re)
-        for n, line in enumerate(lines):
-            if start is None and (m := header_re.search(line)):
-                prefix = line[: -(len(m.group(0)))]
-                if not re.search(r"^#+\s$", prefix):
-                    continue
-                start = n
-            elif start is not None and line.startswith(prefix):
-                end = n
-                break
-        if start is not None and end is not None:
-            return "\n".join(lines[start:end])
-        return None
+        try:
+            return Section(self.path, header_re)
+        except ValueError:
+            return None
 
     def tasks(self) -> Iterable[Task]:
         """Get the tasks in the page."""
@@ -339,21 +359,3 @@ class Vault:
                 pages.append((date, page))
         pages.sort(key=lambda x: x[0])
         return Journal(pages)
-
-
-def _get_raw_text(item: dict):
-    """Returns the raw text (e.g. of a task) from a mistune token."""
-    match item["type"]:
-        case "text":
-            return item["raw"]
-        case "codespan":
-            return f"`{item['raw']}`"
-        case "blank_line" | "softbreak":
-            return "\n"
-        case _:
-            if "children" in item:
-                children_text = []
-                for child in item["children"]:
-                    children_text.append(_get_raw_text(child))
-                return "".join(children_text)
-    return repr(item)

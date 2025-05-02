@@ -1,8 +1,6 @@
-import re
 from datetime import datetime, time
 import os
 import subprocess
-from typing import List
 
 import click
 import rich
@@ -80,41 +78,17 @@ def record(date_: datetime, text: str, time_: str | None = None):
         time_ = time.fromisoformat(time_)
     else:
         time_ = datetime.now().time()
-    lines = page.content().splitlines()
-    start, end = get_section(lines, context.settings.obsidian.journal_header_re)
-    event_lines = [
-        (n, m.group("time"), m.group("end_time"), m.group("name"))
-        for n in range(start, end)
-        if (m := EVENT_RE.match(lines[n]))
+
+    section = page.get_section(context.settings.obsidian.journal_header_re)
+    events = [
+        (n, m) for n, line in enumerate(section.lines) if (m := EVENT_RE.match(line))
     ]
-    # Modify last event: set end_time to time_, if it has no end_time
-    if event_lines:
-        if not event_lines[-1][2]:  # no end_time
-            last_event = f"{event_lines[-1][1]} - {time_:%H:%M} {event_lines[-1][3]}"
-            lines[event_lines[-1][0]] = last_event
+    if events:
+        if not events[-1][1].group("end_time"):
+            last_event = f"{events[-1][1].group('time')} - {time_:%H:%M} {events[-1][1].group('name')}\n"
+            section.lines[events[-1][0]] = last_event
     # Create a new open-ended event: set time to time_, and name to text
-    new_event = f"{time_:%H:%M} {text}"
-    lines.insert(end, new_event)
+    new_event = f"{time_:%H:%M} {text}\n"
+    section.lines.append(new_event)
     # Rewrite the page file at page.path
-    new_content = "\n".join(lines)
-    with open(page.path, "w") as f:
-        f.write(new_content)
-
-
-def get_section(lines: List[str], header: str):
-    header_re = re.compile("^(#+)\\s+" + header + "$")
-    section_start = None
-    if not lines:
-        raise ValueError("page content is empty")
-    for n, line in enumerate(lines):
-        if m := header_re.match(line):
-            section_start = m.group(1) + " "
-            break
-    section = None
-    for k in range(n + 1, len(lines)):
-        if lines[k].startswith(section_start):
-            section = (n + 1, k)
-            break
-    if not section:
-        section = (n + 1, len(lines))
-    return section
+    section.save()
