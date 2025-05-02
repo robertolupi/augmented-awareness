@@ -1,11 +1,12 @@
 import datetime
 import pathlib
+import tempfile
 
 import pytest
 import rich
 import rich.markdown
 
-from aww.observe.obsidian import Vault, Event
+from aww.observe.obsidian import Vault, Event, Section
 from aww.observe.obsidian import events
 import aww.settings
 
@@ -334,3 +335,22 @@ def test_journal_task_table():
         datetime.date(2025, 4, 4),
         None,
     ]
+
+
+def test_edit_section():
+    vault = Vault(test_vault_dir)
+    page = vault.pages()["2025-04-01"]
+
+    fd = tempfile.NamedTemporaryFile(delete_on_close=False)
+    fd.write(open(page.path, "r").read().encode("utf-8"))
+    fd.close()
+
+    assert "06:04 woke up" in open(fd.name, "r").read()
+
+    section = Section(pathlib.Path(fd.name), "Schedule")
+    section.lines = []
+    section.save()
+
+    content = open(fd.name, "r").read()
+    assert "A journal page with frontmatter." in content
+    assert "06:04 woke up" not in content
