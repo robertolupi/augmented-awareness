@@ -74,13 +74,23 @@ class Schedule:
 
         tag_list = list(totals.keys())
         duration_list = list(totals.values())
+        total_duration = sum(t.total_seconds() for t in totals.values())
+        duration_perc = [
+            t.total_seconds() / total_duration * 100 for t in totals.values()
+        ]
         histogram_list = list(histograms.values())
         tag_durations = pa.Table.from_arrays(
-            [pa.array(tag_list), pa.array(duration_list), pa.array(histogram_list)],
+            [
+                pa.array(tag_list),
+                pa.array(duration_list),
+                pa.array(duration_perc),
+                pa.array(histogram_list),
+            ],
             schema=pa.schema(
                 [
                     pa.field("tag", pa.string()),
                     pa.field("duration", pa.duration("s")),
+                    pa.field("duration_perc", pa.float64()),
                     pa.field("histogram", pa.list_(pa.int64())),
                 ]
             ),

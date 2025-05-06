@@ -92,11 +92,13 @@ def busy(verbose: bool = False):
     t = rich.table.Table()
     t.add_column("Tag", justify="left", style="cyan", no_wrap=True)
     t.add_column("Total", justify="right", style="magenta")
+    t.add_column("%", justify="right", style="magenta")
     t.add_column("Histogram", justify="right", style="green", no_wrap=True)
     for row in schedule.total_duration_by_tag().to_pylist():
         t.add_row(
             row["tag"],
             str(row["duration"]),
+            f"{row['duration_perc']:.1f}%",
             generate_sparkline(row["histogram"]),
         )
     rich.print(t)
