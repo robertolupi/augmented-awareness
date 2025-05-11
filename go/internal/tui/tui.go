@@ -37,6 +37,9 @@ type model struct {
 	currentDate string
 	currentPage *obsidian.Page
 
+	windowHeight int
+	windowWidth  int
+
 	events           table.Model
 	err              error
 	selectedEventIdx int // Index of the selected event in the table
@@ -136,6 +139,8 @@ func (m model) refreshEvents() tea.Cmd {
 			Bold(false)
 		tbl.SetStyles(s)
 
+		tbl.SetHeight(m.windowHeight - 4)
+
 		return newEventsMsg{
 			events: tbl,
 		}
@@ -146,6 +151,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowHeight = msg.Height
+		m.windowWidth = msg.Width
+		m.events.SetHeight(m.windowHeight - 4)
 	case tea.KeyMsg:
 		switch m.mode {
 		case normalMode:
