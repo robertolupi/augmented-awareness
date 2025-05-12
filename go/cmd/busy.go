@@ -6,12 +6,14 @@ import (
 	"journal/internal/obsidian"
 	"log"
 	"sort"
+	"strings"
 	"time"
 )
 
 var (
-	busyStartDate string
-	busyEndDate   string
+	busyStartDate  string
+	busyEndDate    string
+	busyExpandTags bool
 
 	busyCmd = &cobra.Command{
 		Use:   "busy",
@@ -49,6 +51,7 @@ var (
 			fmt.Printf("Found %d journal pages\n", len(pages))
 
 			tagsByDuration := make(map[string]time.Duration)
+			var totalDuration time.Duration
 
 			for _, page := range pages {
 
@@ -70,6 +73,35 @@ var (
 							}
 							tagsByDuration[tag] += event.Duration
 						}
+						if event.Tags != nil {
+							totalDuration += event.Duration
+						}
+					}
+				}
+			}
+
+			if busyExpandTags {
+				var seen = make(map[string]int)
+				var expandedTagsByDuration = make(map[string]time.Duration)
+				for tag, duration := range tagsByDuration {
+					seen[tag] = 2 // 2 or higher means we always show this tag
+					parts := strings.Split(tag, "/")
+					for i := 1; i <= len(parts); i++ {
+						prefix := strings.Join(parts[:i], "/")
+						if _, ok := expandedTagsByDuration[prefix]; !ok {
+							expandedTagsByDuration[prefix] = 0
+						}
+						if _, ok := seen[prefix]; !ok {
+							seen[prefix] = 0
+						}
+						seen[prefix]++
+						expandedTagsByDuration[prefix] += duration
+					}
+				}
+				tagsByDuration = make(map[string]time.Duration)
+				for tag, duration := range expandedTagsByDuration {
+					if seen[tag] > 1 {
+						tagsByDuration[tag] = duration
 					}
 				}
 			}
@@ -81,7 +113,6 @@ var (
 				Percent  float64
 			}
 			var tagDurations []tagDuration
-			var totalDuration time.Duration
 			for tag, duration := range tagsByDuration {
 				tagDurations = append(tagDurations, tagDuration{Tag: tag, Duration: duration})
 				totalDuration += duration
@@ -106,4 +137,5 @@ func initBusyCmd() {
 
 	busyCmd.Flags().StringVar(&busyStartDate, "start", oneWeekAgo(), "Start date (YYYY-MM-DD)")
 	busyCmd.Flags().StringVar(&busyEndDate, "end", today(), "End date (YYYY-MM-DD)")
+	busyCmd.Flags().BoolVarP(&busyExpandTags, "expand-tags", "e", false, "Expand tags to show all sub-tags")
 }
