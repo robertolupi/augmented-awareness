@@ -189,31 +189,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "a":
 				// Enter amend mode
+				if len(m.events.Rows()) == 0 {
+					m.err = fmt.Errorf("No events to amend")
+					return m, nil
+				}
+				m.selectedEventIdx = m.events.Cursor()
 				m.mode = amendMode
 				m.textInput.Focus()
 
-				// Get the last event to amend
-				section, err := m.currentPage.FindSection(m.section)
-				if err != nil {
-					m.err = err
-					return m, nil
-				}
-
-				var event *obsidian.Event
-				for i := section.End - 1; i >= section.Start; i-- {
-					event = obsidian.MaybeParseEvent(m.currentPage.Content[i])
-					if event != nil {
-						break
-					}
-				}
-
-				if event != nil {
-					m.textInput.SetValue(event.Text)
-				} else {
-					m.err = fmt.Errorf("No event found to amend")
-					m.mode = normalMode
-					return m, nil
-				}
+				// Get the selected event's text
+				row := m.events.SelectedRow()
+				m.textInput.SetValue(row[4]) // Text is in column 4
 
 				return m, nil
 			case "s":
@@ -327,25 +313,30 @@ func (m model) recordEvent(text string) tea.Cmd {
 
 func (m model) amendEvent(text string) tea.Cmd {
 	return func() tea.Msg {
-		section, err := m.currentPage.FindSection(m.section)
-		if err != nil {
-			return err
+		// Get the selected event
+		rows := m.events.Rows()
+		if m.selectedEventIdx >= len(rows) {
+			return fmt.Errorf("Selected event not found")
 		}
 
-		var event *obsidian.Event
-		var i int
-		for i = section.End - 1; i >= section.Start; i-- {
-			event = obsidian.MaybeParseEvent(m.currentPage.Content[i])
-			if event != nil {
-				break
-			}
+		row := rows[m.selectedEventIdx]
+		lineStr := row[0]
+		lineNum, err := strconv.Atoi(lineStr)
+		if err != nil {
+			return fmt.Errorf("Invalid line number: %s", lineStr)
 		}
+
+		// Line numbers in the table are 1-based, but content array is 0-based
+		lineNum--
+
+		// Parse the event
+		event := obsidian.MaybeParseEvent(m.currentPage.Content[lineNum])
 		if event == nil {
-			return fmt.Errorf("No event found to amend")
+			return fmt.Errorf("Event not found at line %d", lineNum+1)
 		}
 
 		event.Text = text
-		m.currentPage.Content[i] = event.String()
+		m.currentPage.Content[lineNum] = event.String()
 
 		if err := m.currentPage.Save(); err != nil {
 			return err
@@ -489,7 +480,7 @@ func (m model) View() string {
 		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
 		sb.WriteString(m.textInput.View())
 	case amendMode:
-		sb.WriteString("Amending the last event. Press Enter to submit, Esc to cancel.\n")
+		sb.WriteString("Amending the selected event. Press Enter to submit, Esc to cancel.\n")
 		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
 		sb.WriteString(m.textInput.View())
 	case editStartTimeMode:
