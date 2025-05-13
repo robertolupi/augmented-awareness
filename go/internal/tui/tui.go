@@ -349,14 +349,42 @@ func (m model) amendEvent(text string) tea.Cmd {
 	}
 }
 
-func (m model) editStartTime(newTime string) tea.Cmd {
-	return func() tea.Msg {
-		// Validate time format
-		_, err := time.Parse("15:04", newTime)
+// parseTimeString parses a time string which can be either:
+// 1. A standard time in format "15:04" (HH:MM)
+// 2. A relative adjustment like "+45" or "-15" (minutes)
+func parseTimeString(timeStr string, referenceTime string) (string, error) {
+	// Check if it's a relative adjustment
+	if len(timeStr) > 0 && (timeStr[0] == '+' || timeStr[0] == '-') {
+		// Parse the minutes to adjust
+		minutes, err := strconv.Atoi(timeStr)
 		if err != nil {
-			return fmt.Errorf("Invalid time format. Please use HH:MM (24-hour format)")
+			return "", fmt.Errorf("Invalid relative time format. Use +MM or -MM")
 		}
 
+		// Parse the reference time
+		refTime, err := time.Parse("15:04", referenceTime)
+		if err != nil {
+			return "", fmt.Errorf("Invalid reference time format")
+		}
+
+		// Apply the adjustment
+		adjustedTime := refTime.Add(time.Duration(minutes) * time.Minute)
+
+		// Return the adjusted time in the required format
+		return adjustedTime.Format("15:04"), nil
+	}
+
+	// It's a standard time format, validate it
+	parsedTime, err := time.Parse("15:04", timeStr)
+	if err != nil {
+		return "", fmt.Errorf("Invalid time format. Please use HH:MM (24-hour format) or +/-MM for relative adjustments")
+	}
+
+	return parsedTime.Format("15:04"), nil
+}
+
+func (m model) editStartTime(newTime string) tea.Cmd {
+	return func() tea.Msg {
 		// Get the selected event
 		rows := m.events.Rows()
 		if m.selectedEventIdx >= len(rows) {
@@ -379,8 +407,12 @@ func (m model) editStartTime(newTime string) tea.Cmd {
 			return fmt.Errorf("Event not found at line %d", lineNum+1)
 		}
 
-		// Update the start time
-		event.StartTime = newTime
+		// Parse and update the start time
+		parsedTime, err := parseTimeString(newTime, event.StartTime)
+		if err != nil {
+			return err
+		}
+		event.StartTime = parsedTime
 
 		// If end time exists, recalculate duration
 		if event.EndTime != "" {
@@ -409,12 +441,6 @@ func (m model) editStartTime(newTime string) tea.Cmd {
 
 func (m model) editEndTime(newTime string) tea.Cmd {
 	return func() tea.Msg {
-		// Validate time format
-		_, err := time.Parse("15:04", newTime)
-		if err != nil {
-			return fmt.Errorf("Invalid time format. Please use HH:MM (24-hour format)")
-		}
-
 		// Get the selected event
 		rows := m.events.Rows()
 		if m.selectedEventIdx >= len(rows) {
@@ -437,8 +463,12 @@ func (m model) editEndTime(newTime string) tea.Cmd {
 			return fmt.Errorf("Event not found at line %d", lineNum+1)
 		}
 
-		// Update the end time
-		event.EndTime = newTime
+		// Parse and update the end time
+		parsedTime, err := parseTimeString(newTime, event.EndTime)
+		if err != nil {
+			return err
+		}
+		event.EndTime = parsedTime
 
 		// Recalculate duration
 		start, _ := time.Parse("15:04", event.StartTime)
@@ -484,11 +514,11 @@ func (m model) View() string {
 		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
 		sb.WriteString(m.textInput.View())
 	case editStartTimeMode:
-		sb.WriteString("Editing start time. Format: HH:MM (24-hour). Press Enter to submit, Esc to cancel.\n")
+		sb.WriteString("Editing start time. Format: HH:MM (24-hour) or +/-MM for relative adjustments. Press Enter to submit, Esc to cancel.\n")
 		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
 		sb.WriteString(m.textInput.View())
 	case editEndTimeMode:
-		sb.WriteString("Editing end time. Format: HH:MM (24-hour). Press Enter to submit, Esc to cancel.\n")
+		sb.WriteString("Editing end time. Format: HH:MM (24-hour) or +/-MM for relative adjustments. Press Enter to submit, Esc to cancel.\n")
 		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
 		sb.WriteString(m.textInput.View())
 	}
