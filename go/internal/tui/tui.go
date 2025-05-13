@@ -383,7 +383,8 @@ func parseTimeString(timeStr string, referenceTime string) (string, error) {
 	return parsedTime.Format("15:04"), nil
 }
 
-func (m model) editStartTime(newTime string) tea.Cmd {
+// editEventTime is a helper function to edit either the start or end time of an event
+func (m model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 	return func() tea.Msg {
 		// Get the selected event
 		rows := m.events.Rows()
@@ -407,20 +408,37 @@ func (m model) editStartTime(newTime string) tea.Cmd {
 			return fmt.Errorf("Event not found at line %d", lineNum+1)
 		}
 
-		// Parse and update the start time
-		parsedTime, err := parseTimeString(newTime, event.StartTime)
+		// Parse and update the time based on whether it's start or end time
+		var currentTime string
+		if isStartTime {
+			currentTime = event.StartTime
+		} else {
+			currentTime = event.EndTime
+		}
+
+		parsedTime, err := parseTimeString(newTime, currentTime)
 		if err != nil {
 			return err
 		}
-		event.StartTime = parsedTime
 
-		// If end time exists, recalculate duration
-		if event.EndTime != "" {
+		// Update the appropriate time field
+		if isStartTime {
+			event.StartTime = parsedTime
+		} else {
+			event.EndTime = parsedTime
+		}
+
+		// Recalculate duration if both start and end times exist
+		if event.StartTime != "" && event.EndTime != "" {
 			start, _ := time.Parse("15:04", event.StartTime)
 			end, _ := time.Parse("15:04", event.EndTime)
 			event.Duration = end.Sub(start)
 			if event.Duration < 0 {
-				return fmt.Errorf("Start time must be before end time")
+				if isStartTime {
+					return fmt.Errorf("Start time must be before end time")
+				} else {
+					return fmt.Errorf("End time must be after start time")
+				}
 			}
 		}
 
@@ -439,58 +457,12 @@ func (m model) editStartTime(newTime string) tea.Cmd {
 	}
 }
 
+func (m model) editStartTime(newTime string) tea.Cmd {
+	return m.editEventTime(newTime, true)
+}
+
 func (m model) editEndTime(newTime string) tea.Cmd {
-	return func() tea.Msg {
-		// Get the selected event
-		rows := m.events.Rows()
-		if m.selectedEventIdx >= len(rows) {
-			return fmt.Errorf("Selected event not found")
-		}
-
-		row := rows[m.selectedEventIdx]
-		lineStr := row[0]
-		lineNum, err := strconv.Atoi(lineStr)
-		if err != nil {
-			return fmt.Errorf("Invalid line number: %s", lineStr)
-		}
-
-		// Line numbers in the table are 1-based, but content array is 0-based
-		lineNum--
-
-		// Parse the event
-		event := obsidian.MaybeParseEvent(m.currentPage.Content[lineNum])
-		if event == nil {
-			return fmt.Errorf("Event not found at line %d", lineNum+1)
-		}
-
-		// Parse and update the end time
-		parsedTime, err := parseTimeString(newTime, event.EndTime)
-		if err != nil {
-			return err
-		}
-		event.EndTime = parsedTime
-
-		// Recalculate duration
-		start, _ := time.Parse("15:04", event.StartTime)
-		end, _ := time.Parse("15:04", event.EndTime)
-		event.Duration = end.Sub(start)
-		if event.Duration < 0 {
-			return fmt.Errorf("End time must be after start time")
-		}
-
-		// Update the content
-		m.currentPage.Content[lineNum] = event.String()
-
-		// Save the changes
-		if err := m.currentPage.Save(); err != nil {
-			return err
-		}
-
-		// Reset mode and refresh events
-		m.mode = normalMode
-		m.textInput.Blur()
-		return m.refreshEvents()()
-	}
+	return m.editEventTime(newTime, false)
 }
 
 func (m model) View() string {
