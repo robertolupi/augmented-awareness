@@ -62,6 +62,7 @@ var (
 				}
 
 				for i := section.Start; i < section.End; i++ {
+					add := true
 					event := obsidian.MaybeParseEvent(page.Content[i])
 					if event != nil {
 						for _, tag := range event.Tags {
@@ -72,9 +73,10 @@ var (
 								tagsByDuration[tag] = 0
 							}
 							tagsByDuration[tag] += event.Duration
-						}
-						if event.Tags != nil {
-							totalDuration += event.Duration
+							if add {
+								totalDuration += event.Duration
+								add = false
+							}
 						}
 					}
 				}
@@ -115,7 +117,6 @@ var (
 			var tagDurations []tagDuration
 			for tag, duration := range tagsByDuration {
 				tagDurations = append(tagDurations, tagDuration{Tag: tag, Duration: duration})
-				totalDuration += duration
 			}
 			for i := range tagDurations {
 				tagDurations[i].Percent = float64(tagDurations[i].Duration) / float64(totalDuration) * 100
