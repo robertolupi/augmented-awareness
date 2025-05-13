@@ -233,6 +233,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case recordMode, amendMode, editStartTimeMode, editEndTimeMode:
 			switch msg.String() {
+			case "ctrl+c":
+				// Quit the application
+				return m, tea.Quit
 			case "esc":
 				// Cancel and return to normal mode
 				m.mode = normalMode
