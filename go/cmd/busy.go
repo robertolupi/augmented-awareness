@@ -83,29 +83,7 @@ var (
 			}
 
 			if busyExpandTags {
-				var seen = make(map[string]int)
-				var expandedTagsByDuration = make(map[string]time.Duration)
-				for tag, duration := range tagsByDuration {
-					seen[tag] = 2 // 2 or higher means we always show this tag
-					parts := strings.Split(tag, "/")
-					for i := 1; i <= len(parts); i++ {
-						prefix := strings.Join(parts[:i], "/")
-						if _, ok := expandedTagsByDuration[prefix]; !ok {
-							expandedTagsByDuration[prefix] = 0
-						}
-						if _, ok := seen[prefix]; !ok {
-							seen[prefix] = 0
-						}
-						seen[prefix]++
-						expandedTagsByDuration[prefix] += duration
-					}
-				}
-				tagsByDuration = make(map[string]time.Duration)
-				for tag, duration := range expandedTagsByDuration {
-					if seen[tag] > 1 {
-						tagsByDuration[tag] = duration
-					}
-				}
+				tagsByDuration = expandTags(tagsByDuration)
 			}
 
 			// Sort tags by duration in descending order by duration
@@ -132,6 +110,33 @@ var (
 		},
 	}
 )
+
+func expandTags(tagsByDuration map[string]time.Duration) map[string]time.Duration {
+	var seen = make(map[string]int)
+	var expandedTagsByDuration = make(map[string]time.Duration)
+	for tag, duration := range tagsByDuration {
+		seen[tag] = 2 // 2 or higher means we always show this tag
+		parts := strings.Split(tag, "/")
+		for i := 1; i <= len(parts); i++ {
+			prefix := strings.Join(parts[:i], "/")
+			if _, ok := expandedTagsByDuration[prefix]; !ok {
+				expandedTagsByDuration[prefix] = 0
+			}
+			if _, ok := seen[prefix]; !ok {
+				seen[prefix] = 0
+			}
+			seen[prefix]++
+			expandedTagsByDuration[prefix] += duration
+		}
+	}
+	result := make(map[string]time.Duration)
+	for tag, duration := range expandedTagsByDuration {
+		if seen[tag] > 1 {
+			tagsByDuration[tag] = duration
+		}
+	}
+	return result
+}
 
 func initBusyCmd() {
 	rootCmd.AddCommand(busyCmd)
