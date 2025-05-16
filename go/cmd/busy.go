@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"journal/internal/obsidian"
+	"journal/internal/stats"
 	"log"
 	"sort"
 	"strings"
@@ -14,6 +15,7 @@ var (
 	busyStartDate  string
 	busyEndDate    string
 	busyExpandTags bool
+	busyBucketSize time.Duration
 
 	busyCmd = &cobra.Command{
 		Use:   "busy",
@@ -50,8 +52,11 @@ var (
 			}
 			fmt.Printf("Found %d journal pages\n", len(pages))
 
-			tagsByDuration := make(map[string]time.Duration)
-			var totalDuration time.Duration
+			tags := make(map[string]*stats.Histogram)
+			total, err := stats.NewTimeHistogram(stats.PeriodDaily, busyBucketSize)
+			if err != nil {
+				log.Fatalf("Failed to create histogram: %v", err)
+			}
 
 			for _, page := range pages {
 
@@ -69,12 +74,12 @@ var (
 							if tag == "" {
 								continue
 							}
-							if _, ok := tagsByDuration[tag]; !ok {
-								tagsByDuration[tag] = 0
+							if _, ok := tags[tag]; !ok {
+								tags[tag], _ = stats.NewTimeHistogram(stats.PeriodDaily, busyBucketSize)
 							}
-							tagsByDuration[tag] += event.Duration
+							tags[tag].Add(event.Start, event.Duration)
 							if add {
-								totalDuration += event.Duration
+								total.Add(event.Start, event.Duration)
 								add = false
 							}
 						}
@@ -83,59 +88,64 @@ var (
 			}
 
 			if busyExpandTags {
-				tagsByDuration = expandTags(tagsByDuration)
+				tags = expandTags(tags)
 			}
 
 			// Sort tags by duration in descending order by duration
-			type tagDuration struct {
-				Tag      string
-				Duration time.Duration
-				Percent  float64
+			type line struct {
+				Tag       string
+				Histogram *stats.Histogram
+				Percent   float64
 			}
-			var tagDurations []tagDuration
-			for tag, duration := range tagsByDuration {
-				tagDurations = append(tagDurations, tagDuration{Tag: tag, Duration: duration})
+			var lines []line
+			for tag, duration := range tags {
+				lines = append(lines, line{Tag: tag, Histogram: duration})
 			}
-			for i := range tagDurations {
-				tagDurations[i].Percent = float64(tagDurations[i].Duration) / float64(totalDuration) * 100
+			for i := range lines {
+				lines[i].Percent = float64(lines[i].Histogram.Duration) / float64(total.Duration) * 100
 			}
-			sort.Slice(tagDurations, func(i, j int) bool {
-				return tagDurations[i].Duration > tagDurations[j].Duration
+			sort.Slice(lines, func(i, j int) bool {
+				return lines[i].Histogram.Duration > lines[j].Histogram.Duration
 			})
 
 			fmt.Println("Tags sorted by duration:")
-			for _, tagDuration := range tagDurations {
-				fmt.Printf("%40s\t%14s  %.2f%%\n", tagDuration.Tag, tagDuration.Duration, tagDuration.Percent)
+			for _, tagDuration := range lines {
+				fmt.Printf("%40s\t%s  %.2f%%\n", tagDuration.Tag, tagDuration.Histogram, tagDuration.Percent)
 			}
 		},
 	}
 )
 
-func expandTags(tagsByDuration map[string]time.Duration) map[string]time.Duration {
-	var seen = make(map[string]int)
-	var expandedTagsByDuration = make(map[string]time.Duration)
-	for tag, duration := range tagsByDuration {
-		seen[tag] = 2 // 2 or higher means we always show this tag
+func expandTags(tagsByDuration map[string]*stats.Histogram) map[string]*stats.Histogram {
+	expanded := make(map[string]*stats.Histogram)
+	count := make(map[string]int)
+	for tag, histogram := range tagsByDuration {
+		expanded[tag] = histogram
+		count[tag] = 1
+	}
+	for tag, histogram := range tagsByDuration {
+		if tag == "" {
+			continue
+		}
 		parts := strings.Split(tag, "/")
-		for i := 1; i <= len(parts); i++ {
-			prefix := strings.Join(parts[:i], "/")
-			if _, ok := expandedTagsByDuration[prefix]; !ok {
-				expandedTagsByDuration[prefix] = 0
+		for i := len(parts) - 1; i > 0; i-- {
+			subTag := strings.Join(parts[:i], "/")
+			if _, ok := expanded[subTag]; !ok {
+				expanded[subTag] = histogram.Copy()
+				count[subTag] = 0
+			} else {
+				expanded[subTag].Merge(histogram)
+				count[subTag]++
 			}
-			if _, ok := seen[prefix]; !ok {
-				seen[prefix] = 0
-			}
-			seen[prefix]++
-			expandedTagsByDuration[prefix] += duration
 		}
 	}
-	result := make(map[string]time.Duration)
-	for tag, duration := range expandedTagsByDuration {
-		if seen[tag] > 1 {
-			tagsByDuration[tag] = duration
+	for tag := range expanded {
+		if count[tag] > 0 {
+			continue
 		}
+		delete(expanded, tag)
 	}
-	return result
+	return expanded
 }
 
 func initBusyCmd() {
@@ -144,4 +154,5 @@ func initBusyCmd() {
 	busyCmd.Flags().StringVar(&busyStartDate, "start", oneWeekAgo(), "Start date (YYYY-MM-DD)")
 	busyCmd.Flags().StringVar(&busyEndDate, "end", today(), "End date (YYYY-MM-DD)")
 	busyCmd.Flags().BoolVarP(&busyExpandTags, "expand-tags", "e", false, "Expand tags to show all sub-tags")
+	busyCmd.Flags().DurationVar(&busyBucketSize, "bucket-size", 30*time.Minute, "Bucket size for histogram")
 }

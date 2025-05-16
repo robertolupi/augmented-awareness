@@ -198,6 +198,7 @@ func (p *Page) FindSection(section string) (Section, error) {
 type Event struct {
 	StartTime string
 	EndTime   string
+	Start     time.Time
 	Duration  time.Duration
 	Text      string
 	Tags      []string
@@ -230,9 +231,11 @@ func MaybeParseEvent(line string) *Event {
 	startTime := matches[1]
 	endTime := matches[3]
 	var duration time.Duration
+	var start time.Time
+	var err error
 
 	if endTime != "" {
-		start, err := time.Parse("15:04", startTime)
+		start, err = time.Parse("15:04", startTime)
 		if err != nil {
 			return nil
 		}
@@ -258,6 +261,7 @@ func MaybeParseEvent(line string) *Event {
 	return &Event{
 		StartTime: startTime,
 		EndTime:   endTime,
+		Start:     start,
 		Duration:  duration,
 		Text:      text,
 		Tags:      tags,

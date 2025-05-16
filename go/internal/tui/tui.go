@@ -100,7 +100,7 @@ func (m model) refreshEvents() tea.Cmd {
 			{Title: "Line", Width: 4},
 			{Title: "Start", Width: 10},
 			{Title: "End", Width: 10},
-			{Title: "Duration", Width: 10},
+			{Title: "Histogram", Width: 10},
 			{Title: "Text", Width: 50},
 			{Title: "Tags", Width: 30},
 		}
