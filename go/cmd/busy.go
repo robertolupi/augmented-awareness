@@ -43,14 +43,17 @@ var (
 			}
 
 			var pages []*obsidian.Page
+			var dates []string
 			for _, date := range dateRange {
 				page, err := vault.Page(date)
 				if err != nil {
 					log.Printf("Failed to get journal page for %s: %v", date, err)
+					continue
 				}
 				pages = append(pages, page)
+				dates = append(dates, date)
 			}
-			fmt.Printf("Found %d journal pages\n", len(pages))
+			fmt.Printf("Found %d journal pages: %v\n", len(pages), dates)
 
 			tags := make(map[string]*stats.Histogram)
 			total, err := stats.NewTimeHistogram(stats.PeriodDaily, busyBucketSize)
@@ -107,10 +110,11 @@ var (
 			sort.Slice(lines, func(i, j int) bool {
 				return lines[i].Histogram.Duration > lines[j].Histogram.Duration
 			})
-
+			formatString := "%40s\t%s  %.2f%%\n"
+			fmt.Printf(formatString, "Total", total, 100.0)
 			fmt.Println("Tags sorted by duration:")
 			for _, tagDuration := range lines {
-				fmt.Printf("%40s\t%s  %.2f%%\n", tagDuration.Tag, tagDuration.Histogram, tagDuration.Percent)
+				fmt.Printf(formatString, tagDuration.Tag, tagDuration.Histogram, tagDuration.Percent)
 			}
 		},
 	}
