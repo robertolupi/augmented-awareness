@@ -57,6 +57,7 @@ var (
 
 			tags := make(map[string]*stats.Histogram)
 			total, err := stats.NewTimeHistogram(stats.PeriodDaily, busyBucketSize)
+			noTags, err := stats.NewTimeHistogram(stats.PeriodDaily, busyBucketSize)
 			if err != nil {
 				log.Fatalf("Failed to create histogram: %v", err)
 			}
@@ -73,6 +74,9 @@ var (
 					add := true
 					event := obsidian.MaybeParseEvent(page.Content[i])
 					if event != nil {
+						if len(event.Tags) == 0 {
+							noTags.Add(event.Start, event.Duration)
+						}
 						for _, tag := range event.Tags {
 							if tag == "" {
 								continue
@@ -112,6 +116,7 @@ var (
 			})
 			formatString := "%40s\t%s  %.2f%%\n"
 			fmt.Printf(formatString, "Total", total, 100.0)
+			fmt.Printf(formatString, "No tags", noTags, float64(noTags.Duration)/float64(total.Duration)*100)
 			fmt.Println("Tags sorted by duration:")
 			for _, tagDuration := range lines {
 				fmt.Printf(formatString, tagDuration.Tag, tagDuration.Histogram, tagDuration.Percent)
