@@ -49,3 +49,7 @@ func today() string {
 func oneWeekAgo() string {
 	return obsidian.DateToPage(time.Now().AddDate(0, 0, -7))
 }
+
+func sixDaysAgo() string {
+	return obsidian.DateToPage(time.Now().AddDate(0, 0, -6))
+}
