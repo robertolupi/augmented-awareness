@@ -118,8 +118,8 @@ func (v *Vault) Page(date string) (*Page, error) {
 }
 
 func (p *Page) Save() error {
-	path := path.Join(p.Vault.Path, p.Path)
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	fullPath := path.Join(p.Vault.Path, p.Path)
+	file, err := os.OpenFile(fullPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 
 	if err != nil {
 		return err
