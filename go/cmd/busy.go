@@ -64,31 +64,28 @@ var (
 
 			for _, page := range pages {
 
-				section, err := page.FindSection(journalSection)
+				events, err := page.Events(journalSection)
 				if err != nil {
-					log.Printf("Failed to find section %s in journal page: %v", journalSection, err)
+					log.Printf("No events in journal page: %v", err)
 					continue
 				}
 
-				for i := section.Start; i < section.End; i++ {
+				for _, event := range events {
 					add := true
-					event := obsidian.MaybeParseEvent(page.Content[i])
-					if event != nil {
-						if len(event.Tags) == 0 {
-							noTags.Add(event.Start, event.Duration)
+					if len(event.Tags) == 0 {
+						noTags.Add(event.Start, event.Duration)
+					}
+					for _, tag := range event.Tags {
+						if tag == "" {
+							continue
 						}
-						for _, tag := range event.Tags {
-							if tag == "" {
-								continue
-							}
-							if _, ok := tags[tag]; !ok {
-								tags[tag], _ = stats.NewTimeHistogram(stats.PeriodDaily, busyBucketSize)
-							}
-							tags[tag].Add(event.Start, event.Duration)
-							if add {
-								total.Add(event.Start, event.Duration)
-								add = false
-							}
+						if _, ok := tags[tag]; !ok {
+							tags[tag], _ = stats.NewTimeHistogram(stats.PeriodDaily, busyBucketSize)
+						}
+						tags[tag].Add(event.Start, event.Duration)
+						if add {
+							total.Add(event.Start, event.Duration)
+							add = false
 						}
 					}
 				}

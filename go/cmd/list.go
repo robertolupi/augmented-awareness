@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"journal/internal/obsidian"
 	"log"
 )
 
@@ -22,16 +21,13 @@ var (
 				log.Fatalf("Failed to get journal page: %v", err)
 			}
 
-			section, err := page.FindSection(journalSection)
+			events, err := page.Events(journalSection)
 			if err != nil {
-				log.Fatalf("Failed to find section %s in journal page: %v", journalSection, err)
+				log.Fatalf("Failed to get events from journal page: %v", err)
 			}
 
-			for i := section.Start; i < section.End; i++ {
-				event := obsidian.MaybeParseEvent(page.Content[i])
-				if event != nil {
-					fmt.Printf("%5s %5s\t%10s\t%s\n", event.StartTime, event.EndTime, event.Duration, event.Text)
-				}
+			for _, event := range events {
+				fmt.Printf("%5s %5s\t%10s\t%s\n", event.StartTime, event.EndTime, event.Duration, event.Text)
 			}
 		},
 	}

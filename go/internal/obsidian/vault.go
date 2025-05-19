@@ -145,6 +145,24 @@ func (p *Page) Save() error {
 	return nil
 }
 
+// Events return all events in the given section of the page.
+func (p *Page) Events(sectionHeader string) ([]Event, error) {
+	section, err := p.FindSection(sectionHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	var events []Event
+	for i := section.Start; i < section.End; i++ {
+		event := MaybeParseEvent(p.Content[i])
+		if event != nil {
+			events = append(events, *event)
+		}
+	}
+
+	return events, nil
+}
+
 type Section struct {
 	// Start and End line of the section in the page content
 	Page  *Page
@@ -204,7 +222,7 @@ type Event struct {
 	Tags      []string
 }
 
-func (event *Event) String() string {
+func (event Event) String() string {
 	var sb strings.Builder
 	sb.WriteString(event.StartTime)
 	if event.EndTime != "" {
