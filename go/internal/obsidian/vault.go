@@ -154,7 +154,7 @@ func (p *Page) Events(sectionHeader string) ([]Event, error) {
 
 	var events []Event
 	for i := section.Start; i < section.End; i++ {
-		event := MaybeParseEvent(p.Content[i])
+		event := MaybeParseEvent(i, p.Content[i])
 		if event != nil {
 			events = append(events, *event)
 		}
@@ -214,6 +214,7 @@ func (p *Page) FindSection(section string) (Section, error) {
 }
 
 type Event struct {
+	Line      int
 	StartTime string
 	EndTime   string
 	Start     time.Time
@@ -240,7 +241,7 @@ func (event Event) String() string {
 
 var eventRegex = regexp.MustCompile(`^(\d{2}:\d{2})\s*(-\s*(\d{2}:\d{2}))?\s*(.*?)$`)
 
-func MaybeParseEvent(line string) *Event {
+func MaybeParseEvent(lineNo int, line string) *Event {
 	matches := eventRegex.FindStringSubmatch(line)
 	if matches == nil {
 		return nil
@@ -277,6 +278,7 @@ func MaybeParseEvent(line string) *Event {
 	}
 
 	return &Event{
+		Line:      lineNo,
 		StartTime: startTime,
 		EndTime:   endTime,
 		Start:     start,

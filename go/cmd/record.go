@@ -33,7 +33,7 @@ var (
 			var event *obsidian.Event
 			var i int
 			for i = section.End - 1; i >= section.Start; i-- {
-				event = obsidian.MaybeParseEvent(page.Content[i])
+				event = obsidian.MaybeParseEvent(i, page.Content[i])
 				if event != nil {
 					break
 				}

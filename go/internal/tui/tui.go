@@ -91,7 +91,7 @@ type newEventsMsg struct {
 
 func (m model) refreshEvents() tea.Cmd {
 	return func() tea.Msg {
-		section, err := m.currentPage.FindSection(m.section)
+		events, err := m.currentPage.Events(m.section)
 		if err != nil {
 			return err
 		}
@@ -105,22 +105,19 @@ func (m model) refreshEvents() tea.Cmd {
 			{Title: "Tags", Width: 30},
 		}
 		var rows []table.Row
-		for i := section.Start; i < section.End; i++ {
-			event := obsidian.MaybeParseEvent(m.currentPage.Content[i])
-			if event != nil {
-				var duration string
-				if event.Duration != 0 {
-					duration = event.Duration.String()
-				}
-				rows = append(rows, table.Row{
-					strconv.Itoa(i + 1),
-					event.StartTime,
-					event.EndTime,
-					duration,
-					event.Text,
-					strings.Join(event.Tags, " "),
-				})
+		for _, event := range events {
+			var duration string
+			if event.Duration != 0 {
+				duration = event.Duration.String()
 			}
+			rows = append(rows, table.Row{
+				strconv.Itoa(event.Line + 1),
+				event.StartTime,
+				event.EndTime,
+				duration,
+				event.Text,
+				strings.Join(event.Tags, " "),
+			})
 		}
 		tbl := table.New(
 			table.WithColumns(cols),
@@ -284,7 +281,7 @@ func (m model) recordEvent(text string) tea.Cmd {
 		var event *obsidian.Event
 		var i int
 		for i = section.End - 1; i >= section.Start; i-- {
-			event = obsidian.MaybeParseEvent(m.currentPage.Content[i])
+			event = obsidian.MaybeParseEvent(i, m.currentPage.Content[i])
 			if event != nil {
 				break
 			}
@@ -333,7 +330,7 @@ func (m model) amendEvent(text string) tea.Cmd {
 		lineNum--
 
 		// Parse the event
-		event := obsidian.MaybeParseEvent(m.currentPage.Content[lineNum])
+		event := obsidian.MaybeParseEvent(lineNum, m.currentPage.Content[lineNum])
 		if event == nil {
 			return fmt.Errorf("Event not found at line %d", lineNum+1)
 		}
@@ -406,7 +403,7 @@ func (m model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 		lineNum--
 
 		// Parse the event
-		event := obsidian.MaybeParseEvent(m.currentPage.Content[lineNum])
+		event := obsidian.MaybeParseEvent(lineNum, m.currentPage.Content[lineNum])
 		if event == nil {
 			return fmt.Errorf("Event not found at line %d", lineNum+1)
 		}
