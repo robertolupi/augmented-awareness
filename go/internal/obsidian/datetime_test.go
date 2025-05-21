@@ -19,7 +19,7 @@ func TestTimeFromString(t *testing.T) {
 		{"Invalid format", "14-30", "", true},
 		{"Invalid hour", "25:00", "", true},
 		{"Invalid minute", "14:60", "", true},
-		{"Empty string", "", "", true},
+		{"Empty string", "", "", false},
 	}
 
 	for _, tt := range tests {

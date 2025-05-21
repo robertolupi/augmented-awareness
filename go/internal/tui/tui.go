@@ -112,8 +112,8 @@ func (m model) refreshEvents() tea.Cmd {
 			}
 			rows = append(rows, table.Row{
 				strconv.Itoa(event.Line + 1),
-				event.StartTime,
-				event.EndTime,
+				event.StartTime.String(),
+				event.EndTime.String(),
 				duration,
 				event.Text,
 				strings.Join(event.Tags, " "),
@@ -288,13 +288,13 @@ func (m model) recordEvent(text string) tea.Cmd {
 		}
 		if event != nil {
 			if event.EndTime == "" {
-				event.EndTime = time.Now().Format("15:04")
+				event.EndTime = obsidian.TimeNow()
 				m.currentPage.Content[i] = event.String()
 			}
 		}
 
 		newEvent := &obsidian.Event{
-			StartTime: time.Now().Format("15:04"),
+			StartTime: obsidian.TimeNow(),
 			Text:      text,
 		}
 
@@ -411,9 +411,9 @@ func (m model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 		// Parse and update the time based on whether it's start or end time
 		var currentTime string
 		if isStartTime {
-			currentTime = event.StartTime
+			currentTime = event.StartTime.String()
 		} else {
-			currentTime = event.EndTime
+			currentTime = event.EndTime.String()
 		}
 
 		parsedTime, err := parseTimeString(newTime, currentTime)
@@ -423,15 +423,21 @@ func (m model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 
 		// Update the appropriate time field
 		if isStartTime {
-			event.StartTime = parsedTime
+			event.StartTime, err = obsidian.TimeFromString(parsedTime)
+			if err != nil {
+				return fmt.Errorf("Invalid start time format")
+			}
 		} else {
-			event.EndTime = parsedTime
+			event.EndTime, err = obsidian.TimeFromString(parsedTime)
+			if err != nil {
+				return fmt.Errorf("Invalid end time format")
+			}
 		}
 
 		// Recalculate duration if both start and end times exist
 		if event.StartTime != "" && event.EndTime != "" {
-			start, _ := time.Parse("15:04", event.StartTime)
-			end, _ := time.Parse("15:04", event.EndTime)
+			start := event.StartTime.Time()
+			end := event.EndTime.Time()
 			event.Duration = end.Sub(start)
 			if event.Duration < 0 {
 				if isStartTime {

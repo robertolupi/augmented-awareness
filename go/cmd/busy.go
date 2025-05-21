@@ -73,7 +73,7 @@ var (
 				for _, event := range events {
 					add := true
 					if len(event.Tags) == 0 {
-						noTags.Add(event.Start, event.Duration)
+						noTags.Add(event.StartTime.Time(), event.Duration)
 					}
 					for _, tag := range event.Tags {
 						if tag == "" {
@@ -82,9 +82,9 @@ var (
 						if _, ok := tags[tag]; !ok {
 							tags[tag], _ = stats.NewTimeHistogram(stats.PeriodDaily, busyBucketSize)
 						}
-						tags[tag].Add(event.Start, event.Duration)
+						tags[tag].Add(event.StartTime.Time(), event.Duration)
 						if add {
-							total.Add(event.Start, event.Duration)
+							total.Add(event.StartTime.Time(), event.Duration)
 							add = false
 						}
 					}

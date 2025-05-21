@@ -90,7 +90,7 @@ func (v *Vault) Page(date string) (*Page, error) {
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			fmt.Printf("failed to close file: %w\n", err)
+			fmt.Printf("failed to close file: %v\n", err)
 		}
 	}()
 
@@ -119,6 +119,25 @@ func (v *Vault) Page(date string) (*Page, error) {
 	page.Content = strings.Split(fileContent, "\n")
 
 	return page, nil
+}
+
+func (p *Page) Date() (Date, error) {
+	if p.Path == "" {
+		return EmptyDate, fmt.Errorf("page path is empty")
+	}
+
+	// Extract the date from the page path
+	base := path.Base(p.Path)
+	if strings.HasSuffix(base, ".md") {
+		base = base[:len(base)-3]
+	}
+
+	date, err := DateFromString(base)
+	if err != nil {
+		return EmptyDate, fmt.Errorf("failed to parse date from page path: %w", err)
+	}
+
+	return date, nil
 }
 
 func (p *Page) Save() error {
@@ -159,7 +178,7 @@ func (p *Page) Save() error {
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			fmt.Printf("failed to close file: %w\n", closeErr)
+			fmt.Printf("failed to close file: %v\n", closeErr)
 
 		}
 	}()
@@ -242,9 +261,8 @@ func (p *Page) FindSection(section string) (Section, error) {
 
 type Event struct {
 	Line      int
-	StartTime string
-	EndTime   string
-	Start     time.Time
+	StartTime Time
+	EndTime   Time
 	Duration  time.Duration
 	Text      string
 	Tags      []string
@@ -252,10 +270,10 @@ type Event struct {
 
 func (event Event) String() string {
 	var sb strings.Builder
-	sb.WriteString(event.StartTime)
-	if event.EndTime != "" {
+	sb.WriteString(event.StartTime.String())
+	if !event.EndTime.IsEmpty() {
 		sb.WriteString(" - ")
-		sb.WriteString(event.EndTime)
+		sb.WriteString(event.EndTime.String())
 	}
 	sb.WriteString(" ")
 	sb.WriteString(event.Text)
@@ -274,26 +292,27 @@ func MaybeParseEvent(lineNo int, line string) *Event {
 		return nil
 	}
 
-	startTime := matches[1]
-	endTime := matches[3]
-	var duration time.Duration
-	var start time.Time
+	var start, end Time
 	var err error
 
-	if endTime != "" {
-		start, err = time.Parse("15:04", startTime)
-		if err != nil {
-			return nil
-		}
-		end, err := time.Parse("15:04", endTime)
-		if err != nil {
-			return nil
-		}
-		duration = end.Sub(start)
+	start, err = TimeFromString(matches[1])
+	if err != nil {
+		return nil
+	}
+
+	end, err = TimeFromString(matches[3])
+	if err != nil {
+		return nil
+	}
+
+	var duration time.Duration
+	if !end.IsEmpty() {
+		duration = end.Time().Sub(start.Time())
 		if duration < 0 {
 			return nil
 		}
 	}
+
 	text := strings.TrimSpace(matches[4])
 
 	var tags []string
@@ -306,9 +325,8 @@ func MaybeParseEvent(lineNo int, line string) *Event {
 
 	return &Event{
 		Line:      lineNo,
-		StartTime: startTime,
-		EndTime:   endTime,
-		Start:     start,
+		StartTime: start,
+		EndTime:   end,
 		Duration:  duration,
 		Text:      text,
 		Tags:      tags,

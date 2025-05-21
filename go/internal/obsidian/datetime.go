@@ -5,7 +5,13 @@ import "time"
 // Time represents a time in the HH:MM format
 type Time string
 
+const EmptyTime Time = ""
+
 func TimeFromString(timeStr string) (Time, error) {
+	if timeStr == "" {
+		return EmptyTime, nil
+	}
+
 	parsedTime, err := time.Parse("15:04", timeStr)
 	if err != nil {
 		return "", err
@@ -25,6 +31,14 @@ func (t Time) Time() time.Time {
 	return parsedTime
 }
 
+func TimeNow() Time {
+	return Time(time.Now().Format("15:04"))
+}
+
+func (t Time) String() string {
+	return string(t)
+}
+
 func (t Time) AddMinutes(delta int) Time {
 	if t.IsEmpty() {
 		return ""
@@ -36,6 +50,8 @@ func (t Time) AddMinutes(delta int) Time {
 
 // Date represents a date in the YYYY-MM-DD format
 type Date string
+
+const EmptyDate Date = ""
 
 func DateFromString(dateStr string) (Date, error) {
 	parsedDate, err := time.Parse("2006-01-02", dateStr)
@@ -55,6 +71,10 @@ func (d Date) Time() time.Time {
 		return time.Time{}
 	}
 	return parsedDate
+}
+
+func (d Date) String() string {
+	return string(d)
 }
 
 func (d Date) AddDays(delta int) Date {

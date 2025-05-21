@@ -5,7 +5,6 @@ import (
 	"journal/internal/obsidian"
 	"log"
 	"strings"
-	"time"
 )
 
 var (
@@ -40,13 +39,13 @@ var (
 			}
 			if event != nil {
 				if event.EndTime == "" {
-					event.EndTime = time.Now().Format("15:04")
+					event.EndTime = obsidian.TimeNow()
 					page.Content[i] = event.String()
 				}
 			}
 
 			newEvent := &obsidian.Event{
-				StartTime: time.Now().Format("15:04"),
+				StartTime: obsidian.TimeNow(),
 				Text:      strings.Join(args, " "),
 			}
 
