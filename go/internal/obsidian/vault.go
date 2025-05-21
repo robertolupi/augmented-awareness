@@ -88,7 +88,11 @@ func (v *Vault) Page(date string) (*Page, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open page: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("failed to close file: %w\n", err)
+		}
+	}()
 
 	content, err := io.ReadAll(file)
 	if err != nil {
@@ -118,28 +122,51 @@ func (v *Vault) Page(date string) (*Page, error) {
 }
 
 func (p *Page) Save() error {
-	fullPath := path.Join(p.Vault.Path, p.Path)
-	file, err := os.OpenFile(fullPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	var contentBuilder strings.Builder
 
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// Write frontmatter
+	// Prepare frontmatter
 	if len(p.Frontmatter) > 0 {
 		data, err := yaml.Marshal(p.Frontmatter)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("failed to marshal frontmatter: %w", err)
 		}
-		file.WriteString("---\n")
-		file.Write(data)
-		file.WriteString("---\n")
+		_, err = contentBuilder.WriteString("---\n")
+		if err != nil {
+			return fmt.Errorf("failed to write frontmatter start delimiter: %w", err)
+		}
+		_, err = contentBuilder.Write(data)
+		if err != nil {
+			return fmt.Errorf("failed to write frontmatter data: %w", err)
+		}
+		_, err = contentBuilder.WriteString("---\n")
+		if err != nil {
+			return fmt.Errorf("failed to write frontmatter end delimiter: %w", err)
+		}
 	}
 
-	// Write content
+	// Prepare content
 	for _, line := range p.Content {
-		file.WriteString(strings.TrimSuffix(line, "\n") + "\n")
+		_, err := contentBuilder.WriteString(strings.TrimSuffix(line, "\n") + "\n")
+		if err != nil {
+			return fmt.Errorf("failed to write content line: %w", err)
+		}
+	}
+
+	fullPath := path.Join(p.Vault.Path, p.Path)
+	file, err := os.OpenFile(fullPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open file for writing: %w", err)
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Printf("failed to close file: %w\n", closeErr)
+
+		}
+	}()
+
+	_, err = file.WriteString(contentBuilder.String())
+	if err != nil {
+		return fmt.Errorf("failed to write page content to file: %w", err)
 	}
 
 	return nil
