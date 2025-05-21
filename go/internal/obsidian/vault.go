@@ -191,29 +191,22 @@ func (p *Page) Save() error {
 	return nil
 }
 
-// Events return all events in the given section of the page.
-func (p *Page) Events(sectionHeader string) ([]Event, error) {
-	section, err := p.FindSection(sectionHeader)
-	if err != nil {
-		return nil, err
-	}
+type Section struct {
+	// Start and End line of the section in the page content
+	page  *Page
+	Start int
+	End   int
+}
 
+func (s *Section) Events() ([]Event, error) {
 	var events []Event
-	for i := section.Start; i < section.End; i++ {
-		event := MaybeParseEvent(i, p.Content[i])
+	for i := s.Start; i < s.End; i++ {
+		event := MaybeParseEvent(i, s.page.Content[i])
 		if event != nil {
 			events = append(events, *event)
 		}
 	}
-
 	return events, nil
-}
-
-type Section struct {
-	// Start and End line of the section in the page content
-	Page  *Page
-	Start int
-	End   int
 }
 
 var sectionHeaderRegex = regexp.MustCompile(`^(#+)\s+(.*)$`)
@@ -256,7 +249,7 @@ func (p *Page) FindSection(section string) (Section, error) {
 		return Section{}, fmt.Errorf("section %s not found", section)
 	}
 
-	return Section{Page: p, Start: start, End: end}, nil
+	return Section{page: p, Start: start, End: end}, nil
 }
 
 type Event struct {

@@ -64,9 +64,15 @@ var (
 
 			for _, page := range pages {
 
-				events, err := page.Events(journalSection)
+				section, err := page.FindSection(journalSection)
 				if err != nil {
-					log.Printf("No events in journal page: %v", err)
+					log.Printf("Failed to find section %s in page %s: %v", journalSection, page.Path, err)
+					continue
+				}
+
+				events, err := section.Events()
+				if err != nil {
+					log.Printf("No events in section %s in page %s: %v", journalSection, page.Path, err)
 					continue
 				}
 

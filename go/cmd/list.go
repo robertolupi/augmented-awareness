@@ -21,7 +21,12 @@ var (
 				log.Fatalf("Failed to get journal page: %v", err)
 			}
 
-			events, err := page.Events(journalSection)
+			section, err := page.FindSection(journalSection)
+			if err != nil {
+				log.Fatalf("Failed to find journal section: %v", err)
+			}
+
+			events, err := section.Events()
 			if err != nil {
 				log.Fatalf("Failed to get events from journal page: %v", err)
 			}

@@ -91,7 +91,11 @@ type newEventsMsg struct {
 
 func (m model) refreshEvents() tea.Cmd {
 	return func() tea.Msg {
-		events, err := m.currentPage.Events(m.section)
+		section, err := m.currentPage.FindSection(m.section)
+		if err != nil {
+			return err
+		}
+		events, err := section.Events()
 		if err != nil {
 			return err
 		}
