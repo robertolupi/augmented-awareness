@@ -30,8 +30,8 @@ const (
 	editEndTimeMode
 )
 
-type model struct {
-	// Define your model fields here
+type PageEditor struct {
+	// Define your PageEditor fields here
 	vault       *obsidian.Vault
 	section     string
 	currentDate string
@@ -49,13 +49,13 @@ type model struct {
 	mode      mode
 }
 
-func NewModel(vault *obsidian.Vault, page string, sectionName string) tea.Model {
+func NewPageEditor(vault *obsidian.Vault, page string, sectionName string) tea.Model {
 	ti := textinput.New()
 	ti.Placeholder = "Enter event text..."
 	ti.Focus()
 	ti.Width = 80
 
-	return model{
+	return PageEditor{
 		vault:       vault,
 		section:     sectionName,
 		currentDate: page,
@@ -68,11 +68,11 @@ type newPageMsg struct {
 	page *obsidian.Page
 }
 
-func (m model) Init() tea.Cmd {
+func (m PageEditor) Init() tea.Cmd {
 	return m.loadPage()
 }
 
-func (m model) loadPage() tea.Cmd {
+func (m PageEditor) loadPage() tea.Cmd {
 	return func() tea.Msg {
 		page, err := m.vault.Page(m.currentDate)
 		if err != nil {
@@ -89,7 +89,7 @@ type newEventsMsg struct {
 	events table.Model
 }
 
-func (m model) refreshEvents() tea.Cmd {
+func (m PageEditor) refreshEvents() tea.Cmd {
 	return func() tea.Msg {
 		section, err := m.currentPage.FindSection(m.section)
 		if err != nil {
@@ -148,7 +148,7 @@ func (m model) refreshEvents() tea.Cmd {
 	}
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m PageEditor) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -275,7 +275,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) recordEvent(text string) tea.Cmd {
+func (m PageEditor) recordEvent(text string) tea.Cmd {
 	return func() tea.Msg {
 		section, err := m.currentPage.FindSection(m.section)
 		if err != nil {
@@ -315,7 +315,7 @@ func (m model) recordEvent(text string) tea.Cmd {
 	}
 }
 
-func (m model) amendEvent(text string) tea.Cmd {
+func (m PageEditor) amendEvent(text string) tea.Cmd {
 	return func() tea.Msg {
 		// Get the selected event
 		rows := m.events.Rows()
@@ -388,7 +388,7 @@ func parseTimeString(timeStr string, referenceTime string) (string, error) {
 }
 
 // editEventTime is a helper function to edit either the start or end time of an event
-func (m model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
+func (m PageEditor) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 	return func() tea.Msg {
 		// Get the selected event
 		rows := m.events.Rows()
@@ -467,15 +467,15 @@ func (m model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 	}
 }
 
-func (m model) editStartTime(newTime string) tea.Cmd {
+func (m PageEditor) editStartTime(newTime string) tea.Cmd {
 	return m.editEventTime(newTime, true)
 }
 
-func (m model) editEndTime(newTime string) tea.Cmd {
+func (m PageEditor) editEndTime(newTime string) tea.Cmd {
 	return m.editEventTime(newTime, false)
 }
 
-func (m model) View() string {
+func (m PageEditor) View() string {
 	if m.err != nil {
 		return m.err.Error() + "\n"
 	}

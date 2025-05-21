@@ -16,7 +16,7 @@ var (
 			if err := initVault(); err != nil {
 				log.Fatalf("Failed to initialize vault: %v", err)
 			}
-			p := tea.NewProgram(tui.NewModel(vault, today(), journalSection), tea.WithAltScreen())
+			p := tea.NewProgram(tui.NewPageEditor(vault, today(), journalSection), tea.WithAltScreen())
 			if _, err := p.Run(); err != nil {
 				log.Fatalf("Error running program: %v", err)
 			}
