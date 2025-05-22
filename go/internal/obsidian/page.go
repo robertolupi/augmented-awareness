@@ -210,3 +210,38 @@ func (p *Page) FindSection(section string) (Section, error) {
 
 	return Section{page: p, Start: start, End: end}, nil
 }
+
+func (s *Section) AmendEvent(ev Event) error {
+	if s.page == nil {
+		return fmt.Errorf("page is nil")
+	}
+
+	if ev.Line < s.Start || ev.Line >= s.End {
+		return fmt.Errorf("event line number %d is out of section bounds (%d, %d)", ev.Line, s.Start, s.End)
+	}
+
+	if ev.StartTime.IsEmpty() {
+		return fmt.Errorf("event start time is empty")
+	}
+
+	previous := MaybeParseEvent(ev.Line, s.page.Content[ev.Line])
+	if previous == nil {
+		return fmt.Errorf("no event found at line %d", ev.Line)
+	}
+
+	s.page.Content[ev.Line] = ev.String()
+	return nil
+}
+
+func (s *Section) AddEvent(ev Event) error {
+	if s.page == nil {
+		return fmt.Errorf("page is nil")
+	}
+
+	if ev.StartTime.IsEmpty() {
+		return fmt.Errorf("event start time is empty")
+	}
+
+	s.page.Content = append(s.page.Content[:s.End], append([]string{ev.String()}, s.page.Content[s.End:]...)...)
+	return nil
+}

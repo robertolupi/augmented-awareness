@@ -29,27 +29,29 @@ var (
 				log.Fatalf("Failed to find section %s in journal page: %v", journalSection, err)
 			}
 
-			var event *obsidian.Event
-			var i int
-			for i = section.End - 1; i >= section.Start; i-- {
-				event = obsidian.MaybeParseEvent(i, page.Content[i])
-				if event != nil {
-					break
-				}
+			events, err := section.Events()
+			if err != nil {
+				log.Fatalf("Failed to get events from section %s: %v", journalSection, err)
 			}
-			if event != nil {
+
+			if len(events) > 0 {
+				event := events[len(events)-1]
 				if event.EndTime == "" {
 					event.EndTime = obsidian.TimeNow()
-					page.Content[i] = event.String()
+					if err := section.AmendEvent(event); err != nil {
+						log.Fatalf("Failed to amend event: %v", err)
+					}
 				}
 			}
 
-			newEvent := &obsidian.Event{
+			newEvent := obsidian.Event{
 				StartTime: obsidian.TimeNow(),
 				Text:      strings.Join(args, " "),
 			}
 
-			page.Content = append(page.Content[:section.End], append([]string{newEvent.String()}, page.Content[section.End:]...)...)
+			if err := section.AddEvent(newEvent); err != nil {
+				log.Fatalf("Failed to add new event: %v", err)
+			}
 
 			if err := page.Save(); err != nil {
 				log.Fatalf("Failed to save page: %v", err)

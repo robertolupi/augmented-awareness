@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"journal/internal/obsidian"
 	"log"
 	"strings"
 )
@@ -27,20 +26,22 @@ var (
 				log.Fatalf("Failed to find section %s in journal page: %v", journalSection, err)
 			}
 
-			var event *obsidian.Event
-			var i int
-			for i = section.End - 1; i >= section.Start; i-- {
-				event = obsidian.MaybeParseEvent(i, page.Content[i])
-				if event != nil {
-					break
-				}
-			}
-			if event == nil {
-				log.Fatalf("No event found to amend")
+			events, err := section.Events()
+			if err != nil {
+				log.Fatalf("Failed to get events from section %s: %v", journalSection, err)
 			}
 
+			if len(events) == 0 {
+				log.Fatalf("No events found in section %s", journalSection)
+			}
+
+			event := events[len(events)-1]
+
 			event.Text = strings.Join(args, " ")
-			page.Content[i] = event.String()
+
+			if err := section.AmendEvent(event); err != nil {
+				log.Fatalf("Failed to amend event: %v", err)
+			}
 
 			if err := page.Save(); err != nil {
 				log.Fatalf("Failed to save page: %v", err)
