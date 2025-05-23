@@ -59,88 +59,71 @@ func New(vault *obsidian.Vault, sectionName string) Model {
 	}
 }
 
-type newPageMsg struct {
-	page *obsidian.Page
-}
-
 func (m Model) Init() tea.Cmd {
-	return m.loadPage()
+	return nil
 }
 
-func (m Model) loadPage() tea.Cmd {
-	return func() tea.Msg {
-		page, err := m.vault.Page(m.currentDate)
-		if err != nil {
-			return err
-		}
-
-		return newPageMsg{
-			page: page,
-		}
-	}
-}
+type updateEventsMsg struct{}
 
 type newEventsMsg struct {
 	events table.Model
 }
 
-func (m Model) refreshEvents() tea.Cmd {
-	return func() tea.Msg {
-		section, err := m.currentPage.FindSection(m.section)
-		if err != nil {
-			return err
-		}
-		events, err := section.Events()
-		if err != nil {
-			return err
-		}
-
-		cols := []table.Column{
-			{Title: "Line", Width: 4},
-			{Title: "Start", Width: 10},
-			{Title: "End", Width: 10},
-			{Title: "Histogram", Width: 10},
-			{Title: "Text", Width: 50},
-			{Title: "Tags", Width: 30},
-		}
-		var rows []table.Row
-		for _, event := range events {
-			var duration string
-			if event.Duration != 0 {
-				duration = event.Duration.String()
-			}
-			rows = append(rows, table.Row{
-				strconv.Itoa(event.Line + 1),
-				event.StartTime.String(),
-				event.EndTime.String(),
-				duration,
-				event.Text,
-				strings.Join(event.Tags, " "),
-			})
-		}
-		tbl := table.New(
-			table.WithColumns(cols),
-			table.WithRows(rows),
-			table.WithFocused(true),
-		)
-		s := table.DefaultStyles()
-		s.Header = s.Header.
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("240")).
-			BorderBottom(true).
-			Bold(false)
-		s.Selected = s.Selected.
-			Foreground(lipgloss.Color("229")).
-			Background(lipgloss.Color("57")).
-			Bold(false)
-		tbl.SetStyles(s)
-
-		tbl.SetHeight(m.height - 4)
-
-		return newEventsMsg{
-			events: tbl,
-		}
+func (m *Model) updateEvents() error {
+	section, err := m.currentPage.FindSection(m.section)
+	if err != nil {
+		return err
 	}
+	events, err := section.Events()
+	if err != nil {
+		return err
+	}
+
+	cols := []table.Column{
+		{Title: "Line", Width: 4},
+		{Title: "Start", Width: 10},
+		{Title: "End", Width: 10},
+		{Title: "Histogram", Width: 10},
+		{Title: "Text", Width: 50},
+		{Title: "Tags", Width: 30},
+	}
+	var rows []table.Row
+	for _, event := range events {
+		var duration string
+		if event.Duration != 0 {
+			duration = event.Duration.String()
+		}
+		rows = append(rows, table.Row{
+			strconv.Itoa(event.Line + 1),
+			event.StartTime.String(),
+			event.EndTime.String(),
+			duration,
+			event.Text,
+			strings.Join(event.Tags, " "),
+		})
+	}
+	tbl := table.New(
+		table.WithColumns(cols),
+		table.WithRows(rows),
+		table.WithFocused(true),
+	)
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(false)
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("229")).
+		Background(lipgloss.Color("57")).
+		Bold(false)
+	tbl.SetStyles(s)
+
+	tbl.SetHeight(m.height - 4)
+
+	m.events = tbl
+	return nil
+
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -154,7 +137,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.LoadPageMsg:
 		m.currentDate = msg.Date.String()
 		m.currentPage = msg.Page
-		return m, m.loadPage()
+		m.err = msg.Error
+		m.mode = normalMode
+		if m.err == nil && m.currentPage != nil {
+			m.err = m.updateEvents()
+		}
+		return m, nil
+	case updateEventsMsg:
+		m.err = m.updateEvents()
+		m.mode = normalMode
+		return m, nil
 	case tea.KeyMsg:
 		switch m.mode {
 		case normalMode:
@@ -244,14 +236,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case error:
 		m.err = msg
-	case newPageMsg:
-		m.currentPage = msg.page
-		m.err = nil
-		return m, m.refreshEvents()
-	case newEventsMsg:
-		m.events = msg.events
-		m.err = nil
-		m.mode = normalMode
 	}
 
 	m.events, cmd = m.events.Update(msg)
@@ -294,7 +278,7 @@ func (m Model) recordEvent(text string) tea.Cmd {
 		// Reset mode and refresh events
 		m.mode = normalMode
 		m.textInput.Blur()
-		return m.refreshEvents()()
+		return updateEventsMsg{}
 	}
 }
 
@@ -332,7 +316,7 @@ func (m Model) amendEvent(text string) tea.Cmd {
 		// Reset mode and refresh events
 		m.mode = normalMode
 		m.textInput.Blur()
-		return m.refreshEvents()()
+		return updateEventsMsg{}
 	}
 }
 
@@ -446,7 +430,7 @@ func (m Model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 		// Reset mode and refresh events
 		m.mode = normalMode
 		m.textInput.Blur()
-		return m.refreshEvents()()
+		return updateEventsMsg{}
 	}
 }
 
