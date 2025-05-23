@@ -1,4 +1,4 @@
-package tui
+package editor
 
 import (
 	"fmt"
@@ -7,17 +7,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"journal/internal/obsidian"
+	"journal/internal/tui/messages"
+	"journal/internal/tui/styles"
 	"strconv"
 	"strings"
 	"time"
-)
-
-var (
-	baseStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("240"))
-	highlightStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("205"))
 )
 
 type mode int
@@ -30,15 +24,15 @@ const (
 	editEndTimeMode
 )
 
-type PageEditor struct {
-	// Define your PageEditor fields here
+type Model struct {
+	// Define your Model fields here
 	vault       *obsidian.Vault
 	section     string
 	currentDate string
 	currentPage *obsidian.Page
 
-	windowHeight int
-	windowWidth  int
+	height int
+	width  int
 
 	events           table.Model
 	err              error
@@ -49,18 +43,19 @@ type PageEditor struct {
 	mode      mode
 }
 
-func NewPageEditor(vault *obsidian.Vault, page string, sectionName string) tea.Model {
+func New(vault *obsidian.Vault, sectionName string) Model {
 	ti := textinput.New()
 	ti.Placeholder = "Enter event text..."
 	ti.Focus()
 	ti.Width = 80
 
-	return PageEditor{
-		vault:       vault,
-		section:     sectionName,
-		currentDate: page,
-		textInput:   ti,
-		mode:        normalMode,
+	return Model{
+		vault:     vault,
+		section:   sectionName,
+		textInput: ti,
+		mode:      normalMode,
+		width:     80,
+		height:    24,
 	}
 }
 
@@ -68,11 +63,11 @@ type newPageMsg struct {
 	page *obsidian.Page
 }
 
-func (m PageEditor) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return m.loadPage()
 }
 
-func (m PageEditor) loadPage() tea.Cmd {
+func (m Model) loadPage() tea.Cmd {
 	return func() tea.Msg {
 		page, err := m.vault.Page(m.currentDate)
 		if err != nil {
@@ -89,7 +84,7 @@ type newEventsMsg struct {
 	events table.Model
 }
 
-func (m PageEditor) refreshEvents() tea.Cmd {
+func (m Model) refreshEvents() tea.Cmd {
 	return func() tea.Msg {
 		section, err := m.currentPage.FindSection(m.section)
 		if err != nil {
@@ -140,7 +135,7 @@ func (m PageEditor) refreshEvents() tea.Cmd {
 			Bold(false)
 		tbl.SetStyles(s)
 
-		tbl.SetHeight(m.windowHeight - 4)
+		tbl.SetHeight(m.height - 4)
 
 		return newEventsMsg{
 			events: tbl,
@@ -148,14 +143,18 @@ func (m PageEditor) refreshEvents() tea.Cmd {
 	}
 }
 
-func (m PageEditor) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.windowHeight = msg.Height
-		m.windowWidth = msg.Width
-		m.events.SetHeight(m.windowHeight - 4)
+	case messages.ResizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.events.SetHeight(m.height - 4)
+	case messages.LoadPageMsg:
+		m.currentDate = msg.Date.String()
+		m.currentPage = msg.Page
+		return m, m.loadPage()
 	case tea.KeyMsg:
 		switch m.mode {
 		case normalMode:
@@ -163,25 +162,9 @@ func (m PageEditor) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "ctrl+c", "q":
 				return m, tea.Quit
 			case "left":
-				// decrement the current date by one day
-				date, err := obsidian.DateFromPage(m.currentDate)
-				if err != nil {
-					m.err = err
-					return m, nil
-				}
-				date = date.AddDate(0, 0, -1)
-				m.currentDate = obsidian.DateToPage(date)
-				return m, m.loadPage()
+				return m, messages.PreviousPageCmd()
 			case "right":
-				// increment the current date by one day
-				date, err := obsidian.DateFromPage(m.currentDate)
-				if err != nil {
-					m.err = err
-					return m, nil
-				}
-				date = date.AddDate(0, 0, 1)
-				m.currentDate = obsidian.DateToPage(date)
-				return m, m.loadPage()
+				return m, messages.NextPageCmd()
 			case "r":
 				// Enter record mode
 				m.mode = recordMode
@@ -275,7 +258,7 @@ func (m PageEditor) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m PageEditor) recordEvent(text string) tea.Cmd {
+func (m Model) recordEvent(text string) tea.Cmd {
 	return func() tea.Msg {
 		section, err := m.currentPage.FindSection(m.section)
 		if err != nil {
@@ -315,7 +298,7 @@ func (m PageEditor) recordEvent(text string) tea.Cmd {
 	}
 }
 
-func (m PageEditor) amendEvent(text string) tea.Cmd {
+func (m Model) amendEvent(text string) tea.Cmd {
 	return func() tea.Msg {
 		// Get the selected event
 		rows := m.events.Rows()
@@ -388,7 +371,7 @@ func parseTimeString(timeStr string, referenceTime string) (string, error) {
 }
 
 // editEventTime is a helper function to edit either the start or end time of an event
-func (m PageEditor) editEventTime(newTime string, isStartTime bool) tea.Cmd {
+func (m Model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 	return func() tea.Msg {
 		// Get the selected event
 		rows := m.events.Rows()
@@ -467,41 +450,51 @@ func (m PageEditor) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 	}
 }
 
-func (m PageEditor) editStartTime(newTime string) tea.Cmd {
+func (m Model) editStartTime(newTime string) tea.Cmd {
 	return m.editEventTime(newTime, true)
 }
 
-func (m PageEditor) editEndTime(newTime string) tea.Cmd {
+func (m Model) editEndTime(newTime string) tea.Cmd {
 	return m.editEventTime(newTime, false)
 }
 
-func (m PageEditor) View() string {
+func (m Model) View() string {
 	if m.err != nil {
 		return m.err.Error() + "\n"
 	}
 	var sb strings.Builder
-	sb.WriteString("Journal Entry for " + highlightStyle.Render(m.currentDate) + ". ")
-	sb.WriteString("Section: " + highlightStyle.Render(m.section) + ". ")
 
 	switch m.mode {
 	case normalMode:
-		sb.WriteString("Press r to record, a to amend, s to edit start time, e to edit end time, Ctrl+C or q to quit.\n")
-		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
+		sb.WriteString("Press ")
+		binding := func(key, help string) {
+			sb.WriteString(styles.Key(key) + help)
+		}
+		binding("r", " to record, ")
+		binding("a", " to amend, ")
+		binding("s", " to edit start time, ")
+		binding("e", " to edit end time, ")
+		binding("←", "/")
+		binding("→", " to switch pages, ")
+		binding("tab", " to switch to page view, ")
+		binding("Ctrl+c", " or ")
+		binding("q", " to quit.\n")
+		sb.WriteString(styles.BaseStyle.Render(m.events.View()) + "\n")
 	case recordMode:
 		sb.WriteString("Recording a new event. Press Enter to submit, Esc to cancel.\n")
-		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
+		sb.WriteString(styles.BaseStyle.Render(m.events.View()) + "\n")
 		sb.WriteString(m.textInput.View())
 	case amendMode:
 		sb.WriteString("Amending the selected event. Press Enter to submit, Esc to cancel.\n")
-		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
+		sb.WriteString(styles.BaseStyle.Render(m.events.View()) + "\n")
 		sb.WriteString(m.textInput.View())
 	case editStartTimeMode:
 		sb.WriteString("Editing start time. Format: HH:MM (24-hour) or +/-MM for relative adjustments. Press Enter to submit, Esc to cancel.\n")
-		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
+		sb.WriteString(styles.BaseStyle.Render(m.events.View()) + "\n")
 		sb.WriteString(m.textInput.View())
 	case editEndTimeMode:
 		sb.WriteString("Editing end time. Format: HH:MM (24-hour) or +/-MM for relative adjustments. Press Enter to submit, Esc to cancel.\n")
-		sb.WriteString(baseStyle.Render(m.events.View()) + "\n")
+		sb.WriteString(styles.BaseStyle.Render(m.events.View()) + "\n")
 		sb.WriteString(m.textInput.View())
 	}
 
