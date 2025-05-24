@@ -6,6 +6,7 @@ import (
 	"journal/internal/obsidian"
 	"journal/internal/tui/editor"
 	"journal/internal/tui/messages"
+	"journal/internal/tui/plot"
 	"journal/internal/tui/styles"
 	"journal/internal/tui/viewer"
 	"strings"
@@ -16,6 +17,7 @@ type mode int
 const (
 	editorMode mode = iota
 	viewerMode
+	plotMode
 )
 
 type Model struct {
@@ -89,10 +91,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.error = err
 				break
 			}
-			if m.mode == editorMode {
+			switch m.mode {
+			case editorMode:
 				m.mode = viewerMode
 				m.main = viewer.New(m.vault)
-			} else {
+			case viewerMode:
+				m.mode = plotMode
+				m.main = plot.New(m.vault)
+			case plotMode:
 				m.mode = editorMode
 				m.main = editor.New(m.vault, m.journalSection)
 			}
