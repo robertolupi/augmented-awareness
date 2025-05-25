@@ -56,7 +56,8 @@ func MaybeParseEvent(lineNo int, line string) *Event {
 	if !end.IsEmpty() {
 		duration = end.Time().Sub(start.Time())
 		if duration < 0 {
-			return nil
+			// an overnight event
+			duration += 24 * time.Hour
 		}
 	}
 
