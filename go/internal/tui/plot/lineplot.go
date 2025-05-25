@@ -100,6 +100,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.mode {
 		case modePlot:
 			switch msg.String() {
+			case "ctrl+c", "q":
+				return m, tea.Quit
 			case "m":
 				m.mode = modeMetricName
 				m.textInput.SetValue(m.metric)
@@ -111,6 +113,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case modeMetricName, modeDays:
 			switch msg.String() {
+			case "ctrl+c":
+				return m, tea.Quit
 			case "enter":
 				if m.mode == modeMetricName {
 					m.metric = m.textInput.Value()
