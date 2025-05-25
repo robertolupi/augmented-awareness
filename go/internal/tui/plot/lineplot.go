@@ -21,7 +21,9 @@ const (
 )
 
 type Model struct {
-	vault  *obsidian.Vault
+	vault *obsidian.Vault
+
+	date   obsidian.Date
 	metric string
 	days   int
 
@@ -35,7 +37,6 @@ type Model struct {
 func New(vault *obsidian.Vault) Model {
 	ti := textinput.New()
 	ti.Placeholder = "Enter metric name"
-	ti.Focus()
 	ti.CharLimit = 20
 	ti.Width = 20
 
@@ -48,10 +49,11 @@ func New(vault *obsidian.Vault) Model {
 	}
 }
 
-func (m *Model) readData(date obsidian.Date) {
+func (m *Model) update() {
 	m.chart.Clear()
+	m.chart.ClearAllData()
 
-	date = date.AddDays(-m.days + 1) // Start from the first day in the range
+	date := m.date.AddDays(-m.days + 1) // Start from the first day in the range
 	for i := 0; i < m.days; i++ {
 		page, err := m.vault.Page(date.String())
 		if err == nil {
@@ -83,10 +85,19 @@ func (m *Model) readData(date obsidian.Date) {
 		}
 		date = date.AddDays(1)
 	}
+	m.chart.DrawBraille()
 }
 
 func (m Model) Init() tea.Cmd {
 	return nil
+}
+
+type updateMsg struct{}
+
+func updateCmd() tea.Cmd {
+	return func() tea.Msg {
+		return updateMsg{}
+	}
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -94,8 +105,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case messages.ResizeMsg:
 		m.chart.Resize(msg.Width, msg.Height-1)
+		m.update()
 	case messages.LoadPageMsg:
-		m.readData(msg.Date)
+		m.date = msg.Date
+		m.update()
+	case updateMsg:
+		m.update()
 	case tea.KeyMsg:
 		switch m.mode {
 		case modePlot:
@@ -104,10 +119,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			case "m":
 				m.mode = modeMetricName
+				m.textInput.Focus()
 				m.textInput.SetValue(m.metric)
 				return m, textinput.Blink
 			case "d":
 				m.mode = modeDays
+				m.textInput.Focus()
 				m.textInput.SetValue(strconv.Itoa(m.days))
 				return m, textinput.Blink
 			}
@@ -132,12 +149,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.mode = modePlot
 				m.textInput.Blur()
-				m.textInput.SetValue("")
+				return m, updateCmd()
 			case "esc":
 				m.mode = modePlot
 				m.textInput.Blur()
-				m.textInput.SetValue("")
-				return m, nil
+				return m, updateCmd()
 			}
 			m.textInput, cmd = m.textInput.Update(msg)
 			return m, cmd
@@ -160,7 +176,6 @@ func (m Model) View() string {
 		sb.WriteString("Metric: " + styles.Highlight(m.metric) + ", Days: " + styles.Highlight(strconv.Itoa(m.days)) + ". ")
 		sb.WriteString("Press " + styles.Key("m") + " to enter metric name, ")
 		sb.WriteString(styles.Key("d") + " to enter the number of days\n")
-		m.chart.DrawBraille()
 		sb.WriteString(m.chart.View())
 		sb.WriteString("\n")
 	case modeMetricName:
