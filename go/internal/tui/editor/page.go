@@ -28,7 +28,6 @@ type Model struct {
 	// Define your Model fields here
 	vault       *obsidian.Vault
 	section     string
-	currentDate string
 	currentPage *obsidian.Page
 
 	height int
@@ -135,7 +134,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.events.SetHeight(m.height - 4)
 	case messages.LoadPageMsg:
-		m.currentDate = msg.Date.String()
 		m.currentPage = msg.Page
 		m.err = msg.Error
 		m.mode = normalMode
