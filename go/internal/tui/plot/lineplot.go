@@ -104,7 +104,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case messages.ResizeMsg:
-		m.chart.Resize(msg.Width, msg.Height-1)
+		m.chart.Resize(msg.Width, msg.Height-2)
 		m.update()
 	case messages.LoadPageMsg:
 		m.date = msg.Date
