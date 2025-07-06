@@ -33,6 +33,7 @@ func init() {
 	initUiCmd()
 	initMcpCmd()
 	initTasksCmd()
+	initSearchCmd()
 }
 
 func initVault() error {

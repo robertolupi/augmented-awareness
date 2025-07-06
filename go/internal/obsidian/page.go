@@ -99,6 +99,18 @@ func (p *Page) Date() (Date, error) {
 	return date, nil
 }
 
+func (p *Page) Name() string {
+	if p.Path == "" {
+		return ""
+	}
+
+	base := path.Base(p.Path)
+	if strings.HasSuffix(base, ".md") {
+		return base[:len(base)-3] // Remove the .md extension
+	}
+	return base
+}
+
 func (p *Page) Save() error {
 	var contentBuilder strings.Builder
 
