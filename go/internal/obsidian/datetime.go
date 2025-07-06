@@ -57,6 +57,23 @@ func Today() Date {
 	return Date(time.Now().Format("2006-01-02"))
 }
 
+func DateRange(start string, end string) ([]Date, error) {
+	startDate, err := time.Parse("2006-01-02", start)
+	if err != nil {
+		return nil, err
+	}
+	endDate, err := time.Parse("2006-01-02", end)
+	if err != nil {
+		return nil, err
+	}
+
+	var dates []Date
+	for d := startDate; d.Before(endDate) || d.Equal(endDate); d = d.AddDate(0, 0, 1) {
+		dates = append(dates, Date(d.Format("2006-01-02")))
+	}
+	return dates, nil
+}
+
 func DateFromString(dateStr string) (Date, error) {
 	parsedDate, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {

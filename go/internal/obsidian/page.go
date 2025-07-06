@@ -245,3 +245,14 @@ func (s *Section) AddEvent(ev Event) error {
 	s.page.Content = append(s.page.Content[:s.End], append([]string{ev.String()}, s.page.Content[s.End:]...)...)
 	return nil
 }
+
+func (p *Page) Tasks() []Task {
+	var tasks []Task
+	for _, line := range p.Content {
+		task := ParseTask(line)
+		if task != nil {
+			tasks = append(tasks, *task)
+		}
+	}
+	return tasks
+}
