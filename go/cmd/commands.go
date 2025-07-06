@@ -31,6 +31,7 @@ func init() {
 	initListCmd()
 	initAmendCmd()
 	initUiCmd()
+	initMcpCmd()
 }
 
 func initVault() error {
