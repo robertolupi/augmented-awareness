@@ -14,6 +14,7 @@ func NewServer() *server.MCPServer {
 	addDateTimeTool(s)
 	addPagesToolAndResources(s)
 	addJournalTool(s)
+	addTasksTool(s)
 
 	return s
 }

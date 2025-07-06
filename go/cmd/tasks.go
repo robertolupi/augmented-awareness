@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 	"journal/internal/obsidian"
 	"log"
-	"sort"
 )
 
 var (
@@ -26,46 +25,18 @@ var (
 				log.Fatalf("Failed to parse date range: %v", err)
 			}
 
-			tasks := map[obsidian.Task]struct{}{}
-
-			for _, date := range dateRange {
-				page, err := vault.Page(date.String())
-				if err != nil {
-					continue
-				}
-				for _, task := range page.Tasks() {
-					if task.IsDone() {
-						continue
-					}
-					tasks[task] = struct{}{}
-				}
+			tasks, err := obsidian.TasksInDateRange(vault, dateRange, true)
+			if err != nil {
+				log.Fatalf("Failed to retrieve tasks: %v", err)
 			}
 
-			sortedTasks := make(SortedTasks, 0, len(tasks))
-			for task := range tasks {
-				sortedTasks = append(sortedTasks, task)
-			}
-			sort.Sort(sortedTasks)
-
-			for _, task := range sortedTasks {
+			for _, task := range tasks {
 				fmt.Println(task.String())
 			}
 		},
 	}
 )
 
-type SortedTasks []obsidian.Task
-
-func (s SortedTasks) Len() int {
-	return len(s)
-}
-
-func (s SortedTasks) Less(i, j int) bool {
-	return s[i].Description < s[j].Description
-}
-func (s SortedTasks) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
 
 func initTasksCmd() {
 	rootCmd.AddCommand(tasksCmd)
