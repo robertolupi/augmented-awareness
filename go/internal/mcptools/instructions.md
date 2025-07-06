@@ -35,3 +35,8 @@ Tasks have the following properties:
 # Code blocks
 
 Ignore code blocks in the journal (delimited by triple backticks). They are not relevant to the journal's content and can be ignored.
+
+# Search
+
+You have limited search capabilities. You can search pages by text contained in their title, using regular expressions.
+The search is case-insensitive and returns a list of page names. You don't have to specify brackets in the search query.
