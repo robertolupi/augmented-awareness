@@ -49,8 +49,8 @@ func today() string {
 	return obsidian.DateToPage(time.Now())
 }
 
-func oneWeekAgo() string {
-	return obsidian.DateToPage(time.Now().AddDate(0, 0, -7))
+func oneMonthAgo() string {
+	return obsidian.DateToPage(time.Now().AddDate(0, -1, 0))
 }
 
 func sixDaysAgo() string {

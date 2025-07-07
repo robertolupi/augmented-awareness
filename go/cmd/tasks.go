@@ -37,10 +37,9 @@ var (
 	}
 )
 
-
 func initTasksCmd() {
 	rootCmd.AddCommand(tasksCmd)
 
-	tasksCmd.Flags().StringVarP(&taskStartDate, "start", "s", oneWeekAgo(), "Start date for the task range (YYYY-MM-DD)")
+	tasksCmd.Flags().StringVarP(&taskStartDate, "start", "s", oneMonthAgo(), "Start date for the task range (YYYY-MM-DD)")
 	tasksCmd.Flags().StringVarP(&taskEndDate, "end", "e", today(), "End date for the task range (YYYY-MM-DD)")
 }
