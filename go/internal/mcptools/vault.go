@@ -5,6 +5,7 @@ import (
 )
 
 var vault *obsidian.Vault
+var journalSection string
 
 // SetVault sets the vault instance to be used by MCP tools.
 func SetVault(v *obsidian.Vault) {
@@ -12,4 +13,8 @@ func SetVault(v *obsidian.Vault) {
 		panic("vault cannot be nil")
 	}
 	vault = v
+}
+
+func SetJournalSection(section string) {
+	journalSection = section
 }

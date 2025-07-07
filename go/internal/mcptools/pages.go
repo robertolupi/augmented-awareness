@@ -10,8 +10,8 @@ import (
 )
 
 func addPagesToolAndResources(s *server.MCPServer) {
-	pagesTool := mcp.NewTool("pages",
-		mcp.WithDescription("Read pages from the vault."),
+	pagesTool := mcp.NewTool("read-page",
+		mcp.WithDescription("Read a page from the vault, and return its content in markdown format."),
 		mcp.WithIdempotentHintAnnotation(true),
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithString("page",

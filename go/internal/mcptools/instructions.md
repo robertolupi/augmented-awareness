@@ -40,3 +40,9 @@ Ignore code blocks in the journal (delimited by triple backticks). They are not 
 
 You have limited search capabilities. You can search pages by text contained in their title, using regular expressions.
 The search is case-insensitive and returns a list of page names. You don't have to specify brackets in the search query.
+
+# Busy
+
+The `busy` command returns a time histogram of the user's activity.
+
+The output is both text and graphic and uses the following symbols to represent how busy each bucket is: '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'.

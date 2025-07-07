@@ -9,7 +9,7 @@ import (
 )
 
 func addJournalTool(s *server.MCPServer) {
-	journalTool := mcp.NewTool("read-journal",
+	journalTool := mcp.NewTool("weekly-journal",
 		mcp.WithDescription("Read journal for the past week, up to and including today."),
 		mcp.WithIdempotentHintAnnotation(true),
 		mcp.WithReadOnlyHintAnnotation(false))

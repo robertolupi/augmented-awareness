@@ -20,6 +20,8 @@ var (
 			// https://mcp-go.dev/getting-started
 
 			mcptools.SetVault(vault)
+			mcptools.SetJournalSection(journalSection)
+
 			s := mcptools.NewServer()
 
 			if err := server.ServeStdio(s); err != nil {
