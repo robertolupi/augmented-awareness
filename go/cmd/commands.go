@@ -66,6 +66,7 @@ func initConfig() {
 	}
 	vaultPath = viper.GetString(config.VaultPath)
 	journalSection = viper.GetString(config.JournalSection)
+	dataPath = viper.GetString(config.DataPath)
 }
 
 func initVault() error {
