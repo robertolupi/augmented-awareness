@@ -1,14 +1,20 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"journal/internal/config"
 	"journal/internal/obsidian"
+	"log"
+	"os"
 	"time"
 )
 
 var (
 	vaultPath      string
 	journalSection string
+	dataPath       string
 	vault          *obsidian.Vault
 
 	rootCmd = &cobra.Command{
@@ -23,8 +29,25 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&vaultPath, "vault", "~/data/notes", "Path to the Obsidian vault")
-	rootCmd.PersistentFlags().StringVar(&journalSection, "section", "Journal and events", "Section of the journal entry")
+	cobra.OnInitialize(initConfig)
+
+	rootCmd.PersistentFlags().StringVar(&vaultPath, "vault", "", "Path to the Obsidian vault")
+	rootCmd.PersistentFlags().StringVar(&journalSection, "section", "", "Section of the journal entry")
+	rootCmd.PersistentFlags().StringVar(&dataPath, "data", "", "Path to the data directory")
+
+	err := viper.BindPFlag(config.VaultPath, rootCmd.PersistentFlags().Lookup("vault"))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	err = viper.BindPFlag(config.JournalSection, rootCmd.PersistentFlags().Lookup("section"))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = viper.BindPFlag(config.DataPath, rootCmd.PersistentFlags().Lookup("data"))
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	initRecordCmd()
 	initBusyCmd()
@@ -34,6 +57,15 @@ func init() {
 	initMcpCmd()
 	initTasksCmd()
 	initSearchCmd()
+}
+
+func initConfig() {
+	if err := config.InitConfig(""); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	vaultPath = viper.GetString(config.VaultPath)
+	journalSection = viper.GetString(config.JournalSection)
 }
 
 func initVault() error {
