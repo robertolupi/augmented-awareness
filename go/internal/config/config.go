@@ -15,7 +15,7 @@ const (
 func InitConfig(configFile string) error {
 	viper.SetDefault(VaultPath, "~/data/notes")
 	viper.SetDefault(JournalSection, "Journal and events")
-	viper.SetDefault(DataPath, "~/journal")
+	viper.SetDefault(DataPath, "~/.cache/journal")
 
 	if configFile != "" {
 		viper.SetConfigFile(configFile)

@@ -27,5 +27,5 @@ func TestInitConfig(t *testing.T) {
 	// Check that the values are loaded correctly
 	assert.Equal(t, "/tmp/test-vault", viper.GetString(VaultPath))
 	assert.Equal(t, "Journal and events", viper.GetString(JournalSection))
-	assert.Equal(t, "~/journal", viper.GetString(DataPath))
+	assert.Equal(t, "~/.cache/journal", viper.GetString(DataPath))
 }
