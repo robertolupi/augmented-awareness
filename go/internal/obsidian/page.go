@@ -18,31 +18,7 @@ type Page struct {
 	Content     []string
 }
 
-func (v *Vault) Page(date string) (*Page, error) {
-	var pagePath string
-	// Search the whole vault recursively for the journal page
-	err := fs.WalkDir(v.FS, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if d.Name() == date+".md" {
-			pagePath = path
-			return fs.SkipAll
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to walk the vault: %w", err)
-	}
-
-	if pagePath == "" {
-		return nil, fmt.Errorf("page not found for date: %s", date)
-	}
-
+func (v *Vault) PageByPath(pagePath string) (*Page, error) {
 	file, err := v.FS.Open(pagePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open page: %w", err)
@@ -78,6 +54,40 @@ func (v *Vault) Page(date string) (*Page, error) {
 	page.Content = strings.Split(fileContent, "\n")
 
 	return page, nil
+}
+
+func (v *Vault) WalkPages(fn fs.WalkDirFunc) error {
+	if v.FS == nil {
+		return fmt.Errorf("vault filesystem is not initialized")
+	}
+
+	return fs.WalkDir(v.FS, ".", func(filePath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
+			return nil
+		}
+		return fn(filePath, d, nil)
+	})
+}
+
+func (v *Vault) Page(title string) (*Page, error) {
+	var pagePath string
+
+	err := v.WalkPages(func(filePath string, d fs.DirEntry, err error) error {
+		if d.Name() == title+".md" {
+			pagePath = filePath
+			return fs.SkipAll // Stop walking once we find the page
+		}
+		return nil
+	})
+
+	if pagePath != "" {
+		return v.PageByPath(pagePath)
+	}
+
+	return nil, fmt.Errorf("page with title %s not found: %v", title, err)
 }
 
 func (p *Page) Date() (Date, error) {
