@@ -2,8 +2,36 @@ package obsidian
 
 import (
 	"github.com/stretchr/testify/assert"
+	"io/fs"
 	"testing"
 )
+
+func TestVault_WalkPages(t *testing.T) {
+	allPages := make(map[string]bool)
+	vault := NewTestVault(t)
+	err := vault.WalkPages(func(pagePath string, d fs.DirEntry, err error) error {
+		allPages[d.Name()] = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Failed to walk pages: %v", err)
+	}
+	assert.NotEmpty(t, allPages, "expected to find at least one page in the vault")
+
+	expectedPages := map[string]bool{
+		"index.md":      true,
+		"2025-03-30.md": true,
+		"2025-04-01.md": true,
+	}
+
+	for pageName := range expectedPages {
+		if _, exists := allPages[pageName]; !exists {
+			t.Errorf("Expected page %s not found in vault", pageName)
+		}
+	}
+
+	assert.Equal(t, len(expectedPages), len(allPages), "expected number of pages does not match actual number of pages found")
+}
 
 func TestVault_PageByPath(t *testing.T) {
 	vault := NewTestVault(t)
@@ -100,4 +128,102 @@ func TestPage_FindSection(t *testing.T) {
 	events, err := section.Events()
 	assert.NoError(t, err, "expected no error when getting events from section")
 	assert.NotEmpty(t, events, "expected events to be found in section")
+}
+
+func TestPage_Save(t *testing.T) {
+	vault := NewTempVault(t)
+	page, err := vault.Page("2025-04-01")
+	if err != nil {
+		t.Fatalf("Failed to get page: %v", err)
+	}
+
+	page.Content[0] = "# Updated Content"
+	err = page.Save()
+	if err != nil {
+		t.Fatalf("Failed to save page: %v", err)
+	}
+
+	// Reload the page to verify changes
+	updatedPage, err := vault.Page("2025-04-01")
+	if err != nil {
+		t.Fatalf("Failed to reload page: %v", err)
+	}
+
+	assert.Equal(t, updatedPage.Content[0], "# Updated Content", "expected content to be updated")
+}
+
+func TestPage_AmendEvent(t *testing.T) {
+	vault := NewTempVault(t)
+	page, err := vault.Page("2025-04-01")
+	if err != nil {
+		t.Fatalf("Failed to get page: %v", err)
+	}
+
+	section, err := page.FindSection("Schedule")
+	if err != nil {
+		t.Fatalf("Failed to find section: %v", err)
+	}
+
+	events, err := section.Events()
+	if err != nil {
+		t.Fatalf("Failed to get events from section: %v", err)
+	}
+
+	assert.NotEmpty(t, events, "expected events to be found in section")
+
+	event := events[0]
+	event.Text = "Updated Event Text"
+	err = section.AmendEvent(event)
+	if err != nil {
+		t.Fatalf("Failed to amend event: %v", err)
+	}
+
+	assert.Equal(t, "06:04 Updated Event Text", page.Content[event.Line], "expected event text to be updated in page content")
+}
+
+func TestPage_AmendEventError(t *testing.T) {
+	vault := NewTempVault(t)
+	page, err := vault.Page("2025-04-01")
+	if err != nil {
+		t.Fatalf("Failed to get page: %v", err)
+	}
+
+	section, err := page.FindSection("Schedule")
+	if err != nil {
+		t.Fatalf("Failed to find section: %v", err)
+	}
+
+	// Create an event that does not exist in the section, and doesn't have a valid line number
+	event := Event{
+		Text: "Non-existent Event",
+	}
+
+	err = section.AmendEvent(event)
+	assert.Error(t, err, "expected error when amending non-existent event")
+}
+
+func TestPage_AddEvent(t *testing.T) {
+	vault := NewTempVault(t)
+	page, err := vault.Page("2025-04-01")
+	if err != nil {
+		t.Fatalf("Failed to get page: %v", err)
+	}
+
+	section, err := page.FindSection("Schedule")
+	if err != nil {
+		t.Fatalf("Failed to find section: %v", err)
+	}
+
+	newEvent := Event{
+		Text:      "New Event",
+		StartTime: mustTimeFromString(t, "14:00"),
+		EndTime:   mustTimeFromString(t, "15:00"),
+	}
+
+	err = section.AddEvent(newEvent)
+	if err != nil {
+		t.Fatalf("Failed to add event: %v", err)
+	}
+
+	assert.Equal(t, page.Content[section.End], "14:00 - 15:00 New Event")
 }
