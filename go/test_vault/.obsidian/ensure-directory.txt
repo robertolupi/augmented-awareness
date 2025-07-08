@@ -1,0 +1,1 @@
+Ensure the directory test/vault/.obsidian exists.
