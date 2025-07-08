@@ -20,6 +20,7 @@ The following configuration options are available:
 |---|---|---|---|---|
 | Vault Path | `vault.path` | `JOURNAL_VAULT_PATH` | `--vault` | `~/data/notes` |
 | Journal Section | `journal.section` | `JOURNAL_JOURNAL_SECTION` | `--section` | `Journal and events` |
+| Data Path | `data.path` | `JOURNAL_DATA_PATH` | `--data` | `~/.cache/journal` |
 
 Configuration is loaded in the following order of precedence:
 
