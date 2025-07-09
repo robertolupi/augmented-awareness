@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"journal/internal/search"
 	"log"
+	"path"
 	"strings"
 )
 
@@ -13,22 +15,30 @@ var (
 		Short: "Search for pages in the journal",
 		Long:  `Search for pages in the journal based on text they contain in their title.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 0 {
+				log.Println("Please provide a search term.")
+				return
+			}
+
 			if err := initVault(); err != nil {
 				log.Fatalf("Failed to initialize vault: %v", err)
 			}
 
-			pages, err := vault.Search(strings.Join(args, "|"))
+			index, err := search.NewIndex(dataPath)
 			if err != nil {
-				log.Fatalf("Failed to search journal pages: %v", err)
+				log.Fatalf("Failed to open or create index at %s: %v", dataPath, err)
+			}
+			defer index.Close()
+
+			results, err := index.Search(strings.Join(args, " "))
+			if err != nil {
+				log.Fatalf("Failed to search index: %v", err)
 			}
 
-			if len(pages) == 0 {
-				log.Println("No pages found matching the search criteria.")
-				return
-			}
-
-			for _, page := range pages {
-				fmt.Println(page.Name())
+			for _, result := range results.Hits {
+				_, pageFile := path.Split(result.ID)
+				pageName := strings.TrimSuffix(pageFile, ".md")
+				fmt.Println(pageName)
 			}
 		},
 	}

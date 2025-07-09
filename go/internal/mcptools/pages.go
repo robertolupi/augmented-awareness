@@ -11,24 +11,24 @@ import (
 
 func addPagesToolAndResources(s *server.MCPServer) {
 	pagesTool := mcp.NewTool("read-page",
-		mcp.WithDescription("Read a page from the vault, and return its content in markdown format."),
+		mcp.WithDescription("Read one or more pages from the vault, and return their content in markdown format."),
 		mcp.WithIdempotentHintAnnotation(true),
 		mcp.WithReadOnlyHintAnnotation(true),
-		mcp.WithString("page",
-			mcp.Description("The name of the page to read, e.g. 2023-10-01 or [[2023-10-01]]."),
-			mcp.Required()))
+		mcp.WithArray("pages",
+			mcp.Description("names of pages to read, e.g. 2023-10-01 or [[2023-10-01]]."),
+			mcp.Required()),
+	)
 
-	s.AddResourceTemplate(
-		mcp.NewResourceTemplate("journal://pages/{page}",
-			"A journal page",
-			mcp.WithTemplateDescription("A page in the journal vault."),
-			mcp.WithTemplateMIMEType("text/markdown"),
-		),
-		func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-			pageName := trimPageName(request.Params.URI)
+	s.AddTool(pagesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		pageNames := request.GetStringSlice("pages", nil)
+		var sb strings.Builder
+
+		for _, pageName := range pageNames {
+			pageName = trimPageName(pageName)
 			if pageName == "" {
 				return nil, errors.New("invalid page name provided")
 			}
+
 			page, err := vault.Page(pageName)
 			if err != nil {
 				return nil, errors.New("error retrieving page: " + err.Error())
@@ -36,31 +36,12 @@ func addPagesToolAndResources(s *server.MCPServer) {
 			if page == nil {
 				return nil, errors.New("page not found: " + pageName)
 			}
-			return []mcp.ResourceContents{
-				mcp.TextResourceContents{
-					URI:      request.Params.URI,
-					MIMEType: "text/markdown",
-					Text:     pageContent(page),
-				},
-			}, nil
-		})
-
-	s.AddTool(pagesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		pageName := request.GetString("page", "")
-		pageName = trimPageName(pageName)
-		if pageName == "" {
-			return nil, errors.New("invalid page name provided")
+			sb.WriteString("<page name=" + pageName + ">\n")
+			sb.WriteString(pageContent(page))
+			sb.WriteString("</page>\n\n")
 		}
 
-		page, err := vault.Page(pageName)
-		if err != nil {
-			return nil, errors.New("error retrieving page: " + err.Error())
-		}
-		if page == nil {
-			return nil, errors.New("page not found: " + pageName)
-		}
-
-		return mcp.NewToolResultText(pageContent(page)), nil
+		return mcp.NewToolResultText(sb.String()), nil
 	})
 }
 

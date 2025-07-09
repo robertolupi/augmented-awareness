@@ -57,6 +57,7 @@ func init() {
 	initMcpCmd()
 	initTasksCmd()
 	initSearchCmd()
+	initIndexCmd()
 }
 
 func initConfig() {

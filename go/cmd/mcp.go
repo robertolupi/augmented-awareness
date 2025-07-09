@@ -21,6 +21,7 @@ var (
 
 			mcptools.SetVault(vault)
 			mcptools.SetJournalSection(journalSection)
+			mcptools.SetDataPath(dataPath)
 
 			s := mcptools.NewServer()
 
