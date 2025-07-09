@@ -33,23 +33,26 @@ var (
 				log.Fatalf("Failed to walk pages in vault: %v", err)
 			}
 
-			err = tui.ShowProgress(func(setProgress tui.SetProgressFunc) error {
+			err = tui.ShowProgress(func(setProgress tui.SetProgressFunc, reportError tui.ReportErrorFunc) error {
 				for i, pagePath := range allPaths {
 					page, err := vault.PageByPath(pagePath)
 					if err != nil {
 						log.Printf("Failed to get page by path %q: %v", pagePath, err)
+						reportError(err)
 						continue
 					}
 					if page == nil {
 						log.Printf("No page found at path %q", pagePath)
+						reportError(err)
 						continue
 					}
 					if err := index.IndexPage(page); err != nil {
 						log.Printf("Failed to index page %q: %v", page.Path, err)
+						reportError(err)
 					}
 
 					// Update progress
-					setProgress(float64(i+1) / float64(len(allPaths)))
+					setProgress(page.Name(), float64(i+1)/float64(len(allPaths)))
 				}
 				return nil
 			})
