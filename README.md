@@ -21,3 +21,34 @@ text can be interspersed, and it will be ignored.
 09:00 - 09:30 events can have hashtags like #tag
 ```
 
+## Tools
+
+The program provides a set of tools, available both on the command line and as an MCP server for LLMs to use.
+
+```
+A simple command line tool to update my journal in Obsidian.
+
+Usage:
+  journal [command]
+
+Available Commands:
+  amend       Amend the last journal entry
+  busy        Show how I spent my time
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  index       Index the journal pages
+  list        List today events
+  mcp         Run as a MCP (Master Control Program) server
+  record      Record a new journal entry
+  search      Search for pages in the journal
+  tasks       List tasks in the given date range
+  tui         Start the TUI
+
+Flags:
+      --data string      Path to the data directory
+  -h, --help             help for journal
+      --section string   Section of the journal entry
+      --vault string     Path to the Obsidian vault
+
+Use "journal [command] --help" for more information about a command.
+```
