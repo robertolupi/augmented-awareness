@@ -16,12 +16,13 @@ var (
 		Short: "List tasks in the given date range",
 		Long:  `List tasks in the given date range from the journal.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			dateRange, err := obsidian.DateRange(taskStartDate, taskEndDate)
+
+			pages, err := vault.PageRange(taskStartDate, taskEndDate)
 			if err != nil {
-				log.Fatalf("Failed to parse date range: %v", err)
+				log.Fatalf("Failed to parse pages in date range: %v", err)
 			}
 
-			tasks, err := obsidian.TasksInDateRange(vault, dateRange, true)
+			tasks, err := obsidian.TasksInPages(pages, true)
 			if err != nil {
 				log.Fatalf("Failed to retrieve tasks: %v", err)
 			}

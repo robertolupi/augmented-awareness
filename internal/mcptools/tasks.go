@@ -3,6 +3,7 @@ package mcptools
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"journal/internal/obsidian"
@@ -36,12 +37,12 @@ func addTasksTool(s *server.MCPServer) {
 		includeDoneStr := request.GetString("include_done", "false")
 		includeDone := includeDoneStr == "true"
 
-		dateRange, err := obsidian.DateRange(startDate, endDate)
+		pages, err := vault.PageRange(startDate, endDate)
 		if err != nil {
-			return nil, errors.New("failed to parse date range: " + err.Error())
+			return nil, fmt.Errorf("failed to parse pages: %w", err)
 		}
 
-		tasks, err := obsidian.TasksInDateRange(vault, dateRange, !includeDone)
+		tasks, err := obsidian.TasksInPages(pages, !includeDone)
 		if err != nil {
 			return nil, errors.New("failed to retrieve tasks: " + err.Error())
 		}
