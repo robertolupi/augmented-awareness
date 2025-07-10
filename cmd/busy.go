@@ -20,34 +20,13 @@ var (
 		Short: "Show how I spent my time",
 		Long:  `Show how I spent my time in the last week.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			var dateRange []string
-			if busyStartDate != "" && busyEndDate != "" {
-				start, err := time.Parse("2006-01-02", busyStartDate)
-				if err != nil {
-					log.Fatalf("Failed to parse start date: %v", err)
-				}
-				end, err := time.Parse("2006-01-02", busyEndDate)
-				if err != nil {
-					log.Fatalf("Failed to parse end date: %v", err)
-				}
-
-				for d := start; d.Before(end) || d.Equal(end); d = d.AddDate(0, 0, 1) {
-					dateRange = append(dateRange, d.Format("2006-01-02"))
-				}
-			}
-
 			var pages []*obsidian.Page
-			var dates []string
-			for _, date := range dateRange {
-				page, err := vault.Page(date)
-				if err != nil {
-					log.Printf("Failed to get journal page for %s: %v", date, err)
-					continue
-				}
-				pages = append(pages, page)
-				dates = append(dates, date)
+
+			pages, err := vault.PageRange(busyStartDate, busyEndDate)
+			if err != nil {
+				log.Fatalf("Failed to read pages: %v", err)
 			}
-			fmt.Printf("Found %d journal pages: %v\n", len(pages), dates)
+			fmt.Printf("Found %d journal pages: %v\n", len(pages), pages)
 
 			report, err := stats.NewBusyReport(stats.PeriodDaily, busyBucketSize)
 			if err != nil {

@@ -72,6 +72,48 @@ func (v *Vault) WalkPages(fn fs.WalkDirFunc) error {
 	})
 }
 
+func (v *Vault) PageRange(startDate, endDate string) ([]*Page, error) {
+	var pages []*Page
+
+	dateRange, err := DateRange(startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse date range: %w", err)
+	}
+
+	dates := map[string]bool{}
+	for _, date := range dateRange {
+		dates[date.String()] = true
+	}
+
+	err = v.WalkPages(func(filePath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		pageName := strings.TrimSuffix(d.Name(), ".md")
+		if dates[pageName] {
+			page, err := v.PageByPath(filePath)
+			if err != nil {
+				return fmt.Errorf("failed to get page by path %s: %w", filePath, err)
+			}
+			pages = append(pages, page)
+			delete(dates, pageName)
+		}
+
+		if len(dates) == 0 {
+			return fs.SkipAll // Stop walking if we found all pages in the date range
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to walk pages: %w", err)
+	}
+
+	return pages, nil
+}
+
 func (v *Vault) Page(title string) (*Page, error) {
 	var pagePath string
 
@@ -119,6 +161,10 @@ func (p *Page) Name() string {
 		return base[:len(base)-3] // Remove the .md extension
 	}
 	return base
+}
+
+func (p *Page) String() string {
+	return p.Name()
 }
 
 func (p *Page) Save() error {

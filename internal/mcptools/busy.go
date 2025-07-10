@@ -2,11 +2,9 @@ package mcptools
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"journal/internal/obsidian"
 	"journal/internal/stats"
 	"strings"
 	"time"
@@ -27,6 +25,7 @@ func addBusyTool(s *server.MCPServer) {
 			mcp.Description("Bucket size for the histogram (e.g. '30m'). Defaults to '30m'.")))
 
 	s.AddTool(busyTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+
 		startDate := request.GetString("start", "")
 		if startDate == "" {
 			startDate = time.Now().AddDate(0, 0, -6).Format("2006-01-02")
@@ -43,28 +42,17 @@ func addBusyTool(s *server.MCPServer) {
 		bucketSizeStr := request.GetString("bucket_size", "30m")
 		bucketSize, err := time.ParseDuration(bucketSizeStr)
 		if err != nil {
-			return nil, errors.New("failed to parse bucket size: " + err.Error())
+			return nil, fmt.Errorf("failed to parse bucket size: %w", err)
 		}
 
-		dateRange, err := obsidian.DateRange(startDate, endDate)
+		pages, err := vault.PageRange(startDate, endDate)
 		if err != nil {
-			return nil, errors.New("failed to parse date range: " + err.Error())
-		}
-
-		var pages []*obsidian.Page
-		var dates []string
-		for _, date := range dateRange {
-			page, err := vault.Page(date.String())
-			if err != nil {
-				continue
-			}
-			pages = append(pages, page)
-			dates = append(dates, date.String())
+			return nil, fmt.Errorf("failed to read pages: %w", err)
 		}
 
 		report, err := stats.NewBusyReport(stats.PeriodDaily, bucketSize)
 		if err != nil {
-			return nil, errors.New("failed to create busy report: " + err.Error())
+			return nil, fmt.Errorf("failed to create busy report: %w", err)
 		}
 
 		for _, page := range pages {
@@ -81,7 +69,7 @@ func addBusyTool(s *server.MCPServer) {
 			for _, event := range events {
 				err := report.AddEvent(event.StartTime.Time(), event.Duration, event.Tags)
 				if err != nil {
-					return nil, errors.New("failed to add event to report: " + err.Error())
+					return nil, fmt.Errorf("failed to add event to report: %w", err)
 				}
 			}
 		}
@@ -92,7 +80,7 @@ func addBusyTool(s *server.MCPServer) {
 
 		var content strings.Builder
 		content.WriteString(fmt.Sprintf("# Busy report from %s to %s\n\n", startDate, endDate))
-		content.WriteString(fmt.Sprintf("Found %d journal pages: %v\n\n", len(pages), dates))
+		content.WriteString(fmt.Sprintf("Found %d journal pages: %v\n\n", len(pages), pages))
 
 		sortedTags := report.SortedTags()
 		formatString := "%-40s\t%s  %.2f%%\n"
