@@ -6,6 +6,9 @@ import (
 )
 
 type Task struct {
+	PageName   string
+	LineNumber int
+
 	Description string
 	Status      string
 
@@ -86,7 +89,7 @@ var (
 	redundantSpacesRe = regexp.MustCompile(`\s+`)
 )
 
-func ParseTask(line string) *Task {
+func ParseTask(pageName string, lineNo int, line string) *Task {
 	if !strings.HasPrefix(line, "- [") {
 		return nil // Not a task line
 	}
@@ -100,7 +103,9 @@ func ParseTask(line string) *Task {
 	line = strings.TrimPrefix(line, s)
 
 	task := &Task{
-		Status: status,
+		PageName:   pageName,
+		LineNumber: lineNo,
+		Status:     status,
 	}
 
 	completed := dateCompletedRe.FindStringSubmatch(line)

@@ -4,20 +4,21 @@ import (
 	"sort"
 )
 
+// TasksInPages returns a list of tasks from the provided pages, merging duplicates.
 func TasksInPages(pages []*Page, skipDone bool) ([]Task, error) {
-	tasks := map[Task]struct{}{}
+	tasks := map[string]Task{}
 
 	for _, page := range pages {
 		for _, task := range page.Tasks() {
 			if skipDone && task.IsDone() {
 				continue
 			}
-			tasks[task] = struct{}{}
+			tasks[task.String()] = task
 		}
 	}
 
 	sortedTasks := make([]Task, 0, len(tasks))
-	for task := range tasks {
+	for _, task := range tasks {
 		sortedTasks = append(sortedTasks, task)
 	}
 	sort.Slice(sortedTasks, func(i, j int) bool {

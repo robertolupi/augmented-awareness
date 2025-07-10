@@ -8,18 +8,21 @@ func TestTasksInDateRange(t *testing.T) {
 	// Create a mock vault
 	pages := []*Page{
 		{
+			Path: "2023-10-01.md",
 			Content: []string{
 				"- [ ] Task 1",
 				"- [x] Task 2",
 			},
 		},
 		{
+			Path: "2023-10-02.md",
 			Content: []string{
 				"- [ ] Task 3",
 				"- [ ] Task 4",
 			},
 		},
 		{
+			Path: "2023-10-03.md",
 			Content: []string{
 				"- [x] Task 5",
 				"- [ ] Task 6",

@@ -316,8 +316,8 @@ func (s *Section) AddEvent(ev Event) error {
 
 func (p *Page) Tasks() []Task {
 	var tasks []Task
-	for _, line := range p.Content {
-		task := ParseTask(line)
+	for n, line := range p.Content {
+		task := ParseTask(p.Name(), n, line)
 		if task != nil {
 			tasks = append(tasks, *task)
 		}

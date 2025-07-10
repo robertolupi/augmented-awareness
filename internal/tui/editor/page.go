@@ -79,7 +79,7 @@ func (m *Model) updateEvents() error {
 	}
 
 	cols := []table.Column{
-		{Title: "Line", Width: 4},
+		{Title: "LineNumber", Width: 4},
 		{Title: "Start", Width: 10},
 		{Title: "End", Width: 10},
 		{Title: "Histogram", Width: 10},
@@ -295,7 +295,7 @@ func (m Model) amendEvent(text string) tea.Cmd {
 			return fmt.Errorf("Invalid line number: %s", lineStr)
 		}
 
-		// Line numbers in the table are 1-based, but content array is 0-based
+		// LineNumber numbers in the table are 1-based, but content array is 0-based
 		lineNum--
 
 		// Parse the event
@@ -368,7 +368,7 @@ func (m Model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 			return fmt.Errorf("Invalid line number: %s", lineStr)
 		}
 
-		// Line numbers in the table are 1-based, but content array is 0-based
+		// LineNumber numbers in the table are 1-based, but content array is 0-based
 		lineNum--
 
 		// Parse the event

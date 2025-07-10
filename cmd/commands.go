@@ -58,6 +58,7 @@ func init() {
 	initTasksCmd()
 	initSearchCmd()
 	initIndexCmd()
+	initTasksCleanupCmd()
 }
 
 func initConfig() {
@@ -78,6 +79,9 @@ func initConfig() {
 
 func today() string {
 	return obsidian.DateToPage(time.Now())
+}
+func yesterday() string {
+	return obsidian.DateToPage(time.Now().AddDate(0, 0, -1))
 }
 
 func oneMonthAgo() string {
