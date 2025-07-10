@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -187,4 +188,16 @@ func TestTimeHistogram_AddEdgeCases(t *testing.T) {
 			t.Errorf("Bucket[%d] = %d after adding 48 hours, want 2", i, count)
 		}
 	}
+}
+
+func TestHistogram_String(t *testing.T) {
+	h, _ := NewTimeHistogram(PeriodDaily, time.Hour)
+	baseTime := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
+	h.Add(baseTime, 3*time.Hour)
+
+	expected := `███▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁         3h0m0s`
+	got := h.String()
+
+	assert.Equal(t, expected, got, "String representation of histogram does not match expected output")
+
 }

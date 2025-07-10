@@ -70,6 +70,18 @@ func TestVault_PageNotFound(t *testing.T) {
 	assert.ErrorContainsf(t, err, "non-existent-page", "expected error should contain missing page name")
 }
 
+func TestVault_PageRange(t *testing.T) {
+	vault := NewTestVault(t)
+	pages, err := vault.PageRange("2025-03-30", "2025-04-01")
+	if err != nil {
+		t.Fatalf("Failed to get page range: %v", err)
+	}
+	assert.NotNil(t, pages)
+	assert.Len(t, pages, 2, "expected 2 pages in the range")
+	assert.Equal(t, pages[0].Name(), "2025-03-30")
+	assert.Equal(t, pages[1].Name(), "2025-04-01")
+}
+
 func TestPage_Date(t *testing.T) {
 	vault := NewTestVault(t)
 	page, err := vault.Page("2025-04-01")
@@ -83,6 +95,17 @@ func TestPage_Date(t *testing.T) {
 		t.Fatalf("Failed to get page date: %v", err)
 	}
 	assert.Equal(t, date.String(), "2025-04-01")
+}
+
+func TestPage_String(t *testing.T) {
+	vault := NewTestVault(t)
+	page, err := vault.Page("2025-04-01")
+	if err != nil {
+		t.Fatalf("Failed to get page: %v", err)
+	}
+
+	expectedString := "2025-04-01"
+	assert.Equal(t, expectedString, page.String(), "expected string representation of the page to match")
 }
 
 func TestPage_DateError(t *testing.T) {
