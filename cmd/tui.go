@@ -13,9 +13,6 @@ var (
 		Short: "Start the TUI",
 		Long:  `Start the TUI`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := initVault(); err != nil {
-				log.Fatalf("Failed to initialize vault: %v", err)
-			}
 			p := tea.NewProgram(tui.New(vault, journalSection), tea.WithAltScreen())
 			if _, err := p.Run(); err != nil {
 				log.Fatalf("Error running program: %v", err)

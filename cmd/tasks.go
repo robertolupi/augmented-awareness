@@ -16,10 +16,6 @@ var (
 		Short: "List tasks in the given date range",
 		Long:  `List tasks in the given date range from the journal.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := initVault(); err != nil {
-				log.Fatalf("Failed to initialize vault: %v", err)
-			}
-
 			dateRange, err := obsidian.DateRange(taskStartDate, taskEndDate)
 			if err != nil {
 				log.Fatalf("Failed to parse date range: %v", err)

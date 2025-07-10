@@ -20,10 +20,6 @@ var (
 				return
 			}
 
-			if err := initVault(); err != nil {
-				log.Fatalf("Failed to initialize vault: %v", err)
-			}
-
 			index, err := search.NewIndex(dataPath)
 			if err != nil {
 				log.Fatalf("Failed to open or create index at %s: %v", dataPath, err)

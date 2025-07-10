@@ -20,10 +20,6 @@ var (
 		Short: "Show how I spent my time",
 		Long:  `Show how I spent my time in the last week.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := initVault(); err != nil {
-				log.Fatalf("Failed to initialize vault: %v", err)
-			}
-
 			var dateRange []string
 			if busyStartDate != "" && busyEndDate != "" {
 				start, err := time.Parse("2006-01-02", busyStartDate)

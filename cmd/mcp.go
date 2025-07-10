@@ -13,10 +13,6 @@ var (
 		Short: "Run as a MCP (Master Control Program) server",
 		Long:  `Run as a MCP (Master Control Program) server, allowing LLMs to read journal entries and tasks.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := initVault(); err != nil {
-				log.Fatalf("Failed to initialize vault: %v", err)
-			}
-
 			// https://mcp-go.dev/getting-started
 
 			mcptools.SetVault(vault)

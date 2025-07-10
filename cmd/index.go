@@ -14,10 +14,6 @@ var (
 		Short: "Index the journal pages",
 		Long:  `Index the journal pages to enable fast searching based on their content.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := initVault(); err != nil {
-				log.Fatalf("Failed to initialize vault: %v", err)
-			}
-
 			index, err := search.NewIndex(dataPath)
 			if err != nil {
 				log.Fatalf("Failed to create index at %s: %v", dataPath, err)

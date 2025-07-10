@@ -68,15 +68,12 @@ func initConfig() {
 	vaultPath = viper.GetString(config.VaultPath)
 	journalSection = viper.GetString(config.JournalSection)
 	dataPath = viper.GetString(config.DataPath)
-}
 
-func initVault() error {
 	var err error
 	vault, err = obsidian.NewVault(vaultPath)
 	if err != nil {
-		return err
+		log.Fatalf("Error initializing vault: %v", err)
 	}
-	return nil
 }
 
 func today() string {

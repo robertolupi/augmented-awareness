@@ -12,10 +12,6 @@ var (
 		Short: "Amend the last journal entry",
 		Long:  `Amend the last journal entry in the Obsidian vault.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := initVault(); err != nil {
-				log.Fatalf("Failed to initialize vault: %v", err)
-			}
-
 			page, err := vault.Page(recordDate)
 			if err != nil {
 				log.Fatalf("Failed to get journal page: %v", err)

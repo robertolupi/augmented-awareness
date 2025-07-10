@@ -15,10 +15,6 @@ var (
 		Short: "Record a new journal entry",
 		Long:  `Record a new journal entry in the Obsidian vault.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := initVault(); err != nil {
-				log.Fatalf("Failed to initialize vault: %v", err)
-			}
-
 			page, err := vault.Page(recordDate)
 			if err != nil {
 				log.Fatalf("Failed to get journal page: %v", err)
