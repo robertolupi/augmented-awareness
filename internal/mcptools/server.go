@@ -22,6 +22,7 @@ func NewServer() *server.MCPServer {
 	addTasksTool(s)
 	addSearchTool(s)
 	addBusyTool(s)
+	addMemoryTool(s)
 
 	return s
 }
