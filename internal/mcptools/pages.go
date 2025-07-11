@@ -54,5 +54,5 @@ func trimPageName(pageName string) string {
 }
 
 func pageContent(page *obsidian.Page) string {
-	return strings.Join(obsidian.SkipCodeBlocks(page.Content), "\n")
+	return "Page [[" + page.Name() + "]]:\n" + strings.Join(obsidian.SkipCodeBlocks(page.Content), "\n")
 }

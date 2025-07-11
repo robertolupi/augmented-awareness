@@ -24,6 +24,10 @@ func addJournalTool(s *server.MCPServer) {
 
 		var content strings.Builder
 
+		content.WriteString(currentDateTime())
+
+		content.WriteString("The user journal for the past week is as follows:\n\n")
+
 		for _, date := range dateRange {
 			page, err := vault.Page(date)
 			if err != nil {
