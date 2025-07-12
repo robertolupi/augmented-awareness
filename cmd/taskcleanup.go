@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"journal/internal/datetime"
 	"log"
 )
 
@@ -48,6 +49,6 @@ var (
 func initTasksCleanupCmd() {
 	rootCmd.AddCommand(tasksCleanupCmd)
 
-	tasksCleanupCmd.Flags().StringVarP(&taskCleanupStartDate, "start", "s", oneMonthAgo(), "Start date for the task cleanup range (YYYY-MM-DD)")
-	tasksCleanupCmd.Flags().StringVarP(&taskCleanupEndDate, "end", "e", sixDaysAgo(), "End date for the task cleanup range (YYYY-MM-DD)")
+	tasksCleanupCmd.Flags().StringVarP(&taskCleanupStartDate, "start", "s", datetime.OneMonthAgo().String(), "Start date for the task cleanup range (YYYY-MM-DD)")
+	tasksCleanupCmd.Flags().StringVarP(&taskCleanupEndDate, "end", "e", datetime.SixDaysAgo().String(), "End date for the task cleanup range (YYYY-MM-DD)")
 }

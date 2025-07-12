@@ -1,4 +1,4 @@
-package obsidian
+package datetime
 
 import (
 	"testing"
@@ -288,17 +288,17 @@ func TestDateFromPage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := DateFromPage(tt.page)
+			got, err := DateFromString(tt.page)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("DateFromPage() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("TimeFromPage() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr {
 				expectedYear, expectedMonth, expectedDay := tt.expected.Date()
-				gotYear, gotMonth, gotDay := got.Date()
+				gotYear, gotMonth, gotDay := got.Time().Date()
 
 				if gotYear != expectedYear || gotMonth != expectedMonth || gotDay != expectedDay {
-					t.Errorf("DateFromPage() = %v-%v-%v, want %v-%v-%v",
+					t.Errorf("TimeFromPage() = %v-%v-%v, want %v-%v-%v",
 						gotYear, gotMonth, gotDay, expectedYear, expectedMonth, expectedDay)
 				}
 			}
@@ -341,8 +341,8 @@ func TestDateToPage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := DateToPage(tt.date); got != tt.expected {
-				t.Errorf("DateToPage() = %v, want %v", got, tt.expected)
+			if got := TimeToString(tt.date); got != tt.expected {
+				t.Errorf("TimeToString() = %v, want %v", got, tt.expected)
 			}
 		})
 	}

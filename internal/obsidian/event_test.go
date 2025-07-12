@@ -2,13 +2,14 @@ package obsidian
 
 import (
 	"github.com/stretchr/testify/assert"
+	"journal/internal/datetime"
 	"testing"
 	"time"
 )
 
-func mustTimeFromString(t *testing.T, str string) Time {
+func mustTimeFromString(t *testing.T, str string) datetime.Time {
 	t.Helper()
-	tt, err := TimeFromString(str)
+	tt, err := datetime.TimeFromString(str)
 	if err != nil {
 		t.Fatalf("Failed to parse time %s: %v", str, err)
 	}

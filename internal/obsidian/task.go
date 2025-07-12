@@ -1,6 +1,7 @@
 package obsidian
 
 import (
+	"journal/internal/datetime"
 	"regexp"
 	"strings"
 )
@@ -12,11 +13,11 @@ type Task struct {
 	Description string
 	Status      string
 
-	Completed    Date
-	Created      Date
-	Due          Date
-	Started      Date
-	Scheduled    Date
+	Completed    datetime.Date
+	Created      datetime.Date
+	Due          datetime.Date
+	Started      datetime.Date
+	Scheduled    datetime.Date
 	Recurrence   string
 	OnCompletion string
 }
@@ -110,27 +111,27 @@ func ParseTask(pageName string, lineNo int, line string) *Task {
 
 	completed := dateCompletedRe.FindStringSubmatch(line)
 	if len(completed) > 1 {
-		task.Completed = Date(completed[1])
+		task.Completed = datetime.Date(completed[1])
 		line = dateCompletedRe.ReplaceAllString(line, "")
 	}
 	created := dateCreatedRe.FindStringSubmatch(line)
 	if len(created) > 1 {
-		task.Created = Date(created[1])
+		task.Created = datetime.Date(created[1])
 		line = dateCreatedRe.ReplaceAllString(line, "")
 	}
 	due := dateDueRe.FindStringSubmatch(line)
 	if len(due) > 1 {
-		task.Due = Date(due[1])
+		task.Due = datetime.Date(due[1])
 		line = dateDueRe.ReplaceAllString(line, "")
 	}
 	started := dateStartedRe.FindStringSubmatch(line)
 	if len(started) > 1 {
-		task.Started = Date(started[1])
+		task.Started = datetime.Date(started[1])
 		line = dateStartedRe.ReplaceAllString(line, "")
 	}
 	scheduled := dateScheduledRe.FindStringSubmatch(line)
 	if len(scheduled) > 1 {
-		task.Scheduled = Date(scheduled[1])
+		task.Scheduled = datetime.Date(scheduled[1])
 		line = dateScheduledRe.ReplaceAllString(line, "")
 	}
 	recurrence := recurrenceRe.FindStringSubmatch(line)

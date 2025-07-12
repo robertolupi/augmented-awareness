@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"journal/internal/datetime"
 	"journal/internal/obsidian"
 	"log"
 )
@@ -37,6 +38,6 @@ var (
 func initTasksCmd() {
 	rootCmd.AddCommand(tasksCmd)
 
-	tasksCmd.Flags().StringVarP(&taskStartDate, "start", "s", oneMonthAgo(), "Start date for the task range (YYYY-MM-DD)")
-	tasksCmd.Flags().StringVarP(&taskEndDate, "end", "e", today(), "End date for the task range (YYYY-MM-DD)")
+	tasksCmd.Flags().StringVarP(&taskStartDate, "start", "s", datetime.OneMonthAgo().String(), "Start date for the task range (YYYY-MM-DD)")
+	tasksCmd.Flags().StringVarP(&taskEndDate, "end", "e", datetime.Today().String(), "End date for the task range (YYYY-MM-DD)")
 }

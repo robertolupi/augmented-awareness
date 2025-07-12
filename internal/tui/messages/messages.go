@@ -2,6 +2,7 @@ package messages
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"journal/internal/datetime"
 	"journal/internal/obsidian"
 )
 
@@ -36,12 +37,12 @@ func NextPageCmd() tea.Cmd {
 }
 
 type LoadPageMsg struct {
-	Date  obsidian.Date
+	Date  datetime.Date
 	Page  *obsidian.Page
 	Error error
 }
 
-func LoadPageCmd(vault *obsidian.Vault, date obsidian.Date) tea.Cmd {
+func LoadPageCmd(vault *obsidian.Vault, date datetime.Date) tea.Cmd {
 	return func() tea.Msg {
 		page, err := vault.Page(date.String())
 		if err != nil {
