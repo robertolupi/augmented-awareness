@@ -5,6 +5,7 @@ import (
 	"github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"journal/internal/datetime"
 	"journal/internal/obsidian"
 	"journal/internal/tui/messages"
 	"journal/internal/tui/styles"
@@ -23,7 +24,7 @@ const (
 type Model struct {
 	vault *obsidian.Vault
 
-	date   obsidian.Date
+	date   datetime.Date
 	metric string
 	days   int
 

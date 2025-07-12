@@ -5,6 +5,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"io/fs"
+	"journal/internal/datetime"
 	"os"
 	"path"
 	"regexp"
@@ -75,7 +76,7 @@ func (v *Vault) WalkPages(fn fs.WalkDirFunc) error {
 func (v *Vault) PageRange(startDate, endDate string) ([]*Page, error) {
 	var pages []*Page
 
-	dateRange, err := DateRange(startDate, endDate)
+	dateRange, err := datetime.DateRange(startDate, endDate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse date range: %w", err)
 	}
@@ -132,9 +133,9 @@ func (v *Vault) Page(title string) (*Page, error) {
 	return nil, fmt.Errorf("page with title %s not found: %v", title, err)
 }
 
-func (p *Page) Date() (Date, error) {
+func (p *Page) Date() (datetime.Date, error) {
 	if p.Path == "" {
-		return EmptyDate, fmt.Errorf("page path is empty")
+		return datetime.EmptyDate, fmt.Errorf("page path is empty")
 	}
 
 	// Extract the date from the page path
@@ -143,9 +144,9 @@ func (p *Page) Date() (Date, error) {
 		base = base[:len(base)-3]
 	}
 
-	date, err := DateFromString(base)
+	date, err := datetime.DateFromString(base)
 	if err != nil {
-		return EmptyDate, fmt.Errorf("failed to parse date from page path: %w", err)
+		return datetime.EmptyDate, fmt.Errorf("failed to parse date from page path: %w", err)
 	}
 
 	return date, nil

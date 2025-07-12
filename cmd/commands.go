@@ -8,7 +8,6 @@ import (
 	"journal/internal/obsidian"
 	"log"
 	"os"
-	"time"
 )
 
 var (
@@ -75,19 +74,4 @@ func initConfig() {
 	if err != nil {
 		log.Fatalf("Error initializing vault: %v", err)
 	}
-}
-
-func today() string {
-	return obsidian.DateToPage(time.Now())
-}
-func yesterday() string {
-	return obsidian.DateToPage(time.Now().AddDate(0, 0, -1))
-}
-
-func oneMonthAgo() string {
-	return obsidian.DateToPage(time.Now().AddDate(0, -1, 0))
-}
-
-func sixDaysAgo() string {
-	return obsidian.DateToPage(time.Now().AddDate(0, 0, -6))
 }

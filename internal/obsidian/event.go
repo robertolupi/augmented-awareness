@@ -1,6 +1,7 @@
 package obsidian
 
 import (
+	"journal/internal/datetime"
 	"regexp"
 	"strings"
 	"time"
@@ -8,8 +9,8 @@ import (
 
 type Event struct {
 	Line      int
-	StartTime Time
-	EndTime   Time
+	StartTime datetime.Time
+	EndTime   datetime.Time
 	Duration  time.Duration
 	Text      string
 	Tags      []string
@@ -39,15 +40,15 @@ func MaybeParseEvent(lineNo int, line string) *Event {
 		return nil
 	}
 
-	var start, end Time
+	var start, end datetime.Time
 	var err error
 
-	start, err = TimeFromString(matches[1])
+	start, err = datetime.TimeFromString(matches[1])
 	if err != nil {
 		return nil
 	}
 
-	end, err = TimeFromString(matches[3])
+	end, err = datetime.TimeFromString(matches[3])
 	if err != nil {
 		return nil
 	}

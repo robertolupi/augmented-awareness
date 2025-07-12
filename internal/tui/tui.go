@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"journal/internal/datetime"
 	"journal/internal/obsidian"
 	"journal/internal/tui/editor"
 	"journal/internal/tui/messages"
@@ -23,7 +24,7 @@ const (
 type Model struct {
 	vault          *obsidian.Vault
 	journalSection string
-	date           obsidian.Date
+	date           datetime.Date
 	page           *obsidian.Page
 
 	width  int
@@ -50,7 +51,7 @@ func New(vault *obsidian.Vault, journalSection string) Model {
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.main.Init(),
-		messages.LoadPageCmd(m.vault, obsidian.Today()))
+		messages.LoadPageCmd(m.vault, datetime.Today()))
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

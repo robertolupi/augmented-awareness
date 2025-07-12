@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"journal/internal/datetime"
 	"journal/internal/obsidian"
 	"log"
 	"strings"
@@ -33,7 +34,7 @@ var (
 			if len(events) > 0 {
 				event := events[len(events)-1]
 				if event.EndTime == "" {
-					event.EndTime = obsidian.TimeNow()
+					event.EndTime = datetime.TimeNow()
 					if err := section.AmendEvent(event); err != nil {
 						log.Fatalf("Failed to amend event: %v", err)
 					}
@@ -41,7 +42,7 @@ var (
 			}
 
 			newEvent := obsidian.Event{
-				StartTime: obsidian.TimeNow(),
+				StartTime: datetime.TimeNow(),
 				Text:      strings.Join(args, " "),
 			}
 
@@ -59,6 +60,6 @@ var (
 func initRecordCmd() {
 	rootCmd.AddCommand(recordCmd)
 
-	recordCmd.Flags().StringVar(&recordDate, "date", today(), "Date of the journal entry (YYYY-MM-DD)")
+	recordCmd.Flags().StringVar(&recordDate, "date", datetime.Today().String(), "Date of the journal entry (YYYY-MM-DD)")
 	recordCmd.Args = cobra.MinimumNArgs(1)
 }

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"journal/internal/datetime"
 	"journal/internal/obsidian"
 	"journal/internal/stats"
 	"log"
@@ -75,8 +76,8 @@ var (
 func initBusyCmd() {
 	rootCmd.AddCommand(busyCmd)
 
-	busyCmd.Flags().StringVar(&busyStartDate, "start", sixDaysAgo(), "Start date (YYYY-MM-DD)")
-	busyCmd.Flags().StringVar(&busyEndDate, "end", today(), "End date (YYYY-MM-DD)")
+	busyCmd.Flags().StringVar(&busyStartDate, "start", datetime.SixDaysAgo().String(), "Start date (YYYY-MM-DD)")
+	busyCmd.Flags().StringVar(&busyEndDate, "end", datetime.Today().String(), "End date (YYYY-MM-DD)")
 	busyCmd.Flags().BoolVarP(&busyExpandTags, "expand-tags", "e", false, "Expand tags to show all sub-tags")
 	busyCmd.Flags().DurationVar(&busyBucketSize, "bucket-size", 30*time.Minute, "Bucket size for histogram")
 }

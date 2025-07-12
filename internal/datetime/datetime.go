@@ -1,4 +1,4 @@
-package obsidian
+package datetime
 
 import "time"
 
@@ -17,6 +17,10 @@ func TimeFromString(timeStr string) (Time, error) {
 		return "", err
 	}
 	return Time(parsedTime.Format("15:04")), nil
+}
+
+func TimeToString(date time.Time) string {
+	return date.Format("2006-01-02")
 }
 
 func (t Time) IsEmpty() bool {
@@ -52,10 +56,6 @@ func (t Time) AddMinutes(delta int) Time {
 type Date string
 
 const EmptyDate Date = ""
-
-func Today() Date {
-	return Date(time.Now().Format("2006-01-02"))
-}
 
 func DateRange(start string, end string) ([]Date, error) {
 	startDate, err := time.Parse("2006-01-02", start)
@@ -107,14 +107,20 @@ func (d Date) AddDays(delta int) Date {
 	return Date(t.Format("2006-01-02"))
 }
 
-func DateFromPage(page string) (time.Time, error) {
-	parsedTime, err := time.Parse("2006-01-02", page)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return parsedTime, nil
+func DateFromTime(t time.Time) Date {
+	return Date(t.Format("2006-01-02"))
 }
 
-func DateToPage(date time.Time) string {
-	return date.Format("2006-01-02")
+func Today() Date { return DateFromTime(time.Now()) }
+
+func Yesterday() Date {
+	return DateFromTime(time.Now().AddDate(0, 0, -1))
+}
+
+func OneMonthAgo() Date {
+	return DateFromTime(time.Now().AddDate(0, -1, 0))
+}
+
+func SixDaysAgo() Date {
+	return DateFromTime(time.Now().AddDate(0, 0, -6))
 }

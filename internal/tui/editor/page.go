@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"journal/internal/datetime"
 	"journal/internal/obsidian"
 	"journal/internal/tui/messages"
 	"journal/internal/tui/styles"
@@ -257,13 +258,13 @@ func (m Model) recordEvent(text string) tea.Cmd {
 		}
 		if event != nil {
 			if event.EndTime == "" {
-				event.EndTime = obsidian.TimeNow()
+				event.EndTime = datetime.TimeNow()
 				m.currentPage.Content[i] = event.String()
 			}
 		}
 
 		newEvent := &obsidian.Event{
-			StartTime: obsidian.TimeNow(),
+			StartTime: datetime.TimeNow(),
 			Text:      text,
 		}
 
@@ -392,12 +393,12 @@ func (m Model) editEventTime(newTime string, isStartTime bool) tea.Cmd {
 
 		// Update the appropriate time field
 		if isStartTime {
-			event.StartTime, err = obsidian.TimeFromString(parsedTime)
+			event.StartTime, err = datetime.TimeFromString(parsedTime)
 			if err != nil {
 				return fmt.Errorf("Invalid start time format")
 			}
 		} else {
-			event.EndTime, err = obsidian.TimeFromString(parsedTime)
+			event.EndTime, err = datetime.TimeFromString(parsedTime)
 			if err != nil {
 				return fmt.Errorf("Invalid end time format")
 			}
