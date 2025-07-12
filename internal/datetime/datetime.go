@@ -107,20 +107,20 @@ func (d Date) AddDays(delta int) Date {
 	return Date(t.Format("2006-01-02"))
 }
 
-func dateFromTimeTime(t time.Time) Date {
-	return Date(t.Format("2006-01-02"))
+func fromToday(months int, days int) Date {
+	return Date(time.Now().AddDate(0, months, days).Format("2006-01-02"))
 }
 
-func Today() Date { return dateFromTimeTime(time.Now()) }
+func Today() Date { return fromToday(0, 0) }
 
 func Yesterday() Date {
-	return dateFromTimeTime(time.Now().AddDate(0, 0, -1))
+	return fromToday(0, -1)
 }
 
 func OneMonthAgo() Date {
-	return dateFromTimeTime(time.Now().AddDate(0, -1, 0))
+	return fromToday(-1, 0)
 }
 
 func SixDaysAgo() Date {
-	return dateFromTimeTime(time.Now().AddDate(0, 0, -6))
+	return fromToday(0, -6)
 }
