@@ -29,7 +29,7 @@ func addPagesToolAndResources(s *server.MCPServer) {
 				return nil, errors.New("invalid page name provided")
 			}
 
-			page, err := vault.Page(pageName)
+			page, err := app.Vault.Page(pageName)
 			if err != nil {
 				return nil, errors.New("error retrieving page: " + err.Error())
 			}

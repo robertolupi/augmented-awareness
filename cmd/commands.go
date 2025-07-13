@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"journal/internal/application"
 	"journal/internal/config"
-	"journal/internal/obsidian"
 	"log"
 	"os"
 )
@@ -14,7 +14,8 @@ var (
 	vaultPath      string
 	journalSection string
 	dataPath       string
-	vault          *obsidian.Vault
+
+	app *application.App
 
 	rootCmd = &cobra.Command{
 		Use:   "journal",
@@ -28,7 +29,7 @@ func Execute() error {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initApp)
 
 	rootCmd.PersistentFlags().StringVar(&vaultPath, "vault", "", "Path to the Obsidian vault")
 	rootCmd.PersistentFlags().StringVar(&journalSection, "section", "", "Section of the journal entry")
@@ -60,7 +61,7 @@ func init() {
 	initTasksCleanupCmd()
 }
 
-func initConfig() {
+func initApp() {
 	if err := config.InitConfig(""); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -70,8 +71,8 @@ func initConfig() {
 	dataPath = viper.GetString(config.DataPath)
 
 	var err error
-	vault, err = obsidian.NewVault(vaultPath)
+	app, err = application.New(vaultPath, journalSection, dataPath)
 	if err != nil {
-		log.Fatalf("Error initializing vault: %v", err)
+		log.Fatalf("Failed to create application: %v", err)
 	}
 }

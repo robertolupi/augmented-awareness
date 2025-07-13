@@ -21,7 +21,7 @@ var (
 			defer index.Close()
 
 			var allPaths []string
-			err = vault.WalkPages(func(pagePath string, d os.DirEntry, err error) error {
+			err = app.Vault.WalkPages(func(pagePath string, d os.DirEntry, err error) error {
 				allPaths = append(allPaths, pagePath)
 				return nil
 			})
@@ -31,7 +31,7 @@ var (
 
 			err = tui.ShowProgress(func(setProgress tui.SetProgressFunc, reportError tui.ReportErrorFunc) error {
 				for i, pagePath := range allPaths {
-					page, err := vault.PageByPath(pagePath)
+					page, err := app.Vault.PageByPath(pagePath)
 					if err != nil {
 						log.Printf("Failed to get page by path %q: %v", pagePath, err)
 						reportError(err)

@@ -37,7 +37,7 @@ func addTasksTool(s *server.MCPServer) {
 		includeDoneStr := request.GetString("include_done", "false")
 		includeDone := includeDoneStr == "true"
 
-		pages, err := vault.PageRange(startDate, endDate)
+		pages, err := app.Vault.PageRange(startDate, endDate)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse pages: %w", err)
 		}

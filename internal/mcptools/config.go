@@ -1,25 +1,11 @@
 package mcptools
 
 import (
-	"journal/internal/obsidian"
+	"journal/internal/application"
 )
 
-var vault *obsidian.Vault
-var journalSection string
-var dataPath string
+var app *application.App
 
-// SetVault sets the vault instance to be used by MCP tools.
-func SetVault(v *obsidian.Vault) {
-	if v == nil {
-		panic("vault cannot be nil")
-	}
-	vault = v
-}
-
-func SetJournalSection(section string) {
-	journalSection = section
-}
-
-func SetDataPath(path string) {
-	dataPath = path
+func SetApp(a *application.App) {
+	app = a
 }

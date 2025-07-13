@@ -25,7 +25,7 @@ func addMemoryTool(s *server.MCPServer) {
 			return nil, errors.New("fact is required")
 		}
 
-		page, err := vault.Page("aww-scratchpad")
+		page, err := app.Vault.Page("aww-scratchpad")
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve scratchpad page: %w", err)
 		}

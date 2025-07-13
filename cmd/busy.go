@@ -23,7 +23,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			var pages []*obsidian.Page
 
-			pages, err := vault.PageRange(busyStartDate, busyEndDate)
+			pages, err := app.Vault.PageRange(busyStartDate, busyEndDate)
 			if err != nil {
 				log.Fatalf("Failed to read pages: %v", err)
 			}

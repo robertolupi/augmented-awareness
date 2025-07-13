@@ -20,7 +20,7 @@ var (
 				return
 			}
 
-			index, err := search.NewIndex(dataPath)
+			index, err := search.NewIndex(app.DataPath)
 			if err != nil {
 				log.Fatalf("Failed to open or create index at %s: %v", dataPath, err)
 			}

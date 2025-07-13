@@ -12,7 +12,7 @@ var (
 		Short: "Amend the last journal entry",
 		Long:  `Amend the last journal entry in the Obsidian vault.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			page, err := vault.Page(recordDate)
+			page, err := app.Vault.Page(recordDate)
 			if err != nil {
 				log.Fatalf("Failed to get journal page: %v", err)
 			}

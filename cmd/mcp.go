@@ -15,9 +15,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			// https://mcp-go.dev/getting-started
 
-			mcptools.SetVault(vault)
-			mcptools.SetJournalSection(journalSection)
-			mcptools.SetDataPath(dataPath)
+			mcptools.SetApp(app)
 
 			s := mcptools.NewServer()
 

@@ -18,7 +18,7 @@ var (
 		Long:  `List tasks in the given date range from the journal.`,
 		Run: func(cmd *cobra.Command, args []string) {
 
-			pages, err := vault.PageRange(taskStartDate, taskEndDate)
+			pages, err := app.Vault.PageRange(taskStartDate, taskEndDate)
 			if err != nil {
 				log.Fatalf("Failed to parse pages in date range: %v", err)
 			}

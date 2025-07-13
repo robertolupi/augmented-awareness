@@ -45,7 +45,7 @@ func addBusyTool(s *server.MCPServer) {
 			return nil, fmt.Errorf("failed to parse bucket size: %w", err)
 		}
 
-		pages, err := vault.PageRange(startDate, endDate)
+		pages, err := app.Vault.PageRange(startDate, endDate)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read pages: %w", err)
 		}
@@ -56,7 +56,7 @@ func addBusyTool(s *server.MCPServer) {
 		}
 
 		for _, page := range pages {
-			section, err := page.FindSection(journalSection)
+			section, err := page.FindSection(app.JournalSection)
 			if err != nil {
 				continue
 			}

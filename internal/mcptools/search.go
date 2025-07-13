@@ -26,7 +26,7 @@ func addSearchTool(s *server.MCPServer) {
 			return nil, errors.New("search query cannot be empty")
 		}
 
-		index, err := search.NewIndex(dataPath)
+		index, err := search.NewIndex(app.DataPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open or create index", err)
 		}

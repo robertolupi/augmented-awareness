@@ -14,7 +14,7 @@ var (
 		Short: "Cleanup incomplete tasks (marked as delete) in the journal",
 		Long:  `This command will remove incomplete tasks that are marked for deletion from the journal files.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			pages, err := vault.PageRange(taskCleanupStartDate, taskCleanupEndDate)
+			pages, err := app.Vault.PageRange(taskCleanupStartDate, taskCleanupEndDate)
 			if err != nil {
 				log.Fatalf("Failed to parse pages in date range: %v", err)
 			}

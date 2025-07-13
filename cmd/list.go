@@ -13,7 +13,7 @@ var (
 		Short: "List today events",
 		Long:  `List today events in the journal.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			page, err := vault.Page(datetime.Today().String())
+			page, err := app.Vault.Page(datetime.Today().String())
 			if err != nil {
 				log.Fatalf("Failed to get journal page: %v", err)
 			}
