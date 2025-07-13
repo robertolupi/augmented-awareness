@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"journal/internal/stats"
-	"strings"
 	"time"
 )
 
@@ -45,57 +43,11 @@ func addBusyTool(s *server.MCPServer) {
 			return nil, fmt.Errorf("failed to parse bucket size: %w", err)
 		}
 
-		pages, err := app.Vault.PageRange(startDate, endDate)
+		report, err := app.BusyReport(startDate, endDate, expandTags, bucketSize)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read pages: %w", err)
+			return nil, fmt.Errorf("failed to generate busy report: %w", err)
 		}
 
-		report, err := stats.NewBusyReport(stats.PeriodDaily, bucketSize)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create busy report: %w", err)
-		}
-
-		for _, page := range pages {
-			section, err := page.FindSection(app.JournalSection)
-			if err != nil {
-				continue
-			}
-
-			events, err := section.Events()
-			if err != nil {
-				continue
-			}
-
-			for _, event := range events {
-				err := report.AddEvent(event.StartTime.Time(), event.Duration, event.Tags)
-				if err != nil {
-					return nil, fmt.Errorf("failed to add event to report: %w", err)
-				}
-			}
-		}
-
-		if expandTags {
-			report.ExpandTags()
-		}
-
-		var content strings.Builder
-		content.WriteString(fmt.Sprintf("# Busy report from %s to %s\n\n", startDate, endDate))
-		content.WriteString(fmt.Sprintf("Found %d journal pages: %v\n\n", len(pages), pages))
-
-		sortedTags := report.SortedTags()
-		formatString := "%-40s\t%s  %.2f%%\n"
-		content.WriteString(fmt.Sprintf(formatString, "Total", report.Total, 100.0))
-		if report.Total.Duration > 0 {
-			content.WriteString(fmt.Sprintf(formatString, "No tags", report.NoTags, float64(report.NoTags.Duration)/float64(report.Total.Duration)*100))
-		} else {
-			content.WriteString(fmt.Sprintf(formatString, "No tags", report.NoTags, 0.0))
-		}
-
-		content.WriteString("\nTags sorted by duration:\n")
-		for _, tagDuration := range sortedTags {
-			content.WriteString(fmt.Sprintf(formatString, tagDuration.Tag, tagDuration.Histogram, tagDuration.Percent))
-		}
-
-		return mcp.NewToolResultText(content.String()), nil
+		return mcp.NewToolResultText(report), nil
 	})
 }

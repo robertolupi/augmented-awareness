@@ -20,3 +20,11 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, app.DataPath, dataPath, "Data path should match")
 	assert.NotNil(t, app.Vault, "Vault should not be nil")
 }
+
+func AppForTesting(t *testing.T) *App {
+	app, err := New(testVaultPath, testJournalSection, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return app
+}
