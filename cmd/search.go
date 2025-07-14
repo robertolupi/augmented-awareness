@@ -3,9 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"journal/internal/search"
 	"log"
-	"path"
 	"strings"
 )
 
@@ -20,21 +18,19 @@ var (
 				return
 			}
 
-			index, err := search.NewIndex(app.DataPath)
+			pages, err := app.Search(strings.Join(args, " "))
 			if err != nil {
-				log.Fatalf("Failed to open or create index at %s: %v", dataPath, err)
-			}
-			defer index.Close()
-
-			results, err := index.Search(strings.Join(args, " "))
-			if err != nil {
-				log.Fatalf("Failed to search index: %v", err)
+				log.Fatalf("Failed to search pages: %v", err)
 			}
 
-			for _, result := range results.Hits {
-				_, pageFile := path.Split(result.ID)
-				pageName := strings.TrimSuffix(pageFile, ".md")
-				fmt.Println(pageName)
+			if len(pages) == 0 {
+				fmt.Println("No pages found matching the search term.")
+				return
+			}
+
+			fmt.Println("Found pages:")
+			for _, page := range pages {
+				fmt.Println(page.Name())
 			}
 		},
 	}

@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"journal/internal/search"
-	"path"
 	"strings"
 )
 
@@ -26,26 +24,19 @@ func addSearchTool(s *server.MCPServer) {
 			return nil, errors.New("search query cannot be empty")
 		}
 
-		index, err := search.NewIndex(app.DataPath)
+		pages, err := app.Search(query)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open or create index", err)
+			return nil, fmt.Errorf("failed to search pages: %w", err)
 		}
-		defer index.Close()
 
-		results, err := index.Search(query)
-		if err != nil {
-			return nil, fmt.Errorf("failed to search index: %w", err)
-		}
-		if len(results.Hits) == 0 {
+		if len(pages) == 0 {
 			return mcp.NewToolResultText("No pages found matching your search query."), nil
 		}
 
 		var sb strings.Builder
 		sb.WriteString("The following pages match your search query:\n\n")
-		for _, result := range results.Hits {
-			_, pageFile := path.Split(result.ID)
-			pageName := strings.TrimSuffix(pageFile, ".md")
-			sb.WriteString("[[" + pageName + "]]\n")
+		for _, page := range pages {
+			sb.WriteString("[[" + page.Name() + "]]\n")
 		}
 
 		return mcp.NewToolResultText(sb.String()), nil
