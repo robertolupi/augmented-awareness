@@ -32,6 +32,5 @@ func (a *App) TasksInDateRange(start, end string, skipDone bool) ([]obsidian.Tas
 		return sortedTasks[i].Description < sortedTasks[j].Description
 	})
 
-	var r error = nil
-	return sortedTasks, r
+	return sortedTasks, nil
 }
