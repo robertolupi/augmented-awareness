@@ -136,7 +136,7 @@ func ParseTask(pageName string, lineNo int, line string) *Task {
 	}
 	recurrence := recurrenceRe.FindStringSubmatch(line)
 	if len(recurrence) > 1 {
-		task.Recurrence = recurrence[1]
+		task.Recurrence = strings.TrimSpace(recurrence[1])
 		line = recurrenceRe.ReplaceAllString(line, "")
 	}
 	onCompletion := onCompletionActionRe.FindStringSubmatch(line)

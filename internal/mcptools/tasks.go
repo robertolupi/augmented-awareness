@@ -2,11 +2,9 @@ package mcptools
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"journal/internal/obsidian"
 	"strings"
 	"time"
 )
@@ -37,14 +35,9 @@ func addTasksTool(s *server.MCPServer) {
 		includeDoneStr := request.GetString("include_done", "false")
 		includeDone := includeDoneStr == "true"
 
-		pages, err := app.Vault.PageRange(startDate, endDate)
+		tasks, err := app.TasksInDateRange(startDate, endDate, includeDone)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse pages: %w", err)
-		}
-
-		tasks, err := obsidian.TasksInPages(pages, !includeDone)
-		if err != nil {
-			return nil, errors.New("failed to retrieve tasks: " + err.Error())
+			return nil, fmt.Errorf("failed to retrieve tasks: %w", err)
 		}
 
 		var content strings.Builder
