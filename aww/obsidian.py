@@ -1,7 +1,10 @@
 import os
 from datetime import date
+import re
 
 from pathlib import PosixPath
+
+FRONTMATTER_RE = re.compile('^---\n(.*?)\n---\n', re.DOTALL | re.MULTILINE)
 
 
 class Vault:
@@ -22,6 +25,12 @@ class Page:
     def name(self) -> str:
         return os.path.splitext(self.path.name)[0]
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return "Page(" + repr(self.path) + ")"
+
     def __eq__(self, other: 'Page'):
         return isinstance(other, Page) and (self.path == other.path)
 
@@ -30,3 +39,11 @@ class Page:
 
     def __bool__(self):
         return self.path.exists()
+
+    def content(self):
+        with self.path.open() as fd:
+            data = fd.read()
+        if FRONTMATTER_RE.match(data):
+            return FRONTMATTER_RE.sub('', data)
+        else:
+            return data

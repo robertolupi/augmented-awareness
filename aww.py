@@ -1,14 +1,31 @@
+import datetime
+
 import click
+import rich
 
-from aww import config
+from rich.markdown import Markdown
 
-settings = config.Settings()
+from aww.config import Settings
+from aww.obsidian import Vault
+from aww import retro
 
-@click.command()
+settings = Settings()
+
+
+@click.group()
 def main():
-    global settings
-    print(settings.model_dump())
+    pass
 
+
+@main.command()
+@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
+def daily_retro(date: datetime.date):
+    """Daily retrospective."""
+    vault = Vault(settings.vault_path, settings.journal_dir)
+    page = vault.daily_page(date)
+    if page:
+        result = retro.agent.run_sync(page.content())
+        rich.print(Markdown(result.output))
 
 if __name__ == "__main__":
     main()
