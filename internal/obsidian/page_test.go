@@ -35,7 +35,7 @@ func TestVault_WalkPages(t *testing.T) {
 
 func TestVault_PageByPath(t *testing.T) {
 	vault := NewTestVault(t)
-	page, err := vault.PageByPath("2025-04-01.md")
+	page, err := vault.PageByPath("journal/2025/04/2025-04-01.md")
 	if err != nil {
 		t.Fatalf("Failed to get page by path: %v", err)
 	}
