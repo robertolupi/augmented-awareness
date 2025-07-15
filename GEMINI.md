@@ -2,6 +2,25 @@
 
 This document provides guidance for using Gemini to assist with development in this project. This is a multi-language project, which will include Go and Python.
 
+## Obsidian Vault structure
+
+Markdown files hold notes inside the Obsidian vault.
+
+Augmented Awareness supports free-form vaults, but my vault is organized in the following directories:
+
+- `0-inbox`: new notes, that I am still writing and working on.
+- `1-projects`: project notes (GTD projects).
+- `2-areas`: areas of responsibility (health, family, house, work, etc.).
+- `3-resources`: miscellaneous notes that are useful to consult for reference, or as data storage for information (e.g. pages for my collection of photography gear, etc.).
+- `4-archive:` archived notes that I do not need to actively consult.
+- `journal`: Journal files
+  - `journal/yyyy` (e.g. `journal/2025`): a directory for each year.
+  - `journal/yyyy/Yyyyy.md` (e.g. `journal/2025/Y2025.md`): yearly note, containing long-term goals and plans (e.g. GTD "Horizons of Focus" style).
+  - `journal/yyyy/mm` (e.g. `journal/2025/01`): a directory for each year and month.
+    - `journal/yyyy/mm/yyyy-mm-dd.md` (e.g. `journal/2025/01/2025-01-02.md` for January 2nd, 2025): daily notes.
+    - `journal/yyyy/months/yyyy-mm.md` (e.g. `journal/2025/months/2025-01.md` for January 2025): monthly notes.
+    - `journal/yyyy/weeks/yyyy-Www.md` (e.g. `journal/2025/weeks/2025-W01.md` for the first week of 2025): weekly notes.
+
 ## Project Structure
 
 The project is organized by language.
