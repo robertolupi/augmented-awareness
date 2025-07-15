@@ -84,7 +84,7 @@ func ShowProgress(f LongRunningFunc) error {
 	go func() {
 		resultErr = f(setProgress, reportError)
 		if resultErr != nil {
-			log.Println("Error during long-running operation: %v", resultErr)
+			log.Printf("Error during long-running operation: %v", resultErr)
 		}
 		p.Send(tea.Quit)
 	}()
