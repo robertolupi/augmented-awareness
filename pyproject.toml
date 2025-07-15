@@ -4,4 +4,7 @@ version = "0.1.0"
 description = "Augmented Awareness"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "click>=8.2.1",
+    "pydantic-settings==2.10.1",
+]
