@@ -45,23 +45,25 @@ def main(model, local_model, local_provider, gemini_model):
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-def daily_retro(date: datetime.date):
+@click.option('--no-cache', is_flag=True, default=False, help="Do not use cached retrospectives.")
+def daily_retro(date: datetime.datetime, no_cache: bool):
     """Daily retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
     agent = retro.DailyRetrospectiveAgent(llm_model, vault)
-    result = asyncio.run(agent.run(date))
+    result = asyncio.run(agent.run(date.date(), no_cache=no_cache))
     if result:
         rich.print(Markdown(result.output))
 
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-def weekly_retro(date: datetime.date):
+@click.option('--no-cache', is_flag=True, default=False, help="Do not use cached retrospectives.")
+def weekly_retro(date: datetime.datetime, no_cache: bool):
     """Weekly retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
-    past_week = [date - datetime.timedelta(days=i) for i in range(7, 0, -1)]
+    past_week = [date.date() - datetime.timedelta(days=i) for i in range(7, 0, -1)]
     agent = retro.WeeklyRetrospectiveAgent(llm_model, vault)
-    result = asyncio.run(agent.run(past_week, gather=tqdm.asyncio.tqdm.gather))
+    result = asyncio.run(agent.run(past_week, gather=tqdm.asyncio.tqdm.gather, no_cache=no_cache))
     if result:
         rich.print(Markdown(result.output))
 

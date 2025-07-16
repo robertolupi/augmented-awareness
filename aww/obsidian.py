@@ -22,6 +22,16 @@ class Vault:
         page_path = self.path / self.journal_dir / f"{year}/weeks/{year}-W{week_number:02d}.md"
         return Page(page_path)
 
+    def retrospective_daily_page(self, d: date):
+        page_path = self.path / "retrospectives" / d.strftime('%Y/%m') / f"r{d.strftime('%Y-%m-%d')}.md"
+        return Page(page_path)
+
+    def retrospective_weekly_page(self, d: date):
+        year = d.year
+        week_number = d.isocalendar().week
+        page_path = self.path / "retrospectives" / f"{year}/weeks" / f"r{year}-W{week_number:02d}.md"
+        return Page(page_path)
+
 
 class Page:
     def __init__(self, path: PosixPath):
@@ -46,6 +56,9 @@ class Page:
     def __bool__(self):
         return self.path.exists()
 
+    def exists(self):
+        return self.path.exists()
+    
     def content(self):
         with self.path.open() as fd:
             data = fd.read()
