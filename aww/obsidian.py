@@ -22,6 +22,17 @@ class Vault:
         page_path = self.path / self.journal_dir / f"{year}/weeks/{year}-W{week_number:02d}.md"
         return Page(page_path)
 
+    def monthly_page(self, d: date):
+        year = d.year
+        month = d.month
+        page_path = self.path / self.journal_dir / f"{year}/months/{year}-{month:02d}.md"
+        return Page(page_path)
+
+    def yearly_page(self, d: date):
+        year = d.year
+        page_path = self.path / self.journal_dir / f"{year}/Y{year}.md"
+        return Page(page_path)
+
     def retrospective_daily_page(self, d: date):
         page_path = self.path / "retrospectives" / d.strftime('%Y/%m') / f"r{d.strftime('%Y-%m-%d')}.md"
         return Page(page_path)
@@ -30,6 +41,17 @@ class Vault:
         year = d.year
         week_number = d.isocalendar().week
         page_path = self.path / "retrospectives" / f"{year}/weeks" / f"r{year}-W{week_number:02d}.md"
+        return Page(page_path)
+
+    def retrospective_monthly_page(self, d: date):
+        year = d.year
+        month = d.month
+        page_path = self.path / "retrospectives" / f"{year}/months" / f"r{year}-{month:02d}.md"
+        return Page(page_path)
+
+    def retrospective_yearly_page(self, d: date):
+        year = d.year
+        page_path = self.path / "retrospectives" / f"{year}" / f"r{year}.md"
         return Page(page_path)
 
 

@@ -1,4 +1,5 @@
 import asyncio
+import calendar
 import datetime
 import enum
 from collections import OrderedDict
@@ -64,6 +65,42 @@ def weekly_retro(date: datetime.datetime, no_cache: bool):
     past_week = [date.date() - datetime.timedelta(days=i) for i in range(7, 0, -1)]
     agent = retro.WeeklyRetrospectiveAgent(llm_model, vault)
     result = asyncio.run(agent.run(past_week, gather=tqdm.asyncio.tqdm.gather, no_cache=no_cache))
+    if result:
+        rich.print(Markdown(result.output))
+
+
+@main.command()
+@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
+@click.option('--no-cache', is_flag=True, default=False, help="Do not use cached retrospectives.")
+def monthly_retro(date: datetime.datetime, no_cache: bool):
+    """Monthly retrospective."""
+    vault = Vault(settings.vault_path, settings.journal_dir)
+
+    year = date.year
+    month = date.month
+    num_days = calendar.monthrange(year, month)[1]
+    days_in_month = [datetime.date(year, month, day) for day in range(1, num_days + 1)]
+
+    agent = retro.MonthlyRetrospectiveAgent(llm_model, vault)
+    result = asyncio.run(agent.run(days_in_month, gather=tqdm.asyncio.tqdm.gather, no_cache=no_cache))
+    if result:
+        rich.print(Markdown(result.output))
+
+
+@main.command()
+@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
+@click.option('--no-cache', is_flag=True, default=False, help="Do not use cached retrospectives.")
+def yearly_retro(date: datetime.datetime, no_cache: bool):
+    """Yearly retrospective."""
+    vault = Vault(settings.vault_path, settings.journal_dir)
+
+    year = date.year
+    start_date = datetime.date(year, 1, 1)
+    end_date = datetime.date(year, 12, 31)
+    days_in_year = [start_date + datetime.timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+
+    agent = retro.YearlyRetrospectiveAgent(llm_model, vault)
+    result = asyncio.run(agent.run(days_in_year, gather=tqdm.asyncio.tqdm.gather, no_cache=no_cache))
     if result:
         rich.print(Markdown(result.output))
 
