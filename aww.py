@@ -1,4 +1,6 @@
+import asyncio
 import datetime
+import enum
 from collections import OrderedDict
 
 import click
@@ -17,22 +19,27 @@ from aww import retro
 
 settings = Settings()
 
-llm_model : Model
+llm_model: Model
+
+
+class ModelChoice(enum.Enum):
+    LOCAL = "local"
+    GEMINI = "gemini"
+
 
 @click.group()
 @click.option('--local_model', type=str, default='qwen/qwen3-30b-a3b')
 @click.option('--local_provider', type=str, default='http://localhost:1234/v1')
 @click.option('--gemini_model', type=str, default='gemini-2.5-flash')
-@click.option('-m', '--model', type=str, default='local')
+@click.option('-m', '--model', type=click.Choice(ModelChoice, case_sensitive=False), default='local')
 def main(model, local_model, local_provider, gemini_model):
     global llm_model
     match model:
-        case "local":
+        case ModelChoice.LOCAL:
             provider = OpenAIProvider(base_url=local_provider)
             llm_model = OpenAIModel(model_name=local_model, provider=provider)
-        case "gemini":
+        case ModelChoice.GEMINI:
             llm_model = GeminiModel(model_name=gemini_model)
-            
 
 
 @main.command()
@@ -41,8 +48,9 @@ def daily_retro(date: datetime.date):
     """Daily retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
     agent = retro.DailyRetrospectiveAgent(llm_model, vault)
-    result = agent.run_sync(date)
-    rich.print(Markdown(result.output))
+    result = asyncio.run(agent.run(date))
+    if result:
+        rich.print(Markdown(result.output))
 
 
 @main.command()
@@ -50,10 +58,11 @@ def daily_retro(date: datetime.date):
 def weekly_retro(date: datetime.date):
     """Weekly retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
-    past_week = [date - datetime.timedelta(days=i) for i in range(7, 0, -1)]    
+    past_week = [date - datetime.timedelta(days=i) for i in range(7, 0, -1)]
     agent = retro.WeeklyRetrospectiveAgent(llm_model, vault)
-    result = agent.run_sync(past_week)
-    rich.print(Markdown(result.output))
+    result = asyncio.run(agent.run(past_week))
+    if result:
+        rich.print(Markdown(result.output))
 
 
 if __name__ == "__main__":

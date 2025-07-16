@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from datetime import date
 from pathlib import PosixPath
@@ -27,11 +28,11 @@ class DailyRetrospectiveAgent:
         self.vault = vault
         self.agent = Agent(model=model, system_prompt=self.prompt)
 
-    def run_sync(self, d: date) -> RetrospectiveResult | None:
+    async def run(self, d: date) -> RetrospectiveResult | None:
         page = self.vault.daily_page(d)
         if not page:
             return None
-        result = self.agent.run_sync(user_prompt=page.content())
+        result = await self.agent.run(user_prompt=page.content())
         return RetrospectiveResult(dates=[d], output=result.output)
 
 
@@ -43,19 +44,24 @@ class WeeklyRetrospectiveAgent:
         self.agent = Agent(model=model, system_prompt=self.prompt)
         self.daily_agent = DailyRetrospectiveAgent(model, vault)
 
-    def run_sync(self, dd: list[date]) -> RetrospectiveResult | None:
+    async def run(self, dd: list[date]) -> RetrospectiveResult | None:
         if not dd:
             return None
+
+        daily_tasks = [self.daily_agent.run(d) for d in dd]
+        daily_results = await asyncio.gather(*daily_tasks)
+
         content = []
-        seen_pages = set()
-        for d in dd:
-            result = self.daily_agent.run_sync(d)
+        for result in daily_results:
             if result:
                 content.append(result.output)
+
+        seen_pages = set()
+        for d in dd:
             page = self.vault.weekly_page(d)
             if page and page not in seen_pages:
                 content.append(page.content())
                 seen_pages.add(page)
 
-        result = self.agent.run_sync(user_prompt='\n---\n'.join(content))
+        result = await self.agent.run(user_prompt='\n---\n'.join(content))
         return RetrospectiveResult(dates=dd, output=result.output)
