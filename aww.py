@@ -27,14 +27,16 @@ llm_model: Model
 class ModelChoice(enum.Enum):
     LOCAL = "local"
     GEMINI = "gemini"
+    OPENAI = "openai"
 
 
 @click.group()
 @click.option('--local_model', type=str, default='qwen/qwen3-30b-a3b')
 @click.option('--local_provider', type=str, default='http://localhost:1234/v1')
 @click.option('--gemini_model', type=str, default='gemini-2.5-flash')
+@click.option('--openai_model', type=str, default='o4-mini')
 @click.option('-m', '--model', type=click.Choice(ModelChoice, case_sensitive=False), default='local')
-def main(model, local_model, local_provider, gemini_model):
+def main(model, local_model, local_provider, gemini_model, openai_model):
     global llm_model
     match model:
         case ModelChoice.LOCAL:
@@ -42,6 +44,8 @@ def main(model, local_model, local_provider, gemini_model):
             llm_model = OpenAIModel(model_name=local_model, provider=provider)
         case ModelChoice.GEMINI:
             llm_model = GeminiModel(model_name=gemini_model)
+        case ModelChoice.OPENAI:
+            llm_model = OpenAIModel(model_name=openai_model)
 
 
 @main.command()
