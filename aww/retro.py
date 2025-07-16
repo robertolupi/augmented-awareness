@@ -44,12 +44,12 @@ class WeeklyRetrospectiveAgent:
         self.agent = Agent(model=model, system_prompt=self.prompt)
         self.daily_agent = DailyRetrospectiveAgent(model, vault)
 
-    async def run(self, dd: list[date]) -> RetrospectiveResult | None:
+    async def run(self, dd: list[date], gather=asyncio.gather) -> RetrospectiveResult | None:
         if not dd:
             return None
 
         daily_tasks = [self.daily_agent.run(d) for d in dd]
-        daily_results = await asyncio.gather(*daily_tasks)
+        daily_results = await gather(*daily_tasks)
 
         content = []
         for result in daily_results:

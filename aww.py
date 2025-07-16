@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 import click
 import rich
+import tqdm.asyncio
 
 from rich.markdown import Markdown
 
@@ -60,7 +61,7 @@ def weekly_retro(date: datetime.date):
     vault = Vault(settings.vault_path, settings.journal_dir)
     past_week = [date - datetime.timedelta(days=i) for i in range(7, 0, -1)]
     agent = retro.WeeklyRetrospectiveAgent(llm_model, vault)
-    result = asyncio.run(agent.run(past_week))
+    result = asyncio.run(agent.run(past_week, gather=tqdm.asyncio.tqdm.gather))
     if result:
         rich.print(Markdown(result.output))
 
