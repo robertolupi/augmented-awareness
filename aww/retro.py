@@ -47,10 +47,15 @@ class WeeklyRetrospectiveAgent:
         if not dd:
             return None
         content = []
+        seen_pages = set()
         for d in dd:
             result = self.daily_agent.run_sync(d)
             if result:
                 content.append(result.output)
+            page = self.vault.weekly_page(d)
+            if page and page not in seen_pages:
+                content.append(page.content())
+                seen_pages.add(page)
 
         result = self.agent.run_sync(user_prompt='\n---\n'.join(content))
         return RetrospectiveResult(dates=dd, output=result.output)

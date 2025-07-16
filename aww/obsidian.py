@@ -16,6 +16,12 @@ class Vault:
         page_path = self.path / self.journal_dir / d.strftime('%Y/%m/%Y-%m-%d.md')
         return Page(page_path)
 
+    def weekly_page(self, d: date):
+        year = d.year
+        week_number = d.isocalendar().week
+        page_path = self.path / self.journal_dir / f"{year}/weeks/{year}-W{week_number:02d}.md"
+        return Page(page_path)
+
 
 class Page:
     def __init__(self, path: PosixPath):
