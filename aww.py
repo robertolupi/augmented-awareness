@@ -46,8 +46,8 @@ def main(model, local_model, local_provider, gemini_model):
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('--no-cache', is_flag=True, default=False, help="Do not use cached retrospectives.")
-def daily_retro(date: datetime.datetime, no_cache: bool):
+@click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
+def daily_retro(date: datetime.datetime, no_cache: int):
     """Daily retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
     agent = retro.DailyRetrospectiveAgent(llm_model, vault)
@@ -58,8 +58,8 @@ def daily_retro(date: datetime.datetime, no_cache: bool):
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('--no-cache', is_flag=True, default=False, help="Do not use cached retrospectives.")
-def weekly_retro(date: datetime.datetime, no_cache: bool):
+@click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
+def weekly_retro(date: datetime.datetime, no_cache: int):
     """Weekly retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
     past_week = [date.date() - datetime.timedelta(days=i) for i in range(7, 0, -1)]
@@ -71,8 +71,8 @@ def weekly_retro(date: datetime.datetime, no_cache: bool):
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('--no-cache', is_flag=True, default=False, help="Do not use cached retrospectives.")
-def monthly_retro(date: datetime.datetime, no_cache: bool):
+@click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
+def monthly_retro(date: datetime.datetime, no_cache: int):
     """Monthly retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
 
@@ -89,8 +89,8 @@ def monthly_retro(date: datetime.datetime, no_cache: bool):
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('--no-cache', is_flag=True, default=False, help="Do not use cached retrospectives.")
-def yearly_retro(date: datetime.datetime, no_cache: bool):
+@click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
+def yearly_retro(date: datetime.datetime, no_cache: int):
     """Yearly retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
 

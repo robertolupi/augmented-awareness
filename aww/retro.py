@@ -1,3 +1,4 @@
+import enum
 import asyncio
 import re
 from dataclasses import dataclass
@@ -41,14 +42,15 @@ class DailyRetrospectiveAgent:
         self.vault = vault
         self.agent = Agent(model=model, system_prompt=self.prompt)
 
-    async def run(self, d: date, no_cache: bool = False) -> RetrospectiveResult | None:
-        retro_page = self.vault.retrospective_daily_page(d)
-        if not no_cache and retro_page.exists():
-            return RetrospectiveResult(dates=[d], output=retro_page.content(), page=retro_page)
-
+    async def run(self, d: date, no_cache: int = 0) -> RetrospectiveResult | None:
         page = self.vault.daily_page(d)
         if not page:
             return None
+
+        retro_page = self.vault.retrospective_daily_page(d)
+        if no_cache > 0 and retro_page.exists():
+            return RetrospectiveResult(dates=[d], output=retro_page.content(), page=retro_page)
+
         result = await self.agent.run(user_prompt=page.content())
         retro_result = RetrospectiveResult(dates=[d], output=result.output, page=retro_page)
         self.write(retro_result)
@@ -84,16 +86,17 @@ class WeeklyRetrospectiveAgent:
         self.agent = Agent(model=model, system_prompt=self.prompt)
         self.daily_agent = DailyRetrospectiveAgent(model, vault)
 
-    async def run(self, dd: list[date], gather=asyncio.gather, no_cache: bool = False) -> RetrospectiveResult | None:
-        if not dd:
+    async def run(self, dd: list[date], gather=asyncio.gather, no_cache: int = 0) -> RetrospectiveResult | None:
+        pages = [self.vault.daily_page(d) for d in dd]
+        if not any(pages):
             return None
 
         d = dd[-1]
         retro_page = self.vault.retrospective_weekly_page(d)
-        if not no_cache and retro_page.exists():
+        if no_cache <= 0 and retro_page.exists():
             return RetrospectiveResult(dates=dd, output=retro_page.content(), page=retro_page)
 
-        daily_tasks = [self.daily_agent.run(d, no_cache=no_cache) for d in dd]
+        daily_tasks = [self.daily_agent.run(d, no_cache=no_cache - 1) for d in dd]
         daily_results = await gather(*daily_tasks)
 
         content = []
@@ -142,13 +145,14 @@ class MonthlyRetrospectiveAgent:
         self.agent = Agent(model=model, system_prompt=self.prompt)
         self.weekly_agent = WeeklyRetrospectiveAgent(model, vault)
 
-    async def run(self, dd: list[date], gather=asyncio.gather, no_cache: bool = False) -> RetrospectiveResult | None:
-        if not dd:
+    async def run(self, dd: list[date], gather=asyncio.gather, no_cache: int = 0) -> RetrospectiveResult | None:
+        pages = [self.vault.daily_page(d) for d in dd]
+        if not any(pages):
             return None
 
         d = dd[-1]
         retro_page = self.vault.retrospective_monthly_page(d)
-        if not no_cache and retro_page.exists():
+        if no_cache <= 0 and retro_page.exists():
             return RetrospectiveResult(dates=dd, output=retro_page.content(), page=retro_page)
 
         weeks = {}
@@ -158,7 +162,8 @@ class MonthlyRetrospectiveAgent:
                 weeks[week_key] = []
             weeks[week_key].append(day)
 
-        weekly_tasks = [self.weekly_agent.run(week_dates, no_cache=no_cache, gather=gather) for week_dates in weeks.values()]
+        weekly_tasks = [self.weekly_agent.run(week_dates, no_cache=no_cache - 1, gather=gather) for week_dates in
+                        weeks.values()]
         weekly_results = await gather(*weekly_tasks)
 
         content = []
@@ -211,13 +216,14 @@ class YearlyRetrospectiveAgent:
         self.agent = Agent(model=model, system_prompt=self.prompt)
         self.monthly_agent = MonthlyRetrospectiveAgent(model, vault)
 
-    async def run(self, dd: list[date], gather=asyncio.gather, no_cache: bool = False) -> RetrospectiveResult | None:
-        if not dd:
+    async def run(self, dd: list[date], gather=asyncio.gather, no_cache: int = 0) -> RetrospectiveResult | None:
+        pages = [self.vault.daily_page(d) for d in dd]
+        if not any(pages):
             return None
 
         d = dd[-1]
         retro_page = self.vault.retrospective_yearly_page(d)
-        if not no_cache and retro_page.exists():
+        if no_cache <= 0 and retro_page.exists():
             return RetrospectiveResult(dates=dd, output=retro_page.content(), page=retro_page)
 
         months = {}
@@ -227,7 +233,8 @@ class YearlyRetrospectiveAgent:
                 months[month_key] = []
             months[month_key].append(day)
 
-        monthly_tasks = [self.monthly_agent.run(month_dates, no_cache=no_cache, gather=gather) for month_dates in months.values()]
+        monthly_tasks = [self.monthly_agent.run(month_dates, no_cache=no_cache - 1, gather=gather) for month_dates in
+                         months.values()]
         monthly_results = await gather(*monthly_tasks)
 
         content = []
