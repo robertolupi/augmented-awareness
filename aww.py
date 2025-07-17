@@ -58,10 +58,14 @@ def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: int, le
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
 @click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
-def daily_retro(date: datetime.datetime, no_cache: int):
+@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date")
+def daily_retro(date: datetime.datetime, no_cache: int, yesterday: bool):
     """Daily retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
-    dates = [date.date()]
+    if yesterday:
+        dates = [date.date() - datetime.timedelta(days=1)]
+    else:
+        dates = [date.date()]
     do_retrospective(vault, dates, no_cache, Level.daily)
 
 
