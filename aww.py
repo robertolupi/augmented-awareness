@@ -16,7 +16,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.models.gemini import GeminiModel
 
 from aww.config import Settings
-from aww.obsidian import Vault
+from aww.obsidian import Vault, Level
 from aww import retro
 
 settings = Settings()
@@ -48,16 +48,21 @@ def main(model, local_model, local_provider, gemini_model, openai_model):
             llm_model = OpenAIModel(model_name=openai_model)
 
 
+def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: int, level: Level):
+    generator = retro.RecursiveRetrospectiveGenerator(llm_model, vault, dates, level)
+    result = asyncio.run(generator.run(no_cache=no_cache, gather=tqdm.asyncio.tqdm.gather))
+    if result:
+        rich.print(Markdown(result.output))
+
+
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
 @click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
 def daily_retro(date: datetime.datetime, no_cache: int):
     """Daily retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
-    agent = retro.DailyRetrospectiveAgent(llm_model, vault)
-    result = asyncio.run(agent.run(date.date(), no_cache=no_cache))
-    if result:
-        rich.print(Markdown(result.output))
+    dates = [date.date()]
+    do_retrospective(vault, dates, no_cache, Level.daily)
 
 
 @main.command()
@@ -67,10 +72,7 @@ def weekly_retro(date: datetime.datetime, no_cache: int):
     """Weekly retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
     past_week = [date.date() - datetime.timedelta(days=i) for i in range(7, 0, -1)]
-    agent = retro.WeeklyRetrospectiveAgent(llm_model, vault)
-    result = asyncio.run(agent.run(past_week, gather=tqdm.asyncio.tqdm.gather, no_cache=no_cache))
-    if result:
-        rich.print(Markdown(result.output))
+    do_retrospective(vault, past_week, no_cache, Level.weekly)
 
 
 @main.command()
@@ -79,16 +81,11 @@ def weekly_retro(date: datetime.datetime, no_cache: int):
 def monthly_retro(date: datetime.datetime, no_cache: int):
     """Monthly retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
-
     year = date.year
     month = date.month
     num_days = calendar.monthrange(year, month)[1]
     days_in_month = [datetime.date(year, month, day) for day in range(1, num_days + 1)]
-
-    agent = retro.MonthlyRetrospectiveAgent(llm_model, vault)
-    result = asyncio.run(agent.run(days_in_month, gather=tqdm.asyncio.tqdm.gather, no_cache=no_cache))
-    if result:
-        rich.print(Markdown(result.output))
+    do_retrospective(vault, days_in_month, no_cache, Level.monthly)
 
 
 @main.command()
@@ -97,16 +94,11 @@ def monthly_retro(date: datetime.datetime, no_cache: int):
 def yearly_retro(date: datetime.datetime, no_cache: int):
     """Yearly retrospective."""
     vault = Vault(settings.vault_path, settings.journal_dir)
-
     year = date.year
     start_date = datetime.date(year, 1, 1)
     end_date = datetime.date(year, 12, 31)
     days_in_year = [start_date + datetime.timedelta(days=i) for i in range((end_date - start_date).days + 1)]
-
-    agent = retro.YearlyRetrospectiveAgent(llm_model, vault)
-    result = asyncio.run(agent.run(days_in_year, gather=tqdm.asyncio.tqdm.gather, no_cache=no_cache))
-    if result:
-        rich.print(Markdown(result.output))
+    do_retrospective(vault, days_in_year, no_cache, Level.yearly)
 
 
 if __name__ == "__main__":
