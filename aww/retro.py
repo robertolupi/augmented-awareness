@@ -100,6 +100,8 @@ class RecursiveRetrospectiveGenerator:
         with node.retro_page.path.open('w') as fd:
             fd.write("---\n")
             fd.write("sources:\n")
+            if node.page:
+                fd.write(f"- \"[[{node.page.name}]]\"\n")
             for n in node.sources:
                 fd.write(f"- \"[[{n.retro_page.name}]]\"\n")
             fd.write("---\n")
