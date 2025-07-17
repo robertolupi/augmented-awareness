@@ -93,6 +93,10 @@ class RecursiveRetrospectiveGenerator:
         if m := MARKDOWN_RE.match(output):
             output = m.group(1)
         output = output.replace('![[', '[[')
+        
+        output_title = f"# {node.retro_page.name}"
+        output = output_title + "\n\n" + output
+        
         with node.retro_page.path.open('w') as fd:
             fd.write("---\n")
             fd.write("sources:\n")
