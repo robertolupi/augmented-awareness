@@ -30,13 +30,19 @@ class RetrospectiveResult:
     page: Page
 
 
-def load_prompt(name: str):
-    with open(PosixPath(__file__).parent / 'retro' / name) as fd:
+class Level(enum.Enum):
+    daily = 'daily'
+    weekly = 'weekly'
+    monthly = 'monthly'
+    yearly = 'yearly'
+
+def load_prompt(level: Level):
+    with open(PosixPath(__file__).parent / 'retro' / (level.name + ".md")) as fd:
         return fd.read()
 
 
 class DailyRetrospectiveAgent:
-    prompt = load_prompt("daily.md")
+    prompt = load_prompt(Level.daily)
 
     def __init__(self, model: Model, vault: Vault):
         self.vault = vault
@@ -48,7 +54,7 @@ class DailyRetrospectiveAgent:
             return None
 
         retro_page = self.vault.retrospective_daily_page(d)
-        if no_cache > 0 and retro_page.exists():
+        if no_cache <= 0 and retro_page.exists():
             return RetrospectiveResult(dates=[d], output=retro_page.content(), page=retro_page)
 
         result = await self.agent.run(user_prompt=page.content())
@@ -79,7 +85,7 @@ class DailyRetrospectiveAgent:
 
 
 class WeeklyRetrospectiveAgent:
-    prompt = load_prompt("weekly.md")
+    prompt = load_prompt(Level.weekly)
 
     def __init__(self, model: Model, vault: Vault):
         self.vault = vault
@@ -138,7 +144,7 @@ class WeeklyRetrospectiveAgent:
 
 
 class MonthlyRetrospectiveAgent:
-    prompt = load_prompt("monthly.md")
+    prompt = load_prompt(Level.monthly)
 
     def __init__(self, model: Model, vault: Vault):
         self.vault = vault
@@ -209,7 +215,7 @@ class MonthlyRetrospectiveAgent:
 
 
 class YearlyRetrospectiveAgent:
-    prompt = load_prompt("yearly.md")
+    prompt = load_prompt(Level.yearly)
 
     def __init__(self, model: Model, vault: Vault):
         self.vault = vault

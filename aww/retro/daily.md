@@ -36,7 +36,7 @@ What did the author learn, if anything?
 #aww refers to the "Augmented Awareness" project that the user is working on.
 
 Tasks status is depicted graphically, using the following symbols at the start of bullet items:
-- [ ] Incomplete task
-- [x] Done task
+- [ ] means task is not completed
+- [x] means task is done
 
 Incomplete tasks may have a "🏁 delete" marker, which you can safely ignore: it marks recurrent tasks that should be deleted from the journal on completion.
