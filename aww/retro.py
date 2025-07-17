@@ -97,7 +97,7 @@ class RecursiveRetrospectiveGenerator:
             fd.write("---\n")
             fd.write("sources:\n")
             for n in node.sources:
-                fd.write(f"- [[{n.retro_page.name}]]\n")
+                fd.write(f"- \"[[{n.retro_page.name}]]\"\n")
             fd.write("---\n")
             fd.write(output)
         return RetrospectiveResult(dates=list(node.dates), output=output, page=node.retro_page)
