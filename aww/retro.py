@@ -93,7 +93,7 @@ class RecursiveRetrospectiveGenerator:
 
         source_results = await gather(
             *[self._generate(source, no_cache - 1, context_levels, gather) for source in sources
-              if node.level in context_levels])
+              if source.level in context_levels])
 
         source_content = [result.output for result in source_results if result]
         if node.page:
@@ -104,7 +104,7 @@ class RecursiveRetrospectiveGenerator:
         result = await self.agents[node.level].run(user_prompt='\n---\n'.join(source_content))
 
         output = await self.prepare_output(node, result)
-        await self.save_retro_page(node, output, sources)
+        await self.save_retro_page(node, output, sources, context_levels)
         return RetrospectiveResult(dates=list(node.dates), output=output, page=node.retro_page)
 
     @staticmethod
@@ -118,14 +118,14 @@ class RecursiveRetrospectiveGenerator:
         return output
 
     @staticmethod
-    async def save_retro_page(node, output, sources):
+    async def save_retro_page(node, output, sources, levels):
         with node.retro_page.path.open('w') as fd:
             fd.write("---\n")
             fd.write("sources:\n")
             if node.page:
                 fd.write(f"- \"[[{node.page.name}]]\"\n")
             for n in sources:
-                if n.retro_page:
+                if n.retro_page and n.level in levels:
                     fd.write(f"- \"[[{n.retro_page.name}]]\"\n")
             fd.write("---\n")
             fd.write(output)

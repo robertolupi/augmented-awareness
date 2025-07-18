@@ -3,6 +3,7 @@ from pathlib import PosixPath
 
 import aww
 from aww import obsidian
+from aww.obsidian import Level
 
 test_vault_path = (PosixPath(aww.__file__).parent.parent / 'test_vault').absolute()
 
@@ -23,7 +24,7 @@ def test_daily_page():
 
 def test_page():
     vault = obsidian.Vault(test_vault_path, 'journal')
-    page1 = obsidian.Page(test_vault_path / 'journal/2025/03/2025-03-30.md')
-    page2 = obsidian.Page(test_vault_path / 'journal/2025/04/2025-04-01.md')
+    page1 = obsidian.Page(test_vault_path / 'journal/2025/03/2025-03-30.md', Level.daily)
+    page2 = obsidian.Page(test_vault_path / 'journal/2025/04/2025-04-01.md', Level.daily)
     assert page1 != page2
     assert hash(page1) != hash(page2)
