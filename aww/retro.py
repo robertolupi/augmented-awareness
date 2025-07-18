@@ -61,10 +61,17 @@ def build_retrospective_tree(vault: Vault, dates: list[date]) -> dict[Page, Node
     return tree
 
 
-def load_prompt(level: Level):
-    with open(PosixPath(__file__).parent / 'retro' / (level.name + ".md")) as fd:
-        return fd.read()
+import logging
+from functools import cache
 
+
+logger = logging.getLogger(__name__)
+
+@cache
+def load_prompt(level: Level) -> str:
+    """Read and cache system prompt template for the given level."""
+    path = PosixPath(__file__).parent / 'retro' / f"{level.name}.md"
+    return path.read_text()
 
 class RecursiveRetrospectiveGenerator:
     def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level):
@@ -119,6 +126,13 @@ class RecursiveRetrospectiveGenerator:
 
     @staticmethod
     async def save_retro_page(node, output, sources, levels):
+        # ensure parent directory exists
+        node.retro_page.path.parent.mkdir(parents=True, exist_ok=True)
+        logger.info(
+            "Writing retrospective page %s (level=%s)",
+            node.retro_page.path,
+            node.level,
+        )
         with node.retro_page.path.open('w') as fd:
             fd.write("---\n")
             fd.write("sources:\n")

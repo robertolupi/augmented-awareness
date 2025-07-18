@@ -16,77 +16,72 @@ class Level(enum.Enum):
 
 
 class Vault:
-    def __init__(self, path: PosixPath, journal_dir: str):
+    _PAGE_TEMPLATES: dict[Level, str] = {
+        Level.daily: "{year}/{month:02d}/{year}-{month:02d}-{day:02d}.md",
+        Level.weekly: "{year}/weeks/{year}-W{week:02d}.md",
+        Level.monthly: "{year}/months/{year}-{month:02d}.md",
+        Level.yearly: "{year}/Y{year}.md",
+    }
+
+    _RETRO_TEMPLATES: dict[Level, str] = {
+        Level.daily: "{year}/{month:02d}/r{year}-{month:02d}-{day:02d}.md",
+        Level.weekly: "{year}/weeks/r{year}-W{week:02d}.md",
+        Level.monthly: "{year}/months/r{year}-{month:02d}.md",
+        Level.yearly: "{year}/r{year}.md",
+    }
+
+    def __init__(self, path: PosixPath, journal_dir: str, retrospectives_dir: str) -> None:
         self.path = path
         self.journal_dir = journal_dir
+        self.retrospectives_dir = retrospectives_dir
 
-    def page(self, d: date, level: Level):
-        match level:
-            case Level.daily:
-                return self.daily_page(d)
-            case Level.weekly:
-                return self.weekly_page(d)
-            case Level.monthly:
-                return self.monthly_page(d)
-            case Level.yearly:
-                return self.yearly_page(d)
-            case _:
-                raise ValueError(f"Invalid level: {level}")
+    def page(self, d: date, level: Level) -> 'Page':
+        return self._make_page(d, level, self.journal_dir, self._PAGE_TEMPLATES)
 
-    def daily_page(self, d: date):
-        page_path = self.path / self.journal_dir / d.strftime('%Y/%m/%Y-%m-%d.md')
-        return Page(page_path, Level.daily)
+    def retrospective_page(self, d: date, level: Level) -> 'Page':
+        return self._make_page(d, level, self.retrospectives_dir, self._RETRO_TEMPLATES)
 
-    def weekly_page(self, d: date):
-        year = d.year
-        week_number = d.isocalendar().week
-        page_path = self.path / self.journal_dir / f"{year}/weeks/{year}-W{week_number:02d}.md"
-        return Page(page_path, Level.weekly)
+    # Legacy convenience methods
+    def daily_page(self, d: date) -> 'Page':
+        return self.page(d, Level.daily)
 
-    def monthly_page(self, d: date):
-        year = d.year
-        month = d.month
-        page_path = self.path / self.journal_dir / f"{year}/months/{year}-{month:02d}.md"
-        return Page(page_path, Level.monthly)
+    def weekly_page(self, d: date) -> 'Page':
+        return self.page(d, Level.weekly)
 
-    def yearly_page(self, d: date):
-        year = d.year
-        page_path = self.path / self.journal_dir / f"{year}/Y{year}.md"
-        return Page(page_path, Level.yearly)
+    def monthly_page(self, d: date) -> 'Page':
+        return self.page(d, Level.monthly)
 
-    def retrospective_page(self, d: date, level: Level):
-        match level:
-            case Level.daily:
-                return self.retrospective_daily_page(d)
-            case Level.weekly:
-                return self.retrospective_weekly_page(d)
-            case Level.monthly:
-                return self.retrospective_monthly_page(d)
-            case Level.yearly:
-                return self.retrospective_yearly_page(d)
-            case _:
-                raise ValueError(f"Invalid level: {level}")
+    def yearly_page(self, d: date) -> 'Page':
+        return self.page(d, Level.yearly)
 
-    def retrospective_daily_page(self, d: date):
-        page_path = self.path / "retrospectives" / d.strftime('%Y/%m') / f"r{d.strftime('%Y-%m-%d')}.md"
-        return Page(page_path, Level.daily)
+    def retrospective_daily_page(self, d: date) -> 'Page':
+        return self.retrospective_page(d, Level.daily)
 
-    def retrospective_weekly_page(self, d: date):
-        year = d.year
-        week_number = d.isocalendar().week
-        page_path = self.path / "retrospectives" / f"{year}/weeks" / f"r{year}-W{week_number:02d}.md"
-        return Page(page_path, Level.weekly)
+    def retrospective_weekly_page(self, d: date) -> 'Page':
+        return self.retrospective_page(d, Level.weekly)
 
-    def retrospective_monthly_page(self, d: date):
-        year = d.year
-        month = d.month
-        page_path = self.path / "retrospectives" / f"{year}/months" / f"r{year}-{month:02d}.md"
-        return Page(page_path, Level.monthly)
+    def retrospective_monthly_page(self, d: date) -> 'Page':
+        return self.retrospective_page(d, Level.monthly)
 
-    def retrospective_yearly_page(self, d: date):
-        year = d.year
-        page_path = self.path / "retrospectives" / f"{year}" / f"r{year}.md"
-        return Page(page_path, Level.yearly)
+    def retrospective_yearly_page(self, d: date) -> 'Page':
+        return self.retrospective_page(d, Level.yearly)
+
+    def _make_page(
+        self,
+        d: date,
+        level: Level,
+        base_folder: str,
+        templates: dict[Level, str],
+    ) -> 'Page':
+        tpl = templates[level]
+        params = {
+            "year": d.year,
+            "month": d.month,
+            "day": d.day,
+            "week": d.isocalendar().week,
+        }
+        subpath = tpl.format(**params)
+        return Page(self.path / base_folder / subpath, level)
 
 
 class Page:

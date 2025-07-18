@@ -22,6 +22,7 @@ from aww import retro
 
 settings = Settings()
 
+vault : Vault
 llm_model: Model
 
 
@@ -39,6 +40,7 @@ class ModelChoice(enum.Enum):
 @click.option('-m', '--model', type=click.Choice(ModelChoice, case_sensitive=False), default='local')
 def main(model, local_model, local_provider, gemini_model, openai_model):
     global llm_model
+    global vault
     match model:
         case ModelChoice.LOCAL:
             provider = OpenAIProvider(base_url=local_provider)
@@ -47,6 +49,7 @@ def main(model, local_model, local_provider, gemini_model, openai_model):
             llm_model = GeminiModel(model_name=gemini_model)
         case ModelChoice.OPENAI:
             llm_model = OpenAIModel(model_name=openai_model)
+    vault = Vault(settings.vault_path, settings.journal_dir, settings.retrospectives_dir)
 
 
 def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: int, context_levels: list[Level],
@@ -64,7 +67,6 @@ def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: int, co
 @click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date")
 def daily_retro(date: datetime.datetime, no_cache: int, yesterday: bool):
     """Daily retrospective."""
-    vault = Vault(settings.vault_path, settings.journal_dir)
     if yesterday:
         dates = [date.date() - datetime.timedelta(days=1)]
     else:
@@ -77,7 +79,6 @@ def daily_retro(date: datetime.datetime, no_cache: int, yesterday: bool):
 @click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
 def weekly_retro(date: datetime.datetime, no_cache: int):
     """Weekly retrospective."""
-    vault = Vault(settings.vault_path, settings.journal_dir)
     past_week = [date.date() - datetime.timedelta(days=i) for i in range(7, 0, -1)]
     do_retrospective(vault, past_week, no_cache, [Level.daily], Level.weekly)
 
@@ -89,7 +90,6 @@ def weekly_retro(date: datetime.datetime, no_cache: int):
               multiple=True)
 def monthly_retro(date: datetime.datetime, no_cache: int, context: list[retro.Level]):
     """Monthly retrospective."""
-    vault = Vault(settings.vault_path, settings.journal_dir)
     year = date.year
     month = date.month
     num_days = calendar.monthrange(year, month)[1]
@@ -104,7 +104,6 @@ def monthly_retro(date: datetime.datetime, no_cache: int, context: list[retro.Le
               multiple=True)
 def yearly_retro(date: datetime.datetime, no_cache: int, context: list[retro.Level]):
     """Yearly retrospective."""
-    vault = Vault(settings.vault_path, settings.journal_dir)
     year = date.year
     start_date = datetime.date(year, 1, 1)
     end_date = datetime.date(year, 12, 31)
