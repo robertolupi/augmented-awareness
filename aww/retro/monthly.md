@@ -24,5 +24,6 @@ Did the author develop new self-understandings?
 4. Core Struggles & Coping Mechanisms
 5. Intentions & Shifts (if any)
 6. Summary Tags (3-5 hashtags that cover the recurring patterns and themes of the month)
+7. 3 Suggestions (3-5 things that the user can do, and is not thinking or writing about, that could bring wholesome positive change in their life)
 
 Do not include any preamble or explanation. Just produce the markdown document.

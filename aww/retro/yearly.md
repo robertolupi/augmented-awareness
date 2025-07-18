@@ -29,5 +29,6 @@ How has the author changed how they view themselves?
 7. Outlook or Intentions Going Forward
 
 8. Summary Tags (for thematic map of the year, focus on what changes over the year)
+7. Suggestions (things that the user can do, and is not thinking or writing about, that could bring wholesome positive change in their life)
 
 Do not include any preamble or explanation. Just produce the markdown document.
