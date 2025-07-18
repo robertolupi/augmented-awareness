@@ -2,6 +2,7 @@ import asyncio
 import calendar
 import datetime
 import enum
+import sys
 from collections import OrderedDict
 from pickle import FALSE
 
@@ -19,6 +20,8 @@ from pydantic_ai.models.gemini import GeminiModel
 from aww.config import Settings
 from aww.obsidian import Vault, Level
 from aww import retro
+import os
+import sys
 
 settings = Settings()
 
@@ -46,8 +49,14 @@ def main(model, local_model, local_provider, gemini_model, openai_model):
             provider = OpenAIProvider(base_url=local_provider)
             llm_model = OpenAIModel(model_name=local_model, provider=provider)
         case ModelChoice.GEMINI:
+            if "GEMINI_API_KEY" not in os.environ:
+                print("Please set environment variable 'GEMINI_API_KEY'")
+                sys.exit(1)
             llm_model = GeminiModel(model_name=gemini_model)
         case ModelChoice.OPENAI:
+            if "OPENAI_API_KEY" not in os.environ:
+                print("Please set environment variable 'OPENAI_API_KEY'")
+                sys.exit(1)
             llm_model = OpenAIModel(model_name=openai_model)
     vault = Vault(settings.vault_path, settings.journal_dir, settings.retrospectives_dir)
 
