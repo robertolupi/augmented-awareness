@@ -36,6 +36,11 @@ class Node:
     def __hash__(self):
         return hash(self.retro_page)
 
+    def __lt__(self, other):
+        if not isinstance(other, Node):
+            return NotImplemented
+        return self.retro_page.name < other.retro_page.name  
+
 
 def build_retrospective_tree(vault: Vault, dates: list[date]) -> dict[Page, Node]:
     tree = {}
@@ -82,7 +87,7 @@ class RecursiveRetrospectiveGenerator:
         if no_cache <= 0 and node.retro_page:
             return RetrospectiveResult(dates=list(node.dates), output=node.retro_page.content(), page=node.retro_page)
 
-        source_results = await gather(*[self._generate(source, no_cache - 1, gather) for source in node.sources])
+        source_results = await gather(*[self._generate(source, no_cache - 1, gather) for source in sorted(node.sources)])
 
         source_content = [result.output for result in source_results if result]
         if node.page:
@@ -114,6 +119,7 @@ class RecursiveRetrospectiveGenerator:
             if node.page:
                 fd.write(f"- \"[[{node.page.name}]]\"\n")
             for n in node.sources:
-                fd.write(f"- \"[[{n.retro_page.name}]]\"\n")
+                if n.retro_page:
+                    fd.write(f"- \"[[{n.retro_page.name}]]\"\n")
             fd.write("---\n")
             fd.write(output)

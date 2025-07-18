@@ -4,6 +4,7 @@ You will be given a series of structured analyses from seven daily journal entri
 Your goal is to synthesize these daily points into a coherent, abstractive weekly retrospective.
 
 Based on the following daily summaries, write a weekly retrospective.
+Do not wait for all daily summaries to write your retrospective, they may be missing if the user hasn't written anything in the journal on a given date.
 
 Focus on recognizing recurring patterns, mood trajectories, health consistency, and attempts to address goals or issues.
 
