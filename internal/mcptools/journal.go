@@ -29,7 +29,16 @@ func addJournalTool(s *server.MCPServer) {
 		content.WriteString("The user journal for the past week is as follows:\n\n")
 
 		for _, date := range dateRange {
+		    // Journal page
 			page, err := app.Vault.Page(date)
+			if err != nil {
+				continue
+			}
+
+			content.WriteString(pageContent(page))
+			
+			// Retrospective page
+			page, err = app.Vault.Page("r" + date)
 			if err != nil {
 				continue
 			}
