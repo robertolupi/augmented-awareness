@@ -63,11 +63,15 @@ def load_prompt(level: Level):
 
 class RecursiveRetrospectiveGenerator:
     def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level):
-        self.agents = {l: Agent(model=model, system_prompt=load_prompt(l)) for l in Level}
+        self.agents = self.create_agents(model)
         self.vault = vault
         self.tree = build_retrospective_tree(vault, dates)
         self.dates = dates
         self.max_level = level
+
+    @staticmethod
+    def create_agents(model):
+        return {l: Agent(model=model, system_prompt=load_prompt(l)) for l in Level}
 
     async def run(self, no_cache: int, gather=asyncio.gather) -> RetrospectiveResult | None:
         retro_page = self.vault.retrospective_page(self.dates[0], self.max_level)
@@ -78,25 +82,32 @@ class RecursiveRetrospectiveGenerator:
         if no_cache <= 0 and node.retro_page:
             return RetrospectiveResult(dates=list(node.dates), output=node.retro_page.content(), page=node.retro_page)
 
-        source_content = []
+        source_results = await gather(*[self._generate(source, no_cache - 1, gather) for source in node.sources])
+
+        source_content = [result.output for result in source_results if result]
         if node.page:
-            source_content.append(node.page.content())
-        source_generation = [self._generate(source, no_cache - 1, gather) for source in node.sources]
-        source_results = await gather(*source_generation)
-        for result in source_results:
-            if result:
-                source_content.append(result.output)
+            source_content.insert(0, node.page.content())
         if not source_content:
             return None
+        
         result = await self.agents[node.level].run(user_prompt='\n---\n'.join(source_content))
+    
+        output = await self.prepare_output(node, result)
+        await self.save_retro_page(node, output)
+        return RetrospectiveResult(dates=list(node.dates), output=output, page=node.retro_page)
+
+    @staticmethod
+    async def prepare_output(node, result):
         output = result.output.strip()
         if m := MARKDOWN_RE.match(output):
             output = m.group(1)
         output = output.replace('![[', '[[')
-        
         output_title = f"# {node.retro_page.name}"
         output = output_title + "\n\n" + output
-        
+        return output
+
+    @staticmethod
+    async def save_retro_page(node, output):
         with node.retro_page.path.open('w') as fd:
             fd.write("---\n")
             fd.write("sources:\n")
@@ -106,4 +117,3 @@ class RecursiveRetrospectiveGenerator:
                 fd.write(f"- \"[[{n.retro_page.name}]]\"\n")
             fd.write("---\n")
             fd.write(output)
-        return RetrospectiveResult(dates=list(node.dates), output=output, page=node.retro_page)
