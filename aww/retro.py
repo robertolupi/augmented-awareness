@@ -106,6 +106,13 @@ class RecursiveRetrospectiveGenerator:
 
         source_content = [result.output for result in source_results if result]
         if node.page:
+            if fm := node.page.frontmatter():
+                if 'stress' in fm and fm['stress'] is not None:
+                    source_content.append(f"Stress level {fm['stress']} out of 10")
+                for i in ('sleep_score', 'vitals_score', 'activity_score', 'relax_score'):
+                    if i in fm and fm[i] is not None:
+                        label = i.replace('_', ' ').capitalize()
+                        source_content.append(f"{label} {fm[i]} out of 100")
             source_content.insert(0, node.page.content())
         if not source_content:
             return None
