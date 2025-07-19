@@ -64,8 +64,8 @@ def build_retrospective_tree(vault: Vault, dates: list[date]) -> dict[Page, Node
 import logging
 from functools import cache
 
-
 logger = logging.getLogger(__name__)
+
 
 @cache
 def load_prompt(level: Level) -> str:
@@ -73,13 +73,15 @@ def load_prompt(level: Level) -> str:
     path = PosixPath(__file__).parent / 'retro' / f"{level.name}.md"
     return path.read_text()
 
+
 class RecursiveRetrospectiveGenerator:
-    def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level):
+    def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level, concurrency_limit: int = 10):
         self.agents = self.create_agents(model)
         self.vault = vault
         self.tree = build_retrospective_tree(vault, dates)
         self.dates = dates
         self.max_level = level
+        self.semaphore = asyncio.Semaphore(concurrency_limit)
 
     @staticmethod
     def create_agents(model):
@@ -108,7 +110,8 @@ class RecursiveRetrospectiveGenerator:
         if not source_content:
             return None
 
-        result = await self.agents[node.level].run(user_prompt='\n---\n'.join(source_content))
+        async with self.semaphore:
+            result = await self.agents[node.level].run(user_prompt='\n---\n'.join(source_content))
 
         output = await self.prepare_output(node, result)
         await self.save_retro_page(node, output, sources, context_levels)
