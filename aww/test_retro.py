@@ -73,9 +73,10 @@ def test_recursive_retrospective_generator(tmp_vault):
     days_in_year = list(days_between(2025, 1, 1,
                                      2025, 12, 31))
     g = RecursiveRetrospectiveGeneratorForTesting(tmp_vault, days_in_year, Level.yearly)
-    asyncio.run(g.run(0, list(Level)))
+    asyncio.run(g.run(context_levels=list(Level),
+                      cache_policies=[retro.NoRootCachePolicy(), retro.NoLevelsCachePolicy(list(Level))]))
     yearly = tmp_vault.retrospective_yearly_page(days_in_year[0])
-    
+
     march30 = datetime.date(2025, 3, 30)
     april1 = datetime.date(2025, 4, 1)
     d1 = tmp_vault.retrospective_daily_page(march30)
@@ -84,7 +85,7 @@ def test_recursive_retrospective_generator(tmp_vault):
     w2 = tmp_vault.retrospective_weekly_page(april1)
     march = tmp_vault.retrospective_monthly_page(march30)
     april = tmp_vault.retrospective_monthly_page(april1)
-    
+
     sources_with_content = set(g.saved_nodes.keys())
     assert sources_with_content == {d1, d2, w1, w2, march, april, yearly}
 

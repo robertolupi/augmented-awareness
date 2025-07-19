@@ -35,6 +35,15 @@ class ModelChoice(enum.Enum):
     OPENAI = "openai"
 
 
+class NoCachePolicyChoice(enum.Enum):
+    ROOT = 'root'
+    DAILY = 'daily'
+    WEEKLY = 'weekly'
+    MONTHLY = 'monthly'
+    YEARLY = 'yearly'
+    MTIME = 'mtime'
+
+
 @click.group()
 @click.option('--local_model', type=str, default='qwen/qwen3-30b-a3b')
 @click.option('--local_provider', type=str, default='http://localhost:1234/v1')
@@ -61,20 +70,41 @@ def main(model, local_model, local_provider, gemini_model, openai_model):
     vault = Vault(settings.vault_path, settings.journal_dir, settings.retrospectives_dir)
 
 
-def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: int, context_levels: list[Level],
+def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: list[NoCachePolicyChoice],
+                     context_levels: list[Level],
                      level: Level, concurrency_limit: int):
+    cache_policies = []
+    no_cache_levels = []
+    for policy in no_cache:
+        match policy:
+            case NoCachePolicyChoice.ROOT:
+                cache_policies.append(retro.NoRootCachePolicy())
+            case NoCachePolicyChoice.DAILY:
+                no_cache_levels.append(Level.daily)
+            case NoCachePolicyChoice.WEEKLY:
+                no_cache_levels.append(Level.weekly)
+            case NoCachePolicyChoice.MONTHLY:
+                no_cache_levels.append(Level.monthly)
+            case NoCachePolicyChoice.YEARLY:
+                no_cache_levels.append(Level.yearly)
+            case NoCachePolicyChoice.MTIME:
+                cache_policies.append(retro.ModificationTimeCachePolicy())
+    if no_cache_levels:
+        cache_policies.append(retro.NoLevelsCachePolicy(levels=no_cache_levels))
+
     generator = retro.RecursiveRetrospectiveGenerator(llm_model, vault, dates, level, concurrency_limit)
     result = asyncio.run(
-        generator.run(no_cache=no_cache, context_levels=context_levels, gather=tqdm.asyncio.tqdm.gather))
+        generator.run(context_levels=context_levels, cache_policies=cache_policies, gather=tqdm.asyncio.tqdm.gather))
     if result:
         rich.print(Markdown(result.output))
 
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
+@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
+              default=['root'], help="No cache policy", multiple=True)
 @click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date")
-def daily_retro(date: datetime.datetime, no_cache: int, yesterday: bool):
+def daily_retro(date: datetime.datetime, no_cache: list[NoCachePolicyChoice], yesterday: bool):
     """Daily retrospective."""
     if yesterday:
         dates = [date.date() - datetime.timedelta(days=1)]
@@ -85,8 +115,9 @@ def daily_retro(date: datetime.datetime, no_cache: int, yesterday: bool):
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
-def weekly_retro(date: datetime.datetime, no_cache: int):
+@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
+              default=['root', 'mtime'], help="No cache policy", multiple=True)
+def weekly_retro(date: datetime.datetime, no_cache: list[NoCachePolicyChoice]):
     """Weekly retrospective."""
     past_week = [date.date() - datetime.timedelta(days=i) for i in range(7, 0, -1)]
     do_retrospective(vault, past_week, no_cache, [Level.daily], Level.weekly, 7)
@@ -94,11 +125,13 @@ def weekly_retro(date: datetime.datetime, no_cache: int):
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
+@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
+              default=['root', 'mtime'], help="No cache policy", multiple=True)
 @click.option('-c', '--context', type=click.Choice(retro.Level, case_sensitive=False), default=['daily', 'weekly'],
               multiple=True)
 @click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), default=10)
-def monthly_retro(date: datetime.datetime, no_cache: int, context: list[retro.Level], concurrency_limit: int):
+def monthly_retro(date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[retro.Level],
+                  concurrency_limit: int):
     """Monthly retrospective."""
     year = date.year
     month = date.month
@@ -109,12 +142,14 @@ def monthly_retro(date: datetime.datetime, no_cache: int, context: list[retro.Le
 
 @main.command()
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('--no-cache', type=int, default=0, help="Do not use cached retrospectives.")
+@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
+              default=['root', 'mtime'], help="No cache policy", multiple=True)
 @click.option('-c', '--context', type=click.Choice(retro.Level, case_sensitive=False),
               default=['daily', 'weekly', 'monthly'],
               multiple=True)
 @click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), default=10)
-def yearly_retro(date: datetime.datetime, no_cache: int, context: list[retro.Level], concurrency_limit: int):
+def yearly_retro(date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[retro.Level],
+                 concurrency_limit: int):
     """Yearly retrospective."""
     year = date.year
     start_date = datetime.date(year, 1, 1)

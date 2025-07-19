@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import PosixPath
 from textwrap import dedent
+from typing import Callable, Dict, Sequence
 
 from pydantic_ai import Agent
 from pydantic_ai.models import Model
@@ -29,6 +30,7 @@ class Node:
     retro_page: Page
     page: Page
     sources: set['Node']
+    use_cache: bool = True
 
     def __eq__(self, other):
         return isinstance(other, Node) and (self.retro_page == other.retro_page)
@@ -42,7 +44,10 @@ class Node:
         return self.retro_page.name < other.retro_page.name
 
 
-def build_retrospective_tree(vault: Vault, dates: list[date]) -> dict[Page, Node]:
+Tree = Dict[Page, Node]
+
+
+def build_retrospective_tree(vault: Vault, dates: list[date]) -> Tree:
     tree = {}
     for d in dates:
         for l in Level:
@@ -74,6 +79,33 @@ def load_prompt(level: Level) -> str:
     return path.read_text()
 
 
+CachePolicy = Callable[[Node, Tree], None]
+
+
+class NoRootCachePolicy(CachePolicy):
+    def __call__(self, node: Node, tree: Tree):
+        node.use_cache = False
+
+
+class NoLevelsCachePolicy(CachePolicy):
+    def __init__(self, levels: Sequence[Level]):
+        self.levels = set(levels)
+
+    def __call__(self, node: Node, tree: Tree):
+        for source in node.sources:
+            if source.level in self.levels:
+                source.use_cache = False
+
+
+class ModificationTimeCachePolicy(CachePolicy):
+    def __call__(self, node: Node, tree: Tree):
+        for node in tree.values():
+            if not node.page or not node.retro_page:
+                continue
+            if node.page.mtime_ns() > node.retro_page.mtime_ns():
+                node.use_cache = False
+
+
 class RecursiveRetrospectiveGenerator:
     def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level, concurrency_limit: int = 10):
         self.agents = self.create_agents(model)
@@ -87,33 +119,28 @@ class RecursiveRetrospectiveGenerator:
     def create_agents(model):
         return {l: Agent(model=model, system_prompt=load_prompt(l)) for l in Level}
 
-    async def run(self, no_cache: int, context_levels: list[Level],
+    async def run(self, context_levels: list[Level],
+                  cache_policies: list[CachePolicy],
                   gather=asyncio.gather) -> RetrospectiveResult | None:
         retro_page = self.vault.retrospective_page(self.dates[0], self.max_level)
         node = self.tree[retro_page]
-        return await self._generate(node, no_cache, set(context_levels), gather)
+        for policy in cache_policies:
+            policy(node, self.tree)
+        return await self._generate(node, set(context_levels), gather)
 
-    async def _generate(self, node: Node, no_cache: int, context_levels: set[Level],
+    async def _generate(self, node: Node, context_levels: set[Level],
                         gather=asyncio.gather) -> RetrospectiveResult | None:
-        if no_cache <= 0 and node.retro_page:
+        if node.use_cache and node.retro_page:
             return RetrospectiveResult(dates=list(node.dates), output=node.retro_page.content(), page=node.retro_page)
 
         sources = list(sorted(node.sources))
 
         source_results = await gather(
-            *[self._generate(source, no_cache - 1, context_levels, gather) for source in sources
-              if source.level in context_levels])
+            *[self._generate(source, context_levels) for source in sources if source.level in context_levels])
 
         source_content = [result.output for result in source_results if result]
         if node.page:
-            if fm := node.page.frontmatter():
-                if 'stress' in fm and fm['stress'] is not None:
-                    source_content.append(f"Stress level {fm['stress']} out of 10")
-                for i in ('sleep_score', 'vitals_score', 'activity_score', 'relax_score'):
-                    if i in fm and fm[i] is not None:
-                        label = i.replace('_', ' ').capitalize()
-                        source_content.append(f"{label} {fm[i]} out of 100")
-            source_content.insert(0, node.page.content())
+            source_content.insert(0, await self.page_content(node))
         if not source_content:
             return None
 
@@ -125,6 +152,19 @@ class RecursiveRetrospectiveGenerator:
         return RetrospectiveResult(dates=list(node.dates), output=output, page=node.retro_page)
 
     @staticmethod
+    async def page_content(node):
+        page_content = [f'Page: [[{node.page.name}]]', node.page.content()]
+        if fm := node.page.frontmatter():
+            if 'stress' in fm and fm['stress'] is not None:
+                page_content.append(f"Stress level {fm['stress']} of 10.")
+        for i in ('sleep_score', 'vitals_score', 'activity_score', 'relax_score'):
+            if i in fm and fm[i] is not None:
+                label = i.replace('_', ' ').capitalize()
+                page_content.append(f"{label} {fm[i]} of 100.")
+        return '\n'.join(page_content)
+
+    
+    @staticmethod
     async def prepare_output(node, result):
         output = result.output.strip()
         if m := MARKDOWN_RE.match(output):
@@ -133,7 +173,8 @@ class RecursiveRetrospectiveGenerator:
         output_title = f"# {node.retro_page.name}"
         output = output_title + "\n\n" + output
         return output
-
+    
+    
     @staticmethod
     async def save_retro_page(node, output, sources, levels):
         # ensure parent directory exists
