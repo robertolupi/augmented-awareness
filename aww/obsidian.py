@@ -3,6 +3,8 @@ import os
 from datetime import date
 import re
 
+import yaml
+
 from pathlib import PosixPath
 
 FRONTMATTER_RE = re.compile('^---\n(.*?)\n---\n', re.DOTALL | re.MULTILINE)
@@ -67,11 +69,11 @@ class Vault:
         return self.retrospective_page(d, Level.yearly)
 
     def _make_page(
-        self,
-        d: date,
-        level: Level,
-        base_folder: str,
-        templates: dict[Level, str],
+            self,
+            d: date,
+            level: Level,
+            base_folder: str,
+            templates: dict[Level, str],
     ) -> 'Page':
         tpl = templates[level]
         params = {
@@ -85,7 +87,7 @@ class Vault:
 
 
 class Page:
-    def __init__(self, path: PosixPath, level: Level|None):
+    def __init__(self, path: PosixPath, level: Level | None):
         self.path = path
         self.level = level
 
@@ -121,3 +123,13 @@ class Page:
             return FRONTMATTER_RE.sub('', data)
         else:
             return data
+
+    def frontmatter(self):
+        with self.path.open() as fd:
+            data = fd.read()
+        if m := FRONTMATTER_RE.match(data):
+            try:
+                return yaml.load(m.group(1), Loader=yaml.Loader)
+            except yaml.error.YAMLError:
+                return None
+        return None

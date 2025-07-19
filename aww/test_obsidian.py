@@ -7,14 +7,15 @@ from aww.obsidian import Level
 
 test_vault_path = (PosixPath(aww.__file__).parent.parent / 'test_vault').absolute()
 
+
 def test_vault():
     vault = obsidian.Vault(test_vault_path, 'journal', 'retrospectives')
     assert vault.path == test_vault_path
     assert vault.journal_dir == 'journal'
     assert vault.retrospectives_dir == 'retrospectives'
     assert vault.path.exists()
-    
-    
+
+
 def test_daily_page():
     vault = obsidian.Vault(test_vault_path, 'journal', 'retrospectives')
     page = vault.daily_page(date(2025, 3, 30))
@@ -24,8 +25,15 @@ def test_daily_page():
 
 
 def test_page():
-    vault = obsidian.Vault(test_vault_path, 'journal', 'retrospectives')
     page1 = obsidian.Page(test_vault_path / 'journal/2025/03/2025-03-30.md', Level.daily)
     page2 = obsidian.Page(test_vault_path / 'journal/2025/04/2025-04-01.md', Level.daily)
     assert page1 != page2
     assert hash(page1) != hash(page2)
+
+    assert page1.frontmatter() == {'stress': 4}
+    assert page2.frontmatter() == {'stress': 5}
+
+
+def test_index_page():
+    page = obsidian.Page(test_vault_path / 'index.md', None)
+    assert page.frontmatter() is None
