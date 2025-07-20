@@ -71,14 +71,6 @@ from functools import cache
 
 logger = logging.getLogger(__name__)
 
-
-@cache
-def load_prompt(level: Level) -> str:
-    """Read and cache system prompt template for the given level."""
-    path = PosixPath(__file__).parent / 'retro' / f"{level.name}.md"
-    return path.read_text()
-
-
 CachePolicy = Callable[[Node, Tree], None]
 
 
@@ -107,8 +99,9 @@ class ModificationTimeCachePolicy(CachePolicy):
 
 
 class RecursiveRetrospectiveGenerator:
-    def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level, concurrency_limit: int = 10):
-        self.agents = self.create_agents(model)
+    def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level, concurrency_limit: int = 10,
+                 prompts_path: PosixPath | None = None):
+        self.agents = self.create_agents(model, prompts_path or (PosixPath(__file__).parent / 'retro'))
         self.vault = vault
         self.tree = build_retrospective_tree(vault, dates)
         self.dates = dates
@@ -116,7 +109,11 @@ class RecursiveRetrospectiveGenerator:
         self.semaphore = asyncio.Semaphore(concurrency_limit)
 
     @staticmethod
-    def create_agents(model):
+    def create_agents(model, prompts_path: PosixPath):
+        def load_prompt(level: Level):
+            path = prompts_path / f"{level.name}.md"
+            return path.read_text()
+
         return {l: Agent(model=model, system_prompt=load_prompt(l)) for l in Level}
 
     async def run(self, context_levels: list[Level],
@@ -163,7 +160,6 @@ class RecursiveRetrospectiveGenerator:
                 page_content.append(f"{label} {fm[i]} of 100.")
         return '\n'.join(page_content)
 
-    
     @staticmethod
     async def prepare_output(node, result):
         output = result.output.strip()
@@ -173,8 +169,7 @@ class RecursiveRetrospectiveGenerator:
         output_title = f"# {node.retro_page.name}"
         output = output_title + "\n\n" + output
         return output
-    
-    
+
     @staticmethod
     async def save_retro_page(node, output, sources, levels):
         # ensure parent directory exists
