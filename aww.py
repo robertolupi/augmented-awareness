@@ -73,6 +73,11 @@ def main(model, local_model, local_provider, gemini_model, openai_model):
 def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: list[NoCachePolicyChoice],
                      context_levels: list[Level],
                      level: Level, concurrency_limit: int):
+    print("Generating", level.value, "retrospective from", dates[0], "to", dates[-1])
+    print("NoCache policy:", ",".join(c.value for c in no_cache))
+    print("Context:", ",".join(c.value for c in context_levels))
+    print("Concurrency Limit:", concurrency_limit)
+
     cache_policies = []
     no_cache_levels = []
     for policy in no_cache:
@@ -99,63 +104,81 @@ def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: list[No
         rich.print(Markdown(result.output))
 
 
-@main.command()
+@main.command(name="retro")
+@click.argument('level', type=click.Choice(Level, case_sensitive=False))
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
 @click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
-              default=['root'], help="No cache policy", multiple=True)
-@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date")
-def daily_retro(date: datetime.datetime, no_cache: list[NoCachePolicyChoice], yesterday: bool):
-    """Daily retrospective."""
+              multiple=True, help="No cache policy")
+@click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
+              multiple=True, help="Context levels for retrospective")
+@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), help="Concurrency limit")
+@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
+def retrospectives(level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[Level],
+                   concurrency_limit: int, yesterday: bool):
+    """Runs a retrospective for a given level."""
+    dates: list[datetime.date]
+    the_date = date.date()
     if yesterday:
-        dates = [date.date() - datetime.timedelta(days=1)]
+        if level != Level.daily:
+            click.echo("Error: --yesterday can only be used with daily level.", err=True)
+            sys.exit(1)
+        the_date = the_date - datetime.timedelta(days=1)
+
+    # Set defaults based on level
+    final_no_cache = list(no_cache)
+    final_context = list(context)
+    final_concurrency_limit = concurrency_limit
+
+    if level == Level.daily:
+        dates = [the_date]
+        if not final_no_cache:
+            final_no_cache = [NoCachePolicyChoice.ROOT]
+        if not final_context:
+            final_context = []
+        if not final_concurrency_limit:
+            final_concurrency_limit = 10
+    elif level == Level.weekly:
+        dates = get_week(the_date)
+        if not final_no_cache:
+            final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
+        if not final_context:
+            final_context = [Level.daily]
+        if not final_concurrency_limit:
+            final_concurrency_limit = 7
+    elif level == Level.monthly:
+        year = the_date.year
+        month = the_date.month
+        num_days = calendar.monthrange(year, month)[1]
+        dates = [datetime.date(year, month, day) for day in range(1, num_days + 1)]
+        if not final_no_cache:
+            final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
+        if not final_context:
+            final_context = [Level.daily, Level.weekly]
+        if not final_concurrency_limit:
+            final_concurrency_limit = 10
+    elif level == Level.yearly:
+        year = the_date.year
+        start_date = datetime.date(year, 1, 1)
+        end_date = datetime.date(year, 12, 31)
+        days_in_year = [start_date + datetime.timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+        if not final_no_cache:
+            final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
+        if not final_context:
+            final_context = [Level.daily, Level.weekly, Level.monthly]
+        if not final_concurrency_limit:
+            final_concurrency_limit = 10
     else:
-        dates = [date.date()]
-    do_retrospective(vault, dates, no_cache, [], Level.daily, 10)
+        # Should not happen with click.Choice
+        click.echo(f"Error: Unknown level '{level}'", err=True)
+        sys.exit(1)
+
+    do_retrospective(vault, dates, final_no_cache, final_context, level, final_concurrency_limit)
 
 
-@main.command()
-@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
-              default=['root', 'mtime'], help="No cache policy", multiple=True)
-def weekly_retro(date: datetime.datetime, no_cache: list[NoCachePolicyChoice]):
-    """Weekly retrospective."""
-    past_week = [date.date() - datetime.timedelta(days=i) for i in range(7, 0, -1)]
-    do_retrospective(vault, past_week, no_cache, [Level.daily], Level.weekly, 7)
-
-
-@main.command()
-@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
-              default=['root', 'mtime'], help="No cache policy", multiple=True)
-@click.option('-c', '--context', type=click.Choice(retro.Level, case_sensitive=False), default=['daily', 'weekly'],
-              multiple=True)
-@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), default=10)
-def monthly_retro(date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[retro.Level],
-                  concurrency_limit: int):
-    """Monthly retrospective."""
-    year = date.year
-    month = date.month
-    num_days = calendar.monthrange(year, month)[1]
-    days_in_month = [datetime.date(year, month, day) for day in range(1, num_days + 1)]
-    do_retrospective(vault, days_in_month, no_cache, context, Level.monthly, concurrency_limit)
-
-
-@main.command()
-@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
-              default=['root', 'mtime'], help="No cache policy", multiple=True)
-@click.option('-c', '--context', type=click.Choice(retro.Level, case_sensitive=False),
-              default=['daily', 'weekly', 'monthly'],
-              multiple=True)
-@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), default=10)
-def yearly_retro(date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[retro.Level],
-                 concurrency_limit: int):
-    """Yearly retrospective."""
-    year = date.year
-    start_date = datetime.date(year, 1, 1)
-    end_date = datetime.date(year, 12, 31)
-    days_in_year = [start_date + datetime.timedelta(days=i) for i in range((end_date - start_date).days + 1)]
-    do_retrospective(vault, days_in_year, no_cache, context, Level.yearly, concurrency_limit)
+def get_week(the_date: datetime.date) -> list[datetime.date]:
+    """Returns the weekly dates (Mon to Friday) for the week that contains the given date."""
+    monday = the_date - datetime.timedelta(days=the_date.weekday())
+    return [monday + datetime.timedelta(days=i) for i in range(7)]
 
 
 if __name__ == "__main__":
