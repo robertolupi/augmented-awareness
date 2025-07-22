@@ -9,7 +9,7 @@ import (
 )
 
 func addBusyTool(s *server.MCPServer) {
-	busyTool := mcp.NewTool("past-activities",
+	busyTool := mcp.NewTool("busy-histogram",
 		mcp.WithDescription("Read a report of how the user spent their time for a given date range."),
 		mcp.WithIdempotentHintAnnotation(true),
 		mcp.WithReadOnlyHintAnnotation(true),
