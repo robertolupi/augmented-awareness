@@ -32,6 +32,10 @@ func addSearchTool(s *server.MCPServer) {
 			return mcp.NewToolResultText("No pages found matching your search query."), nil
 		}
 
+		if len(pages) > 10 {
+			return returnPages(ctx, pages[:10])
+		}
+
 		return returnPages(ctx, pages)
 	})
 }
