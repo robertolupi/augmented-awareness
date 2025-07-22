@@ -160,7 +160,7 @@ def retrospectives(level: Level, date: datetime.datetime, no_cache: list[NoCache
         year = the_date.year
         start_date = datetime.date(year, 1, 1)
         end_date = datetime.date(year, 12, 31)
-        days_in_year = [start_date + datetime.timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+        dates = [start_date + datetime.timedelta(days=i) for i in range((end_date - start_date).days + 1)]
         if not final_no_cache:
             final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
         if not final_context:

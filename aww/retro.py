@@ -158,10 +158,10 @@ class RecursiveRetrospectiveGenerator:
                 page_content.append(f"Weight {fm['kg']} kg.")
             if 'bmi' in fm and fm['bmi'] is not None:
                 page_content.append(f"Body Mass Index (BMI) {fm['bmi']}.")
-        for i in ('sleep_score', 'vitals_score', 'activity_score', 'relax_score'):
-            if i in fm and fm[i] is not None:
-                label = i.replace('_', ' ').capitalize()
-                page_content.append(f"{label} {fm[i]} of 100.")
+            for i in ('sleep_score', 'vitals_score', 'activity_score', 'relax_score'):
+                if i in fm and fm[i] is not None:
+                    label = i.replace('_', ' ').capitalize()
+                    page_content.append(f"{label} {fm[i]} of 100.")
         return '\n'.join(page_content)
 
     @staticmethod
