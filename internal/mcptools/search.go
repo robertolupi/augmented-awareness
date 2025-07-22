@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"strings"
 )
 
 func addSearchTool(s *server.MCPServer) {
@@ -33,12 +32,6 @@ func addSearchTool(s *server.MCPServer) {
 			return mcp.NewToolResultText("No pages found matching your search query."), nil
 		}
 
-		var sb strings.Builder
-		sb.WriteString("The following pages match your search query:\n\n")
-		for _, page := range pages {
-			sb.WriteString("[[" + page.Name() + "]]\n")
-		}
-
-		return mcp.NewToolResultText(sb.String()), nil
+		return returnPages(ctx, pages)
 	})
 }

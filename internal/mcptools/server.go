@@ -16,8 +16,10 @@ func NewServer() *server.MCPServer {
 		server.WithResourceCapabilities(false, true),
 		server.WithInstructions(instructions))
 
+	addPageResources(s)
+
 	addDateTimeTool(s)
-	addPagesToolAndResources(s)
+	addReadPageTool(s)
 	addJournalTool(s)
 	addTasksTool(s)
 	addSearchTool(s)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	"journal/internal/obsidian"
 )
 
 func addMemoryTool(s *server.MCPServer) {
@@ -37,7 +38,7 @@ func addMemoryTool(s *server.MCPServer) {
 			return nil, fmt.Errorf("failed to save scratchpad page: %w", err)
 		}
 
-		return mcp.NewToolResultText("Fact remembered successfully!"), nil
+		return returnPagesWithMsg(ctx, []*obsidian.Page{page}, "Fact remembered successfully!")
 	})
 
 }
