@@ -8,6 +8,7 @@ import yaml
 from pathlib import PosixPath
 
 FRONTMATTER_RE = re.compile('^---\n(.*?)\n---\n', re.DOTALL | re.MULTILINE)
+CODEBLOCKS_RE = re.compile('\n```([a-z]+)\n(.*?)\n```\n', re.DOTALL | re.MULTILINE)
 
 
 class Level(enum.Enum):
@@ -119,10 +120,9 @@ class Page:
     def content(self):
         with self.path.open() as fd:
             data = fd.read()
-        if FRONTMATTER_RE.match(data):
-            return FRONTMATTER_RE.sub('', data)
-        else:
-            return data
+        data = FRONTMATTER_RE.sub('', data)
+        data = CODEBLOCKS_RE.sub('', data)
+        return data
 
     def frontmatter(self):
         with self.path.open() as fd:
