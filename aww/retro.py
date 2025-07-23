@@ -3,13 +3,15 @@ import asyncio
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import PosixPath
 from textwrap import dedent
 from typing import Callable, Dict, Sequence
 
 from pydantic_ai import Agent
 from pydantic_ai.models import Model
+
+import yaml
 
 from aww.obsidian import Vault, Page, Level
 
@@ -142,10 +144,20 @@ class RecursiveRetrospectiveGenerator:
             return None
 
         async with self.semaphore:
-            result = await self.agents[node.level].run(user_prompt='\n---\n'.join(source_content))
+            agent = self.agents[node.level]
+            sys_prompt = agent.system_prompt()
+            model_name = agent.model.model_name
+            user_prompt = '\n---\n'.join(source_content)
+            retro_frontmatter = dict(
+                sys_prompt_hash=hex(hash(sys_prompt)),
+                model_name=model_name,
+                ctime=datetime.now().isoformat(),
+                user_prompt_hash=hex(hash(user_prompt)),
+            )
+            result = await agent.run(user_prompt=user_prompt)
 
         output = await self.prepare_output(node, result)
-        await self.save_retro_page(node, output, sources, context_levels)
+        await self.save_retro_page(node, output, sources, context_levels, retro_frontmatter)
         return RetrospectiveResult(dates=list(node.dates), output=output, page=node.retro_page)
 
     @staticmethod
@@ -175,7 +187,7 @@ class RecursiveRetrospectiveGenerator:
         return output
 
     @staticmethod
-    async def save_retro_page(node, output, sources, levels):
+    async def save_retro_page(node, output, sources, levels, retro_frontmatter):
         # ensure parent directory exists
         node.retro_page.path.parent.mkdir(parents=True, exist_ok=True)
         logger.info(
@@ -184,12 +196,15 @@ class RecursiveRetrospectiveGenerator:
             node.level,
         )
         with node.retro_page.path.open('w') as fd:
-            fd.write("---\n")
-            fd.write("sources:\n")
+            source_items = []
             if node.page:
-                fd.write(f"- \"[[{node.page.name}]]\"\n")
+                source_items.append(f"[[{node.page.name}]]")
             for n in sources:
-                if n.retro_page and n.level in levels:
-                    fd.write(f"- \"[[{n.retro_page.name}]]\"\n")
+                if n in sources and n.level in levels:
+                    source_items.append(f"[{n.retro_page.name}]")
+
+            retro_frontmatter['sources'] = source_items
+            fd.write("---\n")
+            fd.write(yaml.dump(retro_frontmatter, default_flow_style=False))
             fd.write("---\n")
             fd.write(output)
