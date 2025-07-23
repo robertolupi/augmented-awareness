@@ -127,55 +127,51 @@ def retrospectives(level: Level, date: datetime.datetime, no_cache: list[NoCache
     # Set defaults based on level
     final_no_cache = list(no_cache)
     final_context = list(context)
-    final_concurrency_limit = concurrency_limit
+    final_concurrency_limit = concurrency_limit or 10
 
-    if level == Level.daily:
-        dates = [the_date]
-        if not final_no_cache:
-            final_no_cache = [NoCachePolicyChoice.ROOT]
-        if not final_context:
-            final_context = []
-        if not final_concurrency_limit:
-            final_concurrency_limit = 10
-    elif level == Level.weekly:
-        dates = get_week(the_date)
-        if not final_no_cache:
-            final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
-        if not final_context:
-            final_context = [Level.daily]
-        if not final_concurrency_limit:
-            final_concurrency_limit = 7
-    elif level == Level.monthly:
-        year = the_date.year
-        month = the_date.month
-        num_days = calendar.monthrange(year, month)[1]
-        dates = [datetime.date(year, month, day) for day in range(1, num_days + 1)]
-        if not final_no_cache:
-            final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
-        if not final_context:
-            final_context = [Level.daily, Level.weekly]
-        if not final_concurrency_limit:
-            final_concurrency_limit = 10
-    elif level == Level.yearly:
-        year = the_date.year
-        start_date = datetime.date(year, 1, 1)
-        end_date = datetime.date(year, 12, 31)
-        dates = [start_date + datetime.timedelta(days=i) for i in range((end_date - start_date).days + 1)]
-        if not final_no_cache:
-            final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
-        if not final_context:
-            final_context = [Level.daily, Level.weekly, Level.monthly]
-        if not final_concurrency_limit:
-            final_concurrency_limit = 10
-    else:
-        # Should not happen with click.Choice
-        click.echo(f"Error: Unknown level '{level}'", err=True)
-        sys.exit(1)
+    if not final_no_cache:
+        final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
+    if not final_context:
+        final_context = []
+        for l in Level:
+            if l == level:
+                break
+            final_context.append(l)
+
+    match level:
+        case Level.daily:
+            dates = [the_date]
+        case Level.weekly:
+            dates = whole_week(the_date)
+        case Level.monthly:
+            dates = whole_month(the_date)
+        case Level.yearly:
+            dates = whole_year(the_date)
+        case _:
+            # Should not happen with click.Choice
+            click.echo(f"Error: Unknown level '{level}'", err=True)
+            sys.exit(1)
 
     do_retrospective(vault, dates, final_no_cache, final_context, level, final_concurrency_limit)
 
 
-def get_week(the_date: datetime.date) -> list[datetime.date]:
+def whole_year(the_date: datetime.date) -> list[datetime.date]:
+    year = the_date.year
+    start_date = datetime.date(year, 1, 1)
+    end_date = datetime.date(year, 12, 31)
+    dates = [start_date + datetime.timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+    return dates
+
+
+def whole_month(the_date: datetime.date) -> list[datetime.date]:
+    year = the_date.year
+    month = the_date.month
+    num_days = calendar.monthrange(year, month)[1]
+    dates = [datetime.date(year, month, day) for day in range(1, num_days + 1)]
+    return dates
+
+
+def whole_week(the_date: datetime.date) -> list[datetime.date]:
     """Returns the weekly dates (Mon to Friday) for the week that contains the given date."""
     monday = the_date - datetime.timedelta(days=the_date.weekday())
     return [monday + datetime.timedelta(days=i) for i in range(7)]
