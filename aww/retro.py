@@ -7,6 +7,7 @@ from datetime import date, datetime
 from pathlib import PosixPath
 from textwrap import dedent
 from typing import Callable, Dict, Sequence
+import hashlib
 
 from pydantic_ai import Agent
 from pydantic_ai.models import Model
@@ -14,6 +15,11 @@ from pydantic_ai.models import Model
 import yaml
 
 from aww.obsidian import Vault, Page, Level
+
+
+def md5(s: str) -> str:
+    return hashlib.md5(s.encode("utf-8")).hexdigest()
+
 
 MARKDOWN_RE = re.compile('```markdown\n(.*?)\n```', re.DOTALL | re.MULTILINE)
 
@@ -103,20 +109,20 @@ class ModificationTimeCachePolicy(CachePolicy):
 class RecursiveRetrospectiveGenerator:
     def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level, concurrency_limit: int = 10,
                  prompts_path: PosixPath | None = None):
-        self.agents = self.create_agents(model, prompts_path or (PosixPath(__file__).parent / 'retro'))
+        if not prompts_path:
+            prompts_path = (PosixPath(__file__).parent / 'retro')
+
+        def load_prompt(level: Level):
+            path = prompts_path / f"{level.name}.md"
+            return path.read_text()
+
+        self.prompts = {l: load_prompt(l) for l in Level}
+        self.agents = {l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level}
         self.vault = vault
         self.tree = build_retrospective_tree(vault, dates)
         self.dates = dates
         self.max_level = level
         self.semaphore = asyncio.Semaphore(concurrency_limit)
-
-    @staticmethod
-    def create_agents(model, prompts_path: PosixPath):
-        def load_prompt(level: Level):
-            path = prompts_path / f"{level.name}.md"
-            return path.read_text()
-
-        return {l: Agent(model=model, system_prompt=load_prompt(l)) for l in Level}
 
     async def run(self, context_levels: list[Level],
                   cache_policies: list[CachePolicy],
@@ -145,14 +151,14 @@ class RecursiveRetrospectiveGenerator:
 
         async with self.semaphore:
             agent = self.agents[node.level]
-            sys_prompt = agent.system_prompt()
             model_name = agent.model.model_name
+            sys_prompt = self.prompts[node.level]
             user_prompt = '\n---\n'.join(source_content)
             retro_frontmatter = dict(
-                sys_prompt_hash=hex(hash(sys_prompt)),
+                sys_prompt_hash=md5(sys_prompt),
                 model_name=model_name,
                 ctime=datetime.now().isoformat(),
-                user_prompt_hash=hex(hash(user_prompt)),
+                user_prompt_hash=md5(user_prompt),
             )
             result = await agent.run(user_prompt=user_prompt)
 
