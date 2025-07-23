@@ -40,6 +40,18 @@ The Go portion of the application follows the standard Go project layout:
 -   `pkg/`: (Not yet present) Would contain library code that's okay to be used by external applications.
 -   `go.mod`, `go.sum`: Go module definitions and dependencies.
 
+### Python
+
+The Python code provides tools for generating retrospectives from journal entries.
+
+-   `aww.py`: The main CLI entry point, built with `click`. It allows users to generate retrospectives for different time periods (daily, weekly, etc.) using various language models.
+-   `aww/`: The main Python package.
+    -   `config.py`: Manages application settings using Pydantic.
+    -   `obsidian.py`: Contains classes (`Vault`, `Page`) for interacting with the structure of an Obsidian vault.
+    -   `retro.py`: Implements the core logic for generating retrospectives. It builds a dependency tree of notes and uses an AI agent to summarize them.
+    -   `retro/`: This directory contains the Markdown-based system prompts that guide the AI model for generating daily, weekly, monthly, and yearly retrospectives.
+-   `test_*.py`: Unit tests for the Python modules.
+
 ## Testing
 
 ### Go Testing
@@ -53,6 +65,14 @@ go test ./internal/...
 #### Why not `go test ./...`?
 
 The standard `go test ./...` command will fail because the Go portion of this project contains multiple `main` packages (in the `cmd/` directory and the root). The `go test` command is designed to test library packages, not executable `main` packages. The command `go test ./internal/...` specifically targets the testable library code within the `internal/` directory.
+
+### Python Testing
+
+To run all Python tests in this project, use `pytest` from the project root:
+
+```bash
+pytest
+```
 
 ### General Best Practices
 
