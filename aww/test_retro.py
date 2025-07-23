@@ -64,8 +64,8 @@ class RecursiveRetrospectiveGeneratorForTesting(retro.RecursiveRetrospectiveGene
         super().__init__(model, vault, days, level)
         self.saved_nodes = {}
 
-    async def save_retro_page(self, node, output, sources, levels):
-        await super().save_retro_page(node, output, sources, levels)
+    async def save_retro_page(self, node, output, sources, levels, retro_frontmatter):
+        await super().save_retro_page(node, output, sources, levels, retro_frontmatter)
         self.saved_nodes[node.retro_page] = (node, sources, levels)
 
 
