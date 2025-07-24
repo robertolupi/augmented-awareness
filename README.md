@@ -66,7 +66,7 @@ Usage: aww.py [OPTIONS] COMMAND [ARGS]...
 
 Options:
   --local_model TEXT
-  --local_provider TEXT
+  --local_url TEXT
   --gemini_model TEXT
   --openai_model TEXT
   -p, --provider [local|gemini|openai]
