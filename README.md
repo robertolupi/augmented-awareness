@@ -76,3 +76,7 @@ Commands:
   chat   Interactive chat with LLM access to the user's vault.
   retro  Generate retrospective(s).
 ```
+
+## Demo
+
+See the [Demonstration vault](demo_vault/demo_vault), which contains a journal based on "[The Sorrows of Young Werther](https://www.gutenberg.org/files/2527/2527-h/2527-h.htm)" by J.W. von Goethe.
