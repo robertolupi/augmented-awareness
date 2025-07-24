@@ -207,7 +207,7 @@ class RecursiveRetrospectiveGenerator:
                 source_items.append(f"[[{node.page.name}]]")
             for n in sources:
                 if n in sources and n.level in levels:
-                    source_items.append(f"[{n.retro_page.name}]")
+                    source_items.append(f"[[{n.retro_page.name}]]")
 
             retro_frontmatter['sources'] = source_items
             fd.write("---\n")

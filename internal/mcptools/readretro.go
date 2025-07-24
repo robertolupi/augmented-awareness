@@ -19,6 +19,9 @@ func addRetroTool(s *server.MCPServer) {
 
 	s.AddTool(retroTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		dateString := request.GetString("date", datetime.Today().String())
+		if dateString == "" {
+			dateString = datetime.Today().String() // Default to today if no date is provided
+		}
 
 		date, err := datetime.DateFromString(dateString)
 		if err != nil {
