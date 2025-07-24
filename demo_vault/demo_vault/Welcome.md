@@ -1,0 +1,1 @@
+This vault is setup to create the correct folder structure for [Augmented Awareness](https://github.com/robertolupi/augmented-awareness).
