@@ -26,7 +26,7 @@ vault: Vault
 llm_model: Model
 
 
-class ModelChoice(enum.Enum):
+class Provider(enum.Enum):
     LOCAL = "local"
     GEMINI = "gemini"
     OPENAI = "openai"
@@ -46,19 +46,19 @@ class NoCachePolicyChoice(enum.Enum):
 @click.option('--local_url', type=str, default='http://localhost:1234/v1')
 @click.option('--gemini_model', type=str, default='gemini-2.5-flash')
 @click.option('--openai_model', type=str, default='o4-mini')
-@click.option('-p', '--provider', type=click.Choice(ModelChoice, case_sensitive=False), default='local')
+@click.option('-p', '--provider', type=click.Choice(Provider, case_sensitive=False), default='local')
 def main(provider, local_model, local_url, gemini_model, openai_model):
     global llm_model
     global vault
     match provider:
-        case ModelChoice.LOCAL:
+        case Provider.LOCAL:
             llm_model = OpenAIModel(model_name=local_model, provider=OpenAIProvider(base_url=local_url))
-        case ModelChoice.GEMINI:
+        case Provider.GEMINI:
             if "GEMINI_API_KEY" not in os.environ:
                 print("Please set environment variable 'GEMINI_API_KEY'")
                 sys.exit(1)
             llm_model = GeminiModel(model_name=gemini_model)
-        case ModelChoice.OPENAI:
+        case Provider.OPENAI:
             if "OPENAI_API_KEY" not in os.environ:
                 print("Please set environment variable 'OPENAI_API_KEY'")
                 sys.exit(1)
