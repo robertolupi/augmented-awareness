@@ -7,11 +7,12 @@ import sys
 import textwrap
 from typing import Any
 
+from pathlib import PosixPath
+
 import click
 import rich
 import tqdm.asyncio
 from aww import retro
-from aww.config import Settings
 from aww.obsidian import Vault, Level
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio, CallToolFunc, ToolResult
@@ -21,10 +22,9 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from rich.markdown import Markdown
 
-settings = Settings()
-
 vault: Vault
 llm_model: Model
+
 
 
 class Provider(enum.Enum):
@@ -48,7 +48,10 @@ class NoCachePolicyChoice(enum.Enum):
 @click.option('--gemini_model', type=str, default='gemini-2.5-flash')
 @click.option('--openai_model', type=str, default='o4-mini')
 @click.option('-p', '--provider', type=click.Choice(Provider, case_sensitive=False), default='local')
-def main(provider, local_model, local_url, gemini_model, openai_model):
+@click.option('--vault_path', type=click.Path(), default="~/data/notes")
+@click.option('--journal_dir', type=str, default='journal')
+@click.option('--retrospectives_dir', type=str, default='retrospectives')
+def main(provider, local_model, local_url, gemini_model, openai_model, vault_path, journal_dir, retrospectives_dir):
     global llm_model
     global vault
     match provider:
@@ -64,7 +67,8 @@ def main(provider, local_model, local_url, gemini_model, openai_model):
                 print("Please set environment variable 'OPENAI_API_KEY'")
                 sys.exit(1)
             llm_model = OpenAIModel(model_name=openai_model)
-    vault = Vault(settings.vault_path, settings.journal_dir, settings.retrospectives_dir)
+    vault_path = os.path.expanduser(vault_path)
+    vault = Vault(PosixPath(vault_path), journal_dir, retrospectives_dir)
 
 
 def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: list[NoCachePolicyChoice],
@@ -191,7 +195,7 @@ def chat(journal_cmd):
     """Interactive chat with LLM access to the user's vault."""
     server = MCPServerStdio(
         journal_cmd,
-        args=["mcp"],
+        args=["--vault", str(vault.path), "mcp"],
         process_tool_call=process_tool_call,
     )
     ask_agent = Agent(model=llm_model, toolsets=[server])
