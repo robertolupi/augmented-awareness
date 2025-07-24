@@ -4,6 +4,7 @@ import datetime
 import enum
 import os
 import sys
+import textwrap
 from typing import Any
 
 import click
@@ -197,7 +198,10 @@ def chat(journal_cmd):
 
     @ask_agent.system_prompt
     def system_prompt():
-        return """You are a helpful holistic assistant. Read the user retrospectives, weekly journal and pages as needed, then answer the user question."""
+        return textwrap.dedent("""You are a helpful holistic assistant. 
+        Read the user retrospectives, weekly journal and pages as needed, then answer the user question.
+        Call at most one tool at a time.
+        """)
 
     ask_agent.to_cli_sync(prog_name="aww")
 
