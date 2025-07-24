@@ -13,6 +13,7 @@ func addReadPageTool(s *server.MCPServer) {
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithArray("pages",
 			mcp.Description("names of pages to read, e.g. 2023-10-01 or [[2023-10-01]]."),
+			mcp.WithStringItems(mcp.MinLength(1)),
 			mcp.Required()),
 	)
 

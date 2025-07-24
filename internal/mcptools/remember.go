@@ -15,7 +15,7 @@ func addMemoryTool(s *server.MCPServer) {
 		mcp.WithIdempotentHintAnnotation(false),
 		mcp.WithReadOnlyHintAnnotation(false),
 		mcp.WithString("fact",
-			mcp.Description("The fact or information to remember."),
+			mcp.Description("The fact or information to remember, in markdown format."),
 			mcp.Required(),
 		),
 	)
