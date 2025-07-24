@@ -2,26 +2,23 @@ import asyncio
 import calendar
 import datetime
 import enum
+import os
 import sys
-from collections import OrderedDict
-from pickle import FALSE
+from typing import Any
 
 import click
 import rich
 import tqdm.asyncio
-
-from rich.markdown import Markdown
-
-from pydantic_ai.models import Model
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.providers.openai import OpenAIProvider
-from pydantic_ai.models.gemini import GeminiModel
-
+from aww import retro
 from aww.config import Settings
 from aww.obsidian import Vault, Level
-from aww import retro
-import os
-import sys
+from pydantic_ai import Agent, RunContext
+from pydantic_ai.mcp import MCPServerStdio, CallToolFunc, ToolResult
+from pydantic_ai.models import Model
+from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
+from rich.markdown import Markdown
 
 settings = Settings()
 
@@ -176,6 +173,33 @@ def whole_week(the_date: datetime.date) -> list[datetime.date]:
     monday = the_date - datetime.timedelta(days=the_date.weekday())
     return [monday + datetime.timedelta(days=i) for i in range(7)]
 
+
+async def process_tool_call(
+        ctx: RunContext[int],
+        call_tool: CallToolFunc,
+        name: str,
+        tool_args: dict[str, Any],
+) -> ToolResult:
+    """A tool call processor that passes along the deps."""
+    print(f"Tool call {name}")
+    return await call_tool(name, tool_args, {'deps': ctx.deps})
+
+
+@main.command(name="chat")
+@click.option('-j', '--journal_cmd', type=str, default="./journal")
+def chat(journal_cmd):
+    server = MCPServerStdio(
+        journal_cmd,
+        args=["mcp"],
+        process_tool_call=process_tool_call,
+    )
+    ask_agent = Agent(model=llm_model, toolsets=[server])
+
+    @ask_agent.system_prompt
+    def system_prompt():
+        return """You are a helpful holistic assistant. Read the user retrospectives, weekly journal and pages as needed, then answer the user question."""
+
+    ask_agent.to_cli_sync(prog_name="aww")
 
 if __name__ == "__main__":
     main()
