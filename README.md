@@ -23,7 +23,10 @@ text can be interspersed, and it will be ignored.
 
 ## Tools
 
-The program provides a set of tools, available both on the command line and as an MCP server for LLMs to use.
+### Journal
+
+This program provides a set of tools, available both on the command line for the user and as an MCP server for
+LLMs to use.
 
 ```
 A simple command line tool to update my journal in Obsidian.
@@ -51,4 +54,25 @@ Flags:
       --vault string     Path to the Obsidian vault
 
 Use "journal [command] --help" for more information about a command.
+```
+
+### Aww
+
+This program provides tools to generate yearly/monthly/weekly/daily retrospectives and to chat with LLMs 
+providing access to the user's vault.
+
+```
+Usage: aww.py [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --local_model TEXT
+  --local_provider TEXT
+  --gemini_model TEXT
+  --openai_model TEXT
+  -p, --provider [local|gemini|openai]
+  --help                          Show this message and exit.
+
+Commands:
+  chat   Interactive chat with LLM access to the user's vault.
+  retro  Generate retrospective(s).
 ```

@@ -46,14 +46,13 @@ class NoCachePolicyChoice(enum.Enum):
 @click.option('--local_provider', type=str, default='http://localhost:1234/v1')
 @click.option('--gemini_model', type=str, default='gemini-2.5-flash')
 @click.option('--openai_model', type=str, default='o4-mini')
-@click.option('-m', '--model', type=click.Choice(ModelChoice, case_sensitive=False), default='local')
-def main(model, local_model, local_provider, gemini_model, openai_model):
+@click.option('-p', '--provider', type=click.Choice(ModelChoice, case_sensitive=False), default='local')
+def main(provider, local_model, local_provider, gemini_model, openai_model):
     global llm_model
     global vault
-    match model:
+    match provider:
         case ModelChoice.LOCAL:
-            provider = OpenAIProvider(base_url=local_provider)
-            llm_model = OpenAIModel(model_name=local_model, provider=provider)
+            llm_model = OpenAIModel(model_name=local_model, provider=OpenAIProvider(base_url=local_provider))
         case ModelChoice.GEMINI:
             if "GEMINI_API_KEY" not in os.environ:
                 print("Please set environment variable 'GEMINI_API_KEY'")
@@ -112,7 +111,7 @@ def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: list[No
 @click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
 def retrospectives(level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[Level],
                    concurrency_limit: int, yesterday: bool):
-    """Runs a retrospective for a given level."""
+    """Generate retrospective(s)."""
     dates: list[datetime.date]
     the_date = date.date()
     if yesterday:
@@ -188,6 +187,7 @@ async def process_tool_call(
 @main.command(name="chat")
 @click.option('-j', '--journal_cmd', type=str, default="./journal")
 def chat(journal_cmd):
+    """Interactive chat with LLM access to the user's vault."""
     server = MCPServerStdio(
         journal_cmd,
         args=["mcp"],
@@ -200,6 +200,7 @@ def chat(journal_cmd):
         return """You are a helpful holistic assistant. Read the user retrospectives, weekly journal and pages as needed, then answer the user question."""
 
     ask_agent.to_cli_sync(prog_name="aww")
+
 
 if __name__ == "__main__":
     main()
