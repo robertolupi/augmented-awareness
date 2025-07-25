@@ -20,6 +20,11 @@ Augmented Awareness supports free-form vaults, but my vault is organized in the 
     - `journal/yyyy/mm/yyyy-mm-dd.md` (e.g. `journal/2025/01/2025-01-02.md` for January 2nd, 2025): daily notes.
     - `journal/yyyy/months/yyyy-mm.md` (e.g. `journal/2025/months/2025-01.md` for January 2025): monthly notes.
     - `journal/yyyy/weeks/yyyy-Www.md` (e.g. `journal/2025/weeks/2025-W01.md` for the first week of 2025): weekly notes.
+- `retrospectives`: Retrospective notes, which are summaries and reflections on journal entries. The file names are prefixed with `r`.
+  - `retrospectives/yyyy/ryyyy.md` (e.g. `retrospectives/2025/r2025.md`): yearly retrospective.
+  - `retrospectives/yyyy/mm/ryyyy-mm-dd.md` (e.g. `retrospectives/2025/01/r2025-01-02.md`): daily retrospective.
+  - `retrospectives/yyyy/months/ryyyy-mm.md` (e.g. `retrospectives/2025/months/r2025-01.md`): monthly retrospective.
+  - `retrospectives/yyyy/weeks/ryyyy-Www.md` (e.g. `retrospectives/2025/weeks/r2025-W01.md`): weekly retrospective.
 
 ## Project Structure
 
