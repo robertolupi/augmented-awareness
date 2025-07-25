@@ -57,6 +57,11 @@ The Python code provides tools for generating retrospectives from journal entrie
     -   `retro/`: This directory contains the Markdown-based system prompts that guide the AI model for generating daily, weekly, monthly, and yearly retrospectives.
 -   `test_*.py`: Unit tests for the Python modules.
 
+#### Dependency Management
+
+Use `uv` for python dependencies and to run python programs, such as `aww.py` itself or `streamlit`.
+
+
 ## Testing
 
 ### Go Testing
