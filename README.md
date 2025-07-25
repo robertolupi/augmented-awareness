@@ -62,7 +62,7 @@ This program provides tools to generate yearly/monthly/weekly/daily retrospectiv
 providing access to the user's vault.
 
 ```
-Usage: aww.py [OPTIONS] COMMAND [ARGS]...
+Usage: aww_run.py [OPTIONS] COMMAND [ARGS]...
 
 Options:
   --local_model TEXT
