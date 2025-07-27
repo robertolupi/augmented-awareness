@@ -6,10 +6,13 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.2.1",
+    "nltk>=3.9.1",
     "pydantic-ai==0.4.6",
     "pydantic-settings==2.10.1",
     "pyyaml>=6.0.2",
     "rich>=14.0.0",
+    "scikit-learn>=1.7.1",
+    "sentence-transformers>=5.0.0",
     "streamlit>=1.47.0",
     "tqdm>=4.67.1",
 ]
