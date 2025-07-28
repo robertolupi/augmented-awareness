@@ -27,7 +27,6 @@ vault: Vault
 llm_model: Model
 
 
-
 class Provider(enum.Enum):
     LOCAL = "local"
     GEMINI = "gemini"
@@ -44,6 +43,7 @@ class NoCachePolicyChoice(enum.Enum):
 
 
 settings = config.Settings()
+
 
 @click.group()
 @click.option('--local_model', type=str, default=settings.local_model)
@@ -211,6 +211,60 @@ def chat(journal_cmd):
         """)
 
     ask_agent.to_cli_sync(prog_name="aww")
+
+
+@main.command(name="ask")
+@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
+@click.option('-f', '--prompt_file', type=click.Path(exists=True), default=None)
+@click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
+              multiple=True, help="Context levels for retrospective",
+              default=[Level.daily, Level.weekly, Level.monthly, Level.yearly])
+@click.argument('level', type=click.Choice(Level, case_sensitive=False))
+@click.argument('prompt', type=str)
+@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
+@click.option('-v', '--verbose', is_flag=True, default=False, help="Be verbose (show all sources)")
+def ask(date, yesterday, context, level, prompt, prompt_file, verbose):
+    """Concatenate retrospectives and ask a question."""
+    dates: list[datetime.date]
+    the_date = date.date()
+    if yesterday:
+        if level != Level.daily:
+            click.echo("Error: --yesterday can only be used with daily level.", err=True)
+            sys.exit(1)
+        the_date = the_date - datetime.timedelta(days=1)
+
+    if prompt_file:
+        prompt = open(prompt_file, 'r').read()
+
+    ask_agent = Agent(model=llm_model, system_prompt=prompt)
+
+    match level:
+        case Level.daily:
+            dates = [the_date]
+        case Level.weekly:
+            dates = whole_week(the_date)
+        case Level.monthly:
+            dates = whole_month(the_date)
+        case Level.yearly:
+            dates = whole_year(the_date)
+        case _:
+            # Should not happen with click.Choice
+            click.echo(f"Error: Unknown level '{level}'", err=True)
+            sys.exit(1)
+
+    tree = retro.build_retrospective_tree(vault, dates)
+    retro_page = vault.retrospective_page(dates[0], level)
+    node = tree[retro_page]
+    sources = [n for n in node.sources if n.level in context]
+    if node.level in context:
+        sources.insert(0, node)
+    sources = [s for s in sources if s.retro_page.exists()]
+    if verbose:
+        rich.print("Sources", [n.retro_page.name for n in sources])
+    retros = [n.retro_page.content() for n in sources]
+
+    result = ask_agent.run_sync(user_prompt=retros)
+    rich.print(Markdown(result.output))
 
 
 if __name__ == "__main__":
