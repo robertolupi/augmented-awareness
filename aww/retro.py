@@ -212,6 +212,8 @@ class RecursiveRetrospectiveGenerator:
             if node.page:
                 source_items.append(f"[[{node.page.name}]]")
             for n in sources:
+                if not n.retro_page:
+                    continue
                 if n in sources and n.level in levels:
                     source_items.append(f"[[{n.retro_page.name}]]")
 
