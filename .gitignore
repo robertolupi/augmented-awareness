@@ -3,7 +3,6 @@
 scrap.ipynb
 **/__pycache__
 .idea
-./journal
-journal
+/journal
 similarity_plot.png
 /vendor/
