@@ -153,14 +153,13 @@ class RecursiveRetrospectiveGenerator:
             agent = self.agents[node.level]
             model_name = agent.model.model_name
             sys_prompt = self.prompts[node.level]
-            user_prompt = '\n---\n'.join(source_content)
-            result = await agent.run(user_prompt=user_prompt)
+            result = await agent.run(user_prompt=source_content)
             usage = result.usage()
             retro_frontmatter = dict(
                 sys_prompt_hash=md5(sys_prompt),
                 model_name=model_name,
                 ctime=datetime.now().isoformat(),
-                user_prompt_hash=md5(user_prompt),
+                user_prompt_hash=md5('\n'.join(source_content)),
                 request_tokens=usage.request_tokens,
                 response_tokens=usage.response_tokens,
                 total_tokens=usage.total_tokens,
