@@ -108,57 +108,6 @@ def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: list[No
         rich.print(Markdown(result.output))
 
 
-@main.command(name="retro")
-@click.argument('level', type=click.Choice(Level, case_sensitive=False))
-@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
-              multiple=True, help="No cache policy")
-@click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
-              multiple=True, help="Context levels for retrospective")
-@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), help="Concurrency limit")
-@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
-def retrospectives(level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[Level],
-                   concurrency_limit: int, yesterday: bool):
-    """Generate retrospective(s)."""
-    dates: list[datetime.date]
-    the_date = date.date()
-    if yesterday:
-        if level != Level.daily:
-            click.echo("Error: --yesterday can only be used with daily level.", err=True)
-            sys.exit(1)
-        the_date = the_date - datetime.timedelta(days=1)
-
-    # Set defaults based on level
-    final_no_cache = list(no_cache)
-    final_context = list(context)
-    final_concurrency_limit = concurrency_limit or 10
-
-    if not final_no_cache:
-        final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
-    if not final_context:
-        final_context = []
-        for l in Level:
-            if l == level:
-                break
-            final_context.append(l)
-
-    match level:
-        case Level.daily:
-            dates = [the_date]
-        case Level.weekly:
-            dates = whole_week(the_date)
-        case Level.monthly:
-            dates = whole_month(the_date)
-        case Level.yearly:
-            dates = whole_year(the_date)
-        case _:
-            # Should not happen with click.Choice
-            click.echo(f"Error: Unknown level '{level}'", err=True)
-            sys.exit(1)
-
-    do_retrospective(vault, dates, final_no_cache, final_context, level, final_concurrency_limit)
-
-
 def whole_year(the_date: datetime.date) -> list[datetime.date]:
     year = the_date.year
     start_date = datetime.date(year, 1, 1)
@@ -179,6 +128,61 @@ def whole_week(the_date: datetime.date) -> list[datetime.date]:
     """Returns the weekly dates (Mon to Friday) for the week that contains the given date."""
     monday = the_date - datetime.timedelta(days=the_date.weekday())
     return [monday + datetime.timedelta(days=i) for i in range(7)]
+
+
+def get_dates_for_level(level: Level, date: datetime.datetime, yesterday: bool) -> list[datetime.date]:
+    """Calculates the list of dates for a given level, date, and yesterday flag."""
+    the_date = date.date()
+    if yesterday:
+        if level != Level.daily:
+            click.echo("Error: --yesterday can only be used with daily level.", err=True)
+            sys.exit(1)
+        the_date = the_date - datetime.timedelta(days=1)
+
+    match level:
+        case Level.daily:
+            return [the_date]
+        case Level.weekly:
+            return whole_week(the_date)
+        case Level.monthly:
+            return whole_month(the_date)
+        case Level.yearly:
+            return whole_year(the_date)
+        case _:
+            # Should not happen with click.Choice
+            click.echo(f"Error: Unknown level '{level}'", err=True)
+            sys.exit(1)
+
+
+@main.command(name="retro")
+@click.argument('level', type=click.Choice(Level, case_sensitive=False))
+@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
+@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
+              multiple=True, help="No cache policy")
+@click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
+              multiple=True, help="Context levels for retrospective")
+@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), help="Concurrency limit")
+@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
+def retrospectives(level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[Level],
+                   concurrency_limit: int, yesterday: bool):
+    """Generate retrospective(s)."""
+    dates = get_dates_for_level(level, date, yesterday)
+
+    # Set defaults based on level
+    final_no_cache = list(no_cache)
+    final_context = list(context)
+    final_concurrency_limit = concurrency_limit or 10
+
+    if not final_no_cache:
+        final_no_cache = [NoCachePolicyChoice.ROOT, NoCachePolicyChoice.MTIME]
+    if not final_context:
+        final_context = []
+        for l in Level:
+            if l == level:
+                break
+            final_context.append(l)
+
+    do_retrospective(vault, dates, final_no_cache, final_context, level, final_concurrency_limit)
 
 
 async def process_tool_call(
@@ -225,32 +229,12 @@ def chat(journal_cmd):
 @click.option('-v', '--verbose', is_flag=True, default=False, help="Be verbose (show all sources)")
 def ask(date, yesterday, context, level, prompt, prompt_file, verbose):
     """Concatenate retrospectives and ask a question."""
-    dates: list[datetime.date]
-    the_date = date.date()
-    if yesterday:
-        if level != Level.daily:
-            click.echo("Error: --yesterday can only be used with daily level.", err=True)
-            sys.exit(1)
-        the_date = the_date - datetime.timedelta(days=1)
+    dates = get_dates_for_level(level, date, yesterday)
 
     if prompt_file:
         prompt = open(prompt_file, 'r').read()
 
     ask_agent = Agent(model=llm_model, system_prompt=prompt)
-
-    match level:
-        case Level.daily:
-            dates = [the_date]
-        case Level.weekly:
-            dates = whole_week(the_date)
-        case Level.monthly:
-            dates = whole_month(the_date)
-        case Level.yearly:
-            dates = whole_year(the_date)
-        case _:
-            # Should not happen with click.Choice
-            click.echo(f"Error: Unknown level '{level}'", err=True)
-            sys.exit(1)
 
     tree = retro.build_retrospective_tree(vault, dates)
     retro_page = vault.retrospective_page(dates[0], level)
