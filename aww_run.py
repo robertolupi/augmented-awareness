@@ -13,6 +13,7 @@ import click
 import rich
 import tqdm.asyncio
 from aww import retro
+from aww import config
 from aww.obsidian import Vault, Level
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio, CallToolFunc, ToolResult
@@ -42,15 +43,17 @@ class NoCachePolicyChoice(enum.Enum):
     MTIME = 'mtime'
 
 
+settings = config.Settings()
+
 @click.group()
-@click.option('--local_model', type=str, default='qwen/qwen3-30b-a3b')
-@click.option('--local_url', type=str, default='http://localhost:1234/v1')
-@click.option('--gemini_model', type=str, default='gemini-2.5-flash')
-@click.option('--openai_model', type=str, default='o4-mini')
+@click.option('--local_model', type=str, default=settings.local_model)
+@click.option('--local_url', type=str, default=settings.local_base_url)
+@click.option('--gemini_model', type=str, default=settings.gemini_model)
+@click.option('--openai_model', type=str, default=settings.openai_model)
 @click.option('-p', '--provider', type=click.Choice(Provider, case_sensitive=False), default='local')
-@click.option('--vault_path', type=click.Path(), default="~/data/notes")
-@click.option('--journal_dir', type=str, default='journal')
-@click.option('--retrospectives_dir', type=str, default='retrospectives')
+@click.option('--vault_path', type=click.Path(), default=settings.vault_path)
+@click.option('--journal_dir', type=str, default=settings.journal_dir)
+@click.option('--retrospectives_dir', type=str, default=settings.retrospectives_dir)
 def main(provider, local_model, local_url, gemini_model, openai_model, vault_path, journal_dir, retrospectives_dir):
     global llm_model
     global vault
