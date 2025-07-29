@@ -4,12 +4,11 @@ This plugin helps you manage and generate daily, weekly, monthly, and yearly ret
 
 ## Features
 
--   **Automated Retrospective Generation:** Create retrospective notes automatically from your daily, weekly, monthly, and yearly journal entries.
 -   **Flexible Timeframes:** Supports daily, weekly, monthly, and yearly retrospectives.
 
 ## How it Works
 
-The plugin scans your Obsidian vault for journal notes that follow a specific naming convention. It then summarizes these notes to create corresponding retrospective files.
+The plugin scans your Obsidian vault for journal notes that follow a specific naming convention. 
 
 ### Naming Convention
 
