@@ -1,0 +1,11 @@
+{
+	"id": "aww-retro-obsidian-plugin",
+	"name": "Aww Retrospectives",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Demonstrates some of the capabilities of the Obsidian API.",
+	"author": "Roberto Lupi",
+	"authorUrl": "https://obsidian.md",
+	"fundingUrl": "https://obsidian.md/pricing",
+	"isDesktopOnly": false
+}
