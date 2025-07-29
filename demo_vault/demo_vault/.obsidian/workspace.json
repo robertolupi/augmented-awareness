@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "b0cc7b0775796806",
+        "id": "b260761590ccb45e",
         "type": "tabs",
         "children": [
           {
-            "id": "8ea76fb5cc5f91c0",
+            "id": "6de7eaba0d0d4ce8",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "journal/2025/12/2025-12-06.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "2025-12-06"
+              "title": "New tab"
             }
           }
         ]
@@ -41,7 +37,7 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false
+                "autoReveal": true
               },
               "icon": "lucide-folder-closed",
               "title": "Files"
@@ -180,10 +176,10 @@
       "periodic-notes:Open today": false
     }
   },
-  "active": "8ea76fb5cc5f91c0",
+  "active": "f9ff6fa8fdea13f7",
   "lastOpenFiles": [
-    "journal/2025/12/2025-12-04.md",
     "journal/2025/12/2025-12-06.md",
+    "journal/2025/12/2025-12-04.md",
     "journal/2025/12/2025-12-01.md",
     "journal/2025/11/2025-11-30.md",
     "journal/2025/12",
