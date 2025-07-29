@@ -12,6 +12,8 @@ from pathlib import PosixPath
 import click
 import rich
 import tqdm.asyncio
+
+import aww.obsidian
 from aww import retro
 from aww import config
 from aww.obsidian import Vault, Level
@@ -236,7 +238,7 @@ def ask(date, yesterday, context, level, prompt, prompt_file, verbose):
 
     ask_agent = Agent(model=llm_model, system_prompt=prompt)
 
-    tree = retro.build_retrospective_tree(vault, dates)
+    tree = aww.obsidian.build_retrospective_tree(vault, dates)
     retro_page = vault.retrospective_page(dates[0], level)
     node = tree[retro_page]
     sources = [n for n in node.sources if n.level in context]

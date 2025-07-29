@@ -7,6 +7,7 @@ import pytest
 from pydantic_ai.models.test import TestModel
 
 import aww
+import aww.obsidian
 from aww import retro
 from aww.obsidian import Vault, Level
 from aww.retro import RecursiveRetrospectiveGenerator
@@ -33,7 +34,7 @@ def days_between(start_year, start_month, start_day, end_year, end_month, end_da
 def test_build_retrospective_tree(tmp_vault):
     days_in_year = list(days_between(2025, 1, 1,
                                      2025, 12, 31))
-    tree = retro.build_retrospective_tree(tmp_vault, days_in_year)
+    tree = aww.obsidian.build_retrospective_tree(tmp_vault, days_in_year)
     assert len(tree) == 365 + 52 + 12 + 1
 
     one_day = datetime.date(2025, 1, 1)

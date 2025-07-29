@@ -1,7 +1,9 @@
 import enum
 import os
+from dataclasses import dataclass
 from datetime import date
 import re
+from typing import Dict
 
 import yaml
 
@@ -133,3 +135,46 @@ class Page:
             except yaml.error.YAMLError:
                 return None
         return None
+
+
+@dataclass
+class Node:
+    dates: set[date]
+    level: Level
+    retro_page: Page
+    page: Page
+    sources: set['Node']
+    use_cache: bool = True
+
+    def __eq__(self, other):
+        return isinstance(other, Node) and (self.retro_page == other.retro_page)
+
+    def __hash__(self):
+        return hash(self.retro_page)
+
+    def __lt__(self, other):
+        if not isinstance(other, Node):
+            return NotImplemented
+        return self.retro_page.name < other.retro_page.name
+
+
+Tree = Dict[Page, Node]
+
+
+def build_retrospective_tree(vault: Vault, dates: list[date]) -> Tree:
+    tree = {}
+    for d in dates:
+        for l in Level:
+            retro_page = vault.retrospective_page(d, l)
+            if retro_page not in tree:
+                r = Node(dates=set(), level=l, retro_page=retro_page, page=vault.page(d, l), sources=set())
+                tree[retro_page] = r
+            else:
+                r = tree[retro_page]
+            r.dates.add(d)
+            for i in Level:
+                if i == l:
+                    break
+                prev_retro_page = vault.retrospective_page(d, i)
+                r.sources.add(tree[prev_retro_page])
+    return tree

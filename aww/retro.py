@@ -1,12 +1,9 @@
-import enum
 import asyncio
 import re
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import PosixPath
-from textwrap import dedent
-from typing import Callable, Dict, Sequence
+from typing import Callable, Sequence
 import hashlib
 
 from pydantic_ai import Agent
@@ -14,7 +11,7 @@ from pydantic_ai.models import Model
 
 import yaml
 
-from aww.obsidian import Vault, Page, Level
+from aww.obsidian import Vault, Page, Level, Node, Tree, build_retrospective_tree
 
 
 def md5(s: str) -> str:
@@ -31,51 +28,7 @@ class RetrospectiveResult:
     page: Page
 
 
-@dataclass
-class Node:
-    dates: set[date]
-    level: Level
-    retro_page: Page
-    page: Page
-    sources: set['Node']
-    use_cache: bool = True
-
-    def __eq__(self, other):
-        return isinstance(other, Node) and (self.retro_page == other.retro_page)
-
-    def __hash__(self):
-        return hash(self.retro_page)
-
-    def __lt__(self, other):
-        if not isinstance(other, Node):
-            return NotImplemented
-        return self.retro_page.name < other.retro_page.name
-
-
-Tree = Dict[Page, Node]
-
-
-def build_retrospective_tree(vault: Vault, dates: list[date]) -> Tree:
-    tree = {}
-    for d in dates:
-        for l in Level:
-            retro_page = vault.retrospective_page(d, l)
-            if retro_page not in tree:
-                r = Node(dates=set(), level=l, retro_page=retro_page, page=vault.page(d, l), sources=set())
-                tree[retro_page] = r
-            else:
-                r = tree[retro_page]
-            r.dates.add(d)
-            for i in Level:
-                if i == l:
-                    break
-                prev_retro_page = vault.retrospective_page(d, i)
-                r.sources.add(tree[prev_retro_page])
-    return tree
-
-
 import logging
-from functools import cache
 
 logger = logging.getLogger(__name__)
 
