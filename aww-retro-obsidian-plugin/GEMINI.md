@@ -2,11 +2,10 @@
 
 ## Goal
 
-This project is to develop an Obsidian plugin that automates the generation of retrospectives (daily, weekly, monthly, and yearly) by summarizing existing journal notes.
+This project is to develop an Obsidian plugin that automates the management of retrospectives (daily, weekly, monthly, and yearly) by summarizing existing journal notes.
 
 ## Core Features
 
-- Generate retrospective notes from journal entries.
 - Support for different time-based retrospectives:
     - Daily
     - Weekly
