@@ -10,8 +10,8 @@ import (
 )
 
 func addDateTimeTool(s *server.MCPServer) {
-	currentDateTool := mcp.NewTool("current-date-time",
-		mcp.WithDescription("Get the current date and time."),
+	currentDateTool := mcp.NewTool("today",
+		mcp.WithDescription("Get the date and time as of today."),
 		mcp.WithIdempotentHintAnnotation(true),
 		mcp.WithReadOnlyHintAnnotation(true))
 	s.AddTool(currentDateTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {

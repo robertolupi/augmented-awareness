@@ -8,14 +8,16 @@ You can access the journal freely, without asking for permission, for reading.
 
 The journal is organized chronologically.
 
-- *daily pages* are created for each day. Their name is the date in the format `YYYY-MM-DD`. E.g. `2023-10-01` for October 1, 2023.
-- *weekly pages* are created for each week. Their name is the date of the first day of the week in the format `YYYY-Www`. E.g. `2023-W40` for the 40th week of the year 2023.
-- *monthly pages* are created for each month. Their name is the date in the format `YYYY-MM`. E.g. `2023-10` for October 2023.
-- *yearly pages* are created for each year. Their name is the date in the format `Yyyyy` (year number prefixed by the letter Y). E.g. `Y2023` for the year 2023.
+IMPORTANT: These dates are examples, call the "current-date-time" function to get the current date and time and pages for today!
+
+- *daily pages* are created for each day. Their name is the date in the format `YYYY-MM-DD`.
+- *weekly pages* are created for each week. Their name is the date of the first day of the week in the format `YYYY-Www` (year and week number, separated by W).
+- *monthly pages* are created for each month. Their name is the date in the format `YYYY-MM`.
+- *yearly pages* are created for each year. Their name is the date in the format `Yyyyy` (year number prefixed by the letter Y).
 
 - Other *pages* exist, and they are named according to their content.
 
-In Markdown, references to pages are made using the `[[page-name]]` syntax. For example, `[[2023-10-01]]` refers to the daily page for October 1, 2023.
+In Markdown, references to pages are made using the `[[page-name]]` syntax.
 
 # Tasks
 
