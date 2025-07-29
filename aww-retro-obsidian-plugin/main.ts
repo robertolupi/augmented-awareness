@@ -26,10 +26,6 @@ export default class AwwRetro extends Plugin {
 				this.openRetrospective(view.file);
 			}
 		});
-
-		this.registerEvent(
-			this.app.vault.on('modify', this.handleFileModify.bind(this))
-		);
 	}
 
 	onunload() {
@@ -64,46 +60,11 @@ export default class AwwRetro extends Plugin {
 		const retroFilePath = this.getRetroPath(file);
 		let retroFile = this.app.vault.getAbstractFileByPath(retroFilePath);
 
-		if (!(retroFile instanceof TFile)) {
-			const content = await this.app.vault.read(file);
-			const retroFileDir = retroFilePath.substring(0, retroFilePath.lastIndexOf('/'));
-			if (!this.app.vault.getAbstractFileByPath(retroFileDir)) {
-				await this.app.vault.createFolder(retroFileDir);
-			}
-			retroFile = await this.app.vault.create(retroFilePath, content);
+		if ((retroFile instanceof TFile)) {
+			const newLeaf = this.app.workspace.getLeaf(true);
+			await newLeaf.openFile(retroFile as TFile);
 		}
 
-		const newLeaf = this.app.workspace.getLeaf(true);
-		await newLeaf.openFile(retroFile as TFile);
-	}
-
-async handleFileModify(file: TFile) {
-		if (!this.isJournalFile(file)) {
-			return;
-		}
-
-		const retroFilePath = this.getRetroPath(file);
-
-		try {
-			const content = await this.app.vault.read(file);
-			const retroFile = this.app.vault.getAbstractFileByPath(retroFilePath);
-
-			if (retroFile instanceof TFile) {
-				await this.app.vault.modify(retroFile, content);
-			} else {
-				const retroFileDir = retroFilePath.substring(0, retroFilePath.lastIndexOf('/'));
-				if (!this.app.vault.getAbstractFileByPath(retroFileDir)) {
-					await this.app.vault.createFolder(retroFileDir);
-				}
-				await this.app.vault.create(retroFilePath, content);
-			}
-
-			new Notice(`Retrospective file '${retroFilePath}' updated.`);
-
-		} catch (e) {
-			new Notice(`Error updating retrospective file: ${e.message}`);
-			console.error("Error updating retrospective:", e);
-		}
 	}
 }
 
