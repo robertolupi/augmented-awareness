@@ -10,8 +10,8 @@ import (
 var (
 	mcpCmd = &cobra.Command{
 		Use:   "mcp",
-		Short: "Run as a MCP (Master Control Program) server",
-		Long:  `Run as a MCP (Master Control Program) server, allowing LLMs to read journal entries and tasks.`,
+		Short: "Run as a MCP server",
+		Long:  `Run as a MCP (Model Context Protocol) server, allowing LLMs to read journal entries and tasks.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// https://mcp-go.dev/getting-started
 
