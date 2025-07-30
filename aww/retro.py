@@ -52,11 +52,11 @@ class NoLevelsCachePolicy(CachePolicy):
 
 class ModificationTimeCachePolicy(CachePolicy):
     def __call__(self, node: Node, tree: Tree):
-        for node in tree.values():
-            if not node.page or not node.retro_page:
+        for n in tree.values():
+            if not n.page or not n.retro_page:
                 continue
-            if node.page.mtime_ns() > node.retro_page.mtime_ns():
-                node.use_cache = False
+            if n.page.mtime_ns() > n.retro_page.mtime_ns():
+                n.use_cache = False
 
 
 class TooOldCachePolicy(CachePolicy):
@@ -65,11 +65,11 @@ class TooOldCachePolicy(CachePolicy):
 
     def __call__(self, node: Node, tree: Tree):
         limit_ns = self.limit.timestamp() * 1e9
-        for node in tree.values():
-            if not node.retro_page:
+        for n in tree.values():
+            if not n.retro_page:
                 continue
-            if node.retro_page.mtime_ns() < limit_ns:
-                node.use_cache = False
+            if n.retro_page.mtime_ns() < limit_ns:
+                n.use_cache = False
 
 
 async def page_content(node):
@@ -177,7 +177,7 @@ class RecursiveRetrospectiveGenerator:
             for n in sources:
                 if not n.retro_page:
                     continue
-                if n in sources and n.level in levels:
+                if n.level in levels:
                     source_items.append(f"[[{n.retro_page.name}]]")
 
             retro_frontmatter['sources'] = source_items

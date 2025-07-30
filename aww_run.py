@@ -71,17 +71,18 @@ def make_model(gemini_model, local_model, local_url, openai_model, provider):
             model = OpenAIModel(model_name=local_model, provider=OpenAIProvider(base_url=local_url))
         case Provider.GEMINI:
             if "GEMINI_API_KEY" not in os.environ:
-                print("Please set environment variable 'GEMINI_API_KEY'")
-                sys.exit(1)
+                raise click.ClickException(
+                    "Please set environment variable GEMINI_API_KEY"
+                )
             model = GeminiModel(model_name=gemini_model)
         case Provider.OPENAI:
             if "OPENAI_API_KEY" not in os.environ:
-                print("Please set environment variable 'OPENAI_API_KEY'")
-                sys.exit(1)
+                raise click.ClickException(
+                    "Please set environment variable OPENAI_API_KEY"
+                )
             model = OpenAIModel(model_name=openai_model)
         case _:
-            print("Unknown provider", provider)
-            sys.exit(1)
+            raise click.ClickException(f"Unknown provider: {provider}")
     return model
 
 
@@ -148,8 +149,9 @@ def get_dates_for_level(level: Level, date: datetime.datetime, yesterday: bool) 
     the_date = date.date()
     if yesterday:
         if level != Level.daily:
-            click.echo("Error: --yesterday can only be used with daily level.", err=True)
-            sys.exit(1)
+            raise click.ClickException(
+                "--yesterday can only be used with daily level"
+            )
         the_date = the_date - datetime.timedelta(days=1)
 
     match level:
@@ -163,8 +165,7 @@ def get_dates_for_level(level: Level, date: datetime.datetime, yesterday: bool) 
             return whole_year(the_date)
         case _:
             # Should not happen with click.Choice
-            click.echo(f"Error: Unknown level '{level}'", err=True)
-            sys.exit(1)
+            raise click.ClickException(f"Unknown level '{level}'")
 
 
 @main.command(name="retro")
