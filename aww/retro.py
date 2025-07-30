@@ -59,17 +59,39 @@ class ModificationTimeCachePolicy(CachePolicy):
                 node.use_cache = False
 
 
+async def page_content(node):
+    content = [f'Page: [[{node.page.name}]]', node.page.content()]
+    if fm := node.page.frontmatter():
+        if 'stress' in fm and fm['stress'] is not None:
+            content.append(f"Stress level {fm['stress']} of 10.")
+        if 'kg' in fm and fm['kg'] is not None:
+            content.append(f"Weight {fm['kg']} kg.")
+        if 'bmi' in fm and fm['bmi'] is not None:
+            content.append(f"Body Mass Index (BMI) {fm['bmi']}.")
+        for i in ('sleep_score', 'vitals_score', 'activity_score', 'relax_score'):
+            if i in fm and fm[i] is not None:
+                label = i.replace('_', ' ').capitalize()
+                content.append(f"{label} {fm[i]} of 100.")
+    return '\n'.join(content)
+
+
+async def prepare_output(node, result):
+    output = result.output.strip()
+    if m := MARKDOWN_RE.match(output):
+        output = m.group(1)
+    output = output.replace('![[', '[[')
+    output_title = f"# {node.retro_page.name}"
+    output = output_title + "\n\n" + output
+    return output
+
+
 class RecursiveRetrospectiveGenerator:
     def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level, concurrency_limit: int = 10,
                  prompts_path: PosixPath | None = None):
         if not prompts_path:
             prompts_path = (PosixPath(__file__).parent / 'retro')
 
-        def load_prompt(level: Level):
-            path = prompts_path / f"{level.name}.md"
-            return path.read_text()
-
-        self.prompts = {l: load_prompt(l) for l in Level}
+        self.prompts = {l: (prompts_path / f"{l.name}.md").read_text() for l in Level}
         self.agents = {l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level}
         self.vault = vault
         self.tree = build_retrospective_tree(vault, dates)
@@ -98,57 +120,33 @@ class RecursiveRetrospectiveGenerator:
 
         source_content = [result.output for result in source_results if result]
         if node.page:
-            source_content.insert(0, await self.page_content(node))
+            source_content.insert(0, await page_content(node))
         if not source_content:
             return None
 
-        async with self.semaphore:
-            agent = self.agents[node.level]
-            model_name = agent.model.model_name
-            sys_prompt = self.prompts[node.level]
-            result = await agent.run(user_prompt=source_content)
-            usage = result.usage()
-            retro_frontmatter = dict(
-                sys_prompt_hash=md5(sys_prompt),
-                model_name=model_name,
-                ctime=datetime.now().isoformat(),
-                user_prompt_hash=md5('\n'.join(source_content)),
-                request_tokens=usage.request_tokens,
-                response_tokens=usage.response_tokens,
-                total_tokens=usage.total_tokens,
-                details=usage.details,
-                requests=usage.requests,
-            )
+        agent = self.agents[node.level]
+        model_name = agent.model.model_name
+        sys_prompt = self.prompts[node.level]
 
-        output = await self.prepare_output(node, result)
+        async with self.semaphore:
+            result = await agent.run(user_prompt=source_content)
+
+        usage = result.usage()
+        retro_frontmatter = dict(
+            sys_prompt_hash=md5(sys_prompt),
+            model_name=model_name,
+            ctime=datetime.now().isoformat(),
+            user_prompt_hash=md5('\n'.join(source_content)),
+            request_tokens=usage.request_tokens,
+            response_tokens=usage.response_tokens,
+            total_tokens=usage.total_tokens,
+            details=usage.details,
+            requests=usage.requests,
+        )
+
+        output = await prepare_output(node, result)
         await self.save_retro_page(node, output, sources, context_levels, retro_frontmatter)
         return RetrospectiveResult(dates=list(node.dates), output=output, page=node.retro_page)
-
-    @staticmethod
-    async def page_content(node):
-        page_content = [f'Page: [[{node.page.name}]]', node.page.content()]
-        if fm := node.page.frontmatter():
-            if 'stress' in fm and fm['stress'] is not None:
-                page_content.append(f"Stress level {fm['stress']} of 10.")
-            if 'kg' in fm and fm['kg'] is not None:
-                page_content.append(f"Weight {fm['kg']} kg.")
-            if 'bmi' in fm and fm['bmi'] is not None:
-                page_content.append(f"Body Mass Index (BMI) {fm['bmi']}.")
-            for i in ('sleep_score', 'vitals_score', 'activity_score', 'relax_score'):
-                if i in fm and fm[i] is not None:
-                    label = i.replace('_', ' ').capitalize()
-                    page_content.append(f"{label} {fm[i]} of 100.")
-        return '\n'.join(page_content)
-
-    @staticmethod
-    async def prepare_output(node, result):
-        output = result.output.strip()
-        if m := MARKDOWN_RE.match(output):
-            output = m.group(1)
-        output = output.replace('![[', '[[')
-        output_title = f"# {node.retro_page.name}"
-        output = output_title + "\n\n" + output
-        return output
 
     @staticmethod
     async def save_retro_page(node, output, sources, levels, retro_frontmatter):
