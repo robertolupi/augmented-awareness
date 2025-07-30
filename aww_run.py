@@ -59,21 +59,29 @@ settings = config.Settings()
 def main(provider, local_model, local_url, gemini_model, openai_model, vault_path, journal_dir, retrospectives_dir):
     global llm_model
     global vault
+    llm_model = make_model(gemini_model, local_model, local_url, openai_model, provider)
+    vault_path = os.path.expanduser(vault_path)
+    vault = Vault(PosixPath(vault_path), journal_dir, retrospectives_dir)
+
+
+def make_model(gemini_model, local_model, local_url, openai_model, provider):
     match provider:
         case Provider.LOCAL:
-            llm_model = OpenAIModel(model_name=local_model, provider=OpenAIProvider(base_url=local_url))
+            model = OpenAIModel(model_name=local_model, provider=OpenAIProvider(base_url=local_url))
         case Provider.GEMINI:
             if "GEMINI_API_KEY" not in os.environ:
                 print("Please set environment variable 'GEMINI_API_KEY'")
                 sys.exit(1)
-            llm_model = GeminiModel(model_name=gemini_model)
+            model = GeminiModel(model_name=gemini_model)
         case Provider.OPENAI:
             if "OPENAI_API_KEY" not in os.environ:
                 print("Please set environment variable 'OPENAI_API_KEY'")
                 sys.exit(1)
-            llm_model = OpenAIModel(model_name=openai_model)
-    vault_path = os.path.expanduser(vault_path)
-    vault = Vault(PosixPath(vault_path), journal_dir, retrospectives_dir)
+            model = OpenAIModel(model_name=openai_model)
+        case _:
+            print("Unknown provider", provider)
+            sys.exit(1)
+    return model
 
 
 def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: list[NoCachePolicyChoice],
