@@ -7,7 +7,7 @@ from typing import Dict
 
 import yaml
 
-from pathlib import PosixPath
+from pathlib import Path
 
 FRONTMATTER_RE = re.compile('^---\n(.*?)\n---\n', re.DOTALL | re.MULTILINE)
 CODEBLOCKS_RE = re.compile('\n```([a-z]+)\n(.*?)\n```\n', re.DOTALL | re.MULTILINE)
@@ -35,7 +35,7 @@ class Vault:
         Level.yearly: "{year}/r{year}.md",
     }
 
-    def __init__(self, path: PosixPath, journal_dir: str, retrospectives_dir: str) -> None:
+    def __init__(self, path: Path, journal_dir: str, retrospectives_dir: str) -> None:
         self.path = path
         self.journal_dir = journal_dir
         self.retrospectives_dir = retrospectives_dir
@@ -90,7 +90,7 @@ class Vault:
 
 
 class Page:
-    def __init__(self, path: PosixPath, level: Level | None):
+    def __init__(self, path: Path, level: Level | None):
         self.path = path
         self.level = level
 

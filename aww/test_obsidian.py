@@ -1,11 +1,11 @@
 from datetime import date
-from pathlib import PosixPath
+from pathlib import Path
 
 import aww
 from aww import obsidian
 from aww.obsidian import Level
 
-test_vault_path = (PosixPath(aww.__file__).parent.parent / 'test_vault').absolute()
+test_vault_path = (Path(aww.__file__).parent.parent / 'test_vault').absolute()
 
 
 def test_vault():

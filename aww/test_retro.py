@@ -1,5 +1,5 @@
 import asyncio
-from pathlib import PosixPath
+from pathlib import Path
 import shutil
 import datetime
 import pytest
@@ -12,7 +12,7 @@ from aww import retro
 from aww.obsidian import Vault, Level
 from aww.retro import RecursiveRetrospectiveGenerator
 
-test_vault_path = (PosixPath(aww.__file__).parent.parent / 'test_vault').absolute()
+test_vault_path = (Path(aww.__file__).parent.parent / 'test_vault').absolute()
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def tmp_vault(tmp_path):
     """Copy test_vault_path contents into a temporary directory."""
     dest = tmp_path / "vault"
     shutil.copytree(test_vault_path, dest)
-    return Vault(PosixPath(dest), 'journal', 'retrospectives')
+    return Vault(Path(dest), 'journal', 'retrospectives')
 
 
 def days_between(start_year, start_month, start_day, end_year, end_month, end_day):

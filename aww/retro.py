@@ -2,7 +2,7 @@ import asyncio
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from pathlib import PosixPath
+from pathlib import Path
 from typing import Callable, Sequence
 import hashlib
 
@@ -100,9 +100,9 @@ async def prepare_output(node, result):
 
 class RecursiveRetrospectiveGenerator:
     def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level, concurrency_limit: int = 10,
-                 prompts_path: PosixPath | None = None):
+                 prompts_path: Path | None = None):
         if not prompts_path:
-            prompts_path = (PosixPath(__file__).parent / 'retro')
+            prompts_path = (Path(__file__).parent / 'retro')
 
         self.prompts = {l: (prompts_path / f"{l.name}.md").read_text() for l in Level}
         self.agents = {l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level}

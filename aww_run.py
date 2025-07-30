@@ -7,7 +7,7 @@ import sys
 import textwrap
 from typing import Any
 
-from pathlib import PosixPath
+from pathlib import Path
 
 import click
 import rich
@@ -24,10 +24,6 @@ from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from rich.markdown import Markdown
-
-vault: Vault
-llm_model: Model
-
 
 class Provider(enum.Enum):
     LOCAL = "local"
@@ -57,12 +53,16 @@ settings = config.Settings()
 @click.option('--vault_path', type=click.Path(), default=settings.vault_path)
 @click.option('--journal_dir', type=str, default=settings.journal_dir)
 @click.option('--retrospectives_dir', type=str, default=settings.retrospectives_dir)
-def main(provider, local_model, local_url, gemini_model, openai_model, vault_path, journal_dir, retrospectives_dir):
-    global llm_model
-    global vault
+@click.pass_context
+def main(ctx, provider, local_model, local_url, gemini_model, openai_model, vault_path, journal_dir, retrospectives_dir):
     llm_model = make_model(gemini_model, local_model, local_url, openai_model, provider)
     vault_path = os.path.expanduser(vault_path)
-    vault = Vault(PosixPath(vault_path), journal_dir, retrospectives_dir)
+    vault = Vault(Path(vault_path), journal_dir, retrospectives_dir)
+    ctx.obj = {
+        'llm_model': llm_model,
+        'vault': vault,
+        'settings': settings,
+    }
 
 
 def make_model(gemini_model, local_model, local_url, openai_model, provider):
@@ -84,42 +84,6 @@ def make_model(gemini_model, local_model, local_url, openai_model, provider):
         case _:
             raise click.ClickException(f"Unknown provider: {provider}")
     return model
-
-
-def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: list[NoCachePolicyChoice],
-                     context_levels: list[Level],
-                     level: Level, concurrency_limit: int):
-    print("Generating", level.value, "retrospective from", dates[0], "to", dates[-1])
-    print("NoCache policy:", ",".join(c.value for c in no_cache))
-    print("Context:", ",".join(c.value for c in context_levels))
-    print("Concurrency Limit:", concurrency_limit)
-
-    cache_policies = []
-    no_cache_levels = []
-    for policy in no_cache:
-        match policy:
-            case NoCachePolicyChoice.ROOT:
-                cache_policies.append(retro.NoRootCachePolicy())
-            case NoCachePolicyChoice.DAILY:
-                no_cache_levels.append(Level.daily)
-            case NoCachePolicyChoice.WEEKLY:
-                no_cache_levels.append(Level.weekly)
-            case NoCachePolicyChoice.MONTHLY:
-                no_cache_levels.append(Level.monthly)
-            case NoCachePolicyChoice.YEARLY:
-                no_cache_levels.append(Level.yearly)
-            case NoCachePolicyChoice.MTIME:
-                cache_policies.append(retro.ModificationTimeCachePolicy())
-            case NoCachePolicyChoice.ONE_HOUR:
-                cache_policies.append(retro.TooOldCachePolicy(datetime.datetime.now() - datetime.timedelta(hours=1)))
-    if no_cache_levels:
-        cache_policies.append(retro.NoLevelsCachePolicy(levels=no_cache_levels))
-
-    generator = retro.RecursiveRetrospectiveGenerator(llm_model, vault, dates, level, concurrency_limit)
-    result = asyncio.run(
-        generator.run(context_levels=context_levels, cache_policies=cache_policies, gather=tqdm.asyncio.tqdm.gather))
-    if result:
-        rich.print(Markdown(result.output))
 
 
 def whole_year(the_date: datetime.date) -> list[datetime.date]:
@@ -172,14 +136,17 @@ def get_dates_for_level(level: Level, date: datetime.datetime, yesterday: bool) 
 @click.argument('level', type=click.Choice(Level, case_sensitive=False))
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
 @click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
-              multiple=True, help="No cache policy")
+              multiple=True, help="Don't use cached results for the given level. Can be specified multiple times.")
 @click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
-              multiple=True, help="Context levels for retrospective")
-@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), help="Concurrency limit")
-@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
-def retrospectives(level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[Level],
+              multiple=True, help="Which levels of retrospectives to include as context. Can be specified multiple times.")
+@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), help="How many concurrent LLM API calls to make.")
+@click.option('-y', '--yesterday', is_flag=True, default=False, help="Use yesterday's date (only for daily level).")
+@click.pass_context
+def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[Level],
                    concurrency_limit: int, yesterday: bool):
     """Generate retrospective(s)."""
+    vault = ctx.obj['vault']
+    llm_model = ctx.obj['llm_model']
     dates = get_dates_for_level(level, date, yesterday)
 
     # Set defaults based on level
@@ -196,7 +163,37 @@ def retrospectives(level: Level, date: datetime.datetime, no_cache: list[NoCache
                 break
             final_context.append(l)
 
-    do_retrospective(vault, dates, final_no_cache, final_context, level, final_concurrency_limit)
+    print("Generating", level.value, "retrospective from", dates[0], "to", dates[-1])
+    print("NoCache policy:", ",".join(c.value for c in final_no_cache))
+    print("Context:", ",".join(c.value for c in final_context))
+    print("Concurrency Limit:", final_concurrency_limit)
+
+    cache_policies = []
+    no_cache_levels = []
+    for policy in final_no_cache:
+        match policy:
+            case NoCachePolicyChoice.ROOT:
+                cache_policies.append(retro.NoRootCachePolicy())
+            case NoCachePolicyChoice.DAILY:
+                no_cache_levels.append(Level.daily)
+            case NoCachePolicyChoice.WEEKLY:
+                no_cache_levels.append(Level.weekly)
+            case NoCachePolicyChoice.MONTHLY:
+                no_cache_levels.append(Level.monthly)
+            case NoCachePolicyChoice.YEARLY:
+                no_cache_levels.append(Level.yearly)
+            case NoCachePolicyChoice.MTIME:
+                cache_policies.append(retro.ModificationTimeCachePolicy())
+            case NoCachePolicyChoice.ONE_HOUR:
+                cache_policies.append(retro.TooOldCachePolicy(datetime.datetime.now() - datetime.timedelta(hours=1)))
+    if no_cache_levels:
+        cache_policies.append(retro.NoLevelsCachePolicy(levels=no_cache_levels))
+
+    generator = retro.RecursiveRetrospectiveGenerator(llm_model, vault, dates, level, final_concurrency_limit)
+    result = asyncio.run(
+        generator.run(context_levels=final_context, cache_policies=cache_policies, gather=tqdm.asyncio.tqdm.gather))
+    if result:
+        rich.print(Markdown(result.output))
 
 
 async def process_tool_call(
@@ -212,8 +209,11 @@ async def process_tool_call(
 
 @main.command(name="chat")
 @click.option('-j', '--journal_cmd', type=str, default="./journal")
-def chat(journal_cmd):
+@click.pass_context
+def chat(ctx, journal_cmd):
     """Interactive chat with LLM access to the user's vault."""
+    vault = ctx.obj['vault']
+    llm_model = ctx.obj['llm_model']
     server = MCPServerStdio(
         journal_cmd,
         args=["--vault", str(vault.path), "mcp"],
@@ -241,8 +241,11 @@ def chat(journal_cmd):
 @click.argument('prompt', type=str)
 @click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
 @click.option('-v', '--verbose', is_flag=True, default=False, help="Be verbose (show all sources)")
-def ask(date, yesterday, context, level, prompt, prompt_file, verbose):
+@click.pass_context
+def ask(ctx, date, yesterday, context, level, prompt, prompt_file, verbose):
     """Concatenate retrospectives and ask a question."""
+    vault = ctx.obj['vault']
+    llm_model = ctx.obj['llm_model']
     dates = get_dates_for_level(level, date, yesterday)
 
     if prompt_file:
@@ -266,10 +269,10 @@ def ask(date, yesterday, context, level, prompt, prompt_file, verbose):
 
 
 @main.command(name="rewrite_prompt")
-@click.option('--critique_local_model', type=str, default=settings.local_model)
-@click.option('--critique_local_url', type=str, default=settings.local_base_url)
-@click.option('--critique_gemini_model', type=str, default=settings.gemini_model)
-@click.option('--critique_openai_model', type=str, default=settings.openai_model)
+@click.option('--critique_local_model', type=str)
+@click.option('--critique_local_url', type=str)
+@click.option('--critique_gemini_model', type=str)
+@click.option('--critique_openai_model', type=str)
 @click.option('-P', '--critique_provider', type=click.Choice(Provider, case_sensitive=False), default='local')
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
 @click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
@@ -277,8 +280,16 @@ def ask(date, yesterday, context, level, prompt, prompt_file, verbose):
               default=[Level.daily, Level.weekly, Level.monthly, Level.yearly])
 @click.argument('level', type=click.Choice(Level, case_sensitive=False))
 @click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
-def rewrite_prompt(critique_local_model, critique_local_url, critique_gemini_model, critique_openai_model,
+@click.pass_context
+def rewrite_prompt(ctx, critique_local_model, critique_local_url, critique_gemini_model, critique_openai_model,
                    critique_provider, date, yesterday, context, level):
+    vault = ctx.obj['vault']
+    llm_model = ctx.obj['llm_model']
+    settings = ctx.obj['settings']
+    critique_local_model = critique_local_model or settings.local_model
+    critique_local_url = critique_local_url or settings.local_base_url
+    critique_gemini_model = critique_gemini_model or settings.gemini_model
+    critique_openai_model = critique_openai_model or settings.openai_model
     dates = get_dates_for_level(level, date, yesterday)
 
     tree = aww.obsidian.build_retrospective_tree(vault, dates)
@@ -307,7 +318,7 @@ def rewrite_prompt(critique_local_model, critique_local_url, critique_gemini_mod
         Write only the revised prompt in full, in markdown format.
         """)
 
-    prompt_file = PosixPath(aww.__file__).parent / "retro" / f"{level.value}.md"
+    prompt_file = Path(aww.__file__).parent / "retro" / f"{level.value}.md"
     prompt = prompt_file.read_text()
 
     gen_agent = Agent(model=llm_model, system_prompt=prompt)
