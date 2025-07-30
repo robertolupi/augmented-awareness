@@ -72,19 +72,30 @@ class TooOldCachePolicy(CachePolicy):
                 n.use_cache = False
 
 
+# Table-driven approach for extensible frontmatter metrics
+METRIC_FORMATTERS = {
+    'stress': 'Stress level {} of 10.',
+    'kg': 'Weight {} kg.',
+    'bmi': 'Body Mass Index (BMI) {}.',
+    'mood': 'Mood: {}',
+    'meditation': 'Meditation: {}',
+    'relax': 'Relax: {}',
+    'career': 'Career: {}',
+    'social': 'Social connections: {}',
+    'exercise': 'Exercise: {}',
+    'sleep_score': "Sleep Score: {} of 100.",
+    'vitals_score': "Vitals Score: {} of 100.",
+    'activity_score': "Activity Score: {} of 100.",
+    'relax_score': "Relax Score: {} of 100.",
+}
+
+
 async def page_content(node):
     content = [f'Page: [[{node.page.name}]]', node.page.content()]
     if fm := node.page.frontmatter():
-        if 'stress' in fm and fm['stress'] is not None:
-            content.append(f"Stress level {fm['stress']} of 10.")
-        if 'kg' in fm and fm['kg'] is not None:
-            content.append(f"Weight {fm['kg']} kg.")
-        if 'bmi' in fm and fm['bmi'] is not None:
-            content.append(f"Body Mass Index (BMI) {fm['bmi']}.")
-        for i in ('sleep_score', 'vitals_score', 'activity_score', 'relax_score'):
-            if i in fm and fm[i] is not None:
-                label = i.replace('_', ' ').capitalize()
-                content.append(f"{label} {fm[i]} of 100.")
+        for key, fmt in METRIC_FORMATTERS.items():
+            if (value := fm.get(key)) is not None:
+                content.append(fmt.format(value))
     return '\n'.join(content)
 
 
