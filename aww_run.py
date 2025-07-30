@@ -32,6 +32,7 @@ class Provider(enum.Enum):
 
 
 class NoCachePolicyChoice(enum.Enum):
+    CACHE = 'do_cache'
     ROOT = 'root'
     DAILY = 'daily'
     WEEKLY = 'weekly'
@@ -172,6 +173,9 @@ def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[No
     no_cache_levels = []
     for policy in final_no_cache:
         match policy:
+            case NoCachePolicyChoice.CACHE:
+                # No op, but clears final_no_cache defaults
+                pass
             case NoCachePolicyChoice.ROOT:
                 cache_policies.append(retro.NoRootCachePolicy())
             case NoCachePolicyChoice.DAILY:
