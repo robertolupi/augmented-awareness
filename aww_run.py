@@ -42,6 +42,7 @@ class NoCachePolicyChoice(enum.Enum):
     MONTHLY = 'monthly'
     YEARLY = 'yearly'
     MTIME = 'mtime'
+    ONE_HOUR = '1h'
 
 
 settings = config.Settings()
@@ -108,6 +109,8 @@ def do_retrospective(vault: Vault, dates: list[datetime.date], no_cache: list[No
                 no_cache_levels.append(Level.yearly)
             case NoCachePolicyChoice.MTIME:
                 cache_policies.append(retro.ModificationTimeCachePolicy())
+            case NoCachePolicyChoice.ONE_HOUR:
+                cache_policies.append(retro.TooOldCachePolicy(datetime.datetime.now() - datetime.timedelta(hours=1)))
     if no_cache_levels:
         cache_policies.append(retro.NoLevelsCachePolicy(levels=no_cache_levels))
 

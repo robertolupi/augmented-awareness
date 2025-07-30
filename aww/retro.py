@@ -59,6 +59,19 @@ class ModificationTimeCachePolicy(CachePolicy):
                 node.use_cache = False
 
 
+class TooOldCachePolicy(CachePolicy):
+    def __init__(self, limit: datetime):
+        self.limit = limit
+
+    def __call__(self, node: Node, tree: Tree):
+        limit_ns = self.limit.timestamp() * 1e9
+        for node in tree.values():
+            if not node.retro_page:
+                continue
+            if node.retro_page.mtime_ns() < limit_ns:
+                node.use_cache = False
+
+
 async def page_content(node):
     content = [f'Page: [[{node.page.name}]]', node.page.content()]
     if fm := node.page.frontmatter():
