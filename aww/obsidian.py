@@ -60,39 +60,6 @@ class Vault:
         """Return the retrospective Page for the given date and level."""
         return self._make_page(d, level, self.retrospectives_dir, self._RETRO_TEMPLATES)
 
-    # Legacy convenience methods
-    def daily_page(self, d: date) -> 'Page':
-        """Return the daily journal Page for the given date."""
-        return self.page(d, Level.daily)
-
-    def weekly_page(self, d: date) -> 'Page':
-        """Return the weekly journal Page for the given date."""
-        return self.page(d, Level.weekly)
-
-    def monthly_page(self, d: date) -> 'Page':
-        """Return the monthly journal Page for the given date."""
-        return self.page(d, Level.monthly)
-
-    def yearly_page(self, d: date) -> 'Page':
-        """Return the yearly journal Page for the given date."""
-        return self.page(d, Level.yearly)
-
-    def retrospective_daily_page(self, d: date) -> 'Page':
-        """Return the daily retrospective Page for the given date."""
-        return self.retrospective_page(d, Level.daily)
-
-    def retrospective_weekly_page(self, d: date) -> 'Page':
-        """Return the weekly retrospective Page for the given date."""
-        return self.retrospective_page(d, Level.weekly)
-
-    def retrospective_monthly_page(self, d: date) -> 'Page':
-        """Return the monthly retrospective Page for the given date."""
-        return self.retrospective_page(d, Level.monthly)
-
-    def retrospective_yearly_page(self, d: date) -> 'Page':
-        """Return the yearly retrospective Page for the given date."""
-        return self.retrospective_page(d, Level.yearly)
-
     def _make_page(
             self,
             d: date,

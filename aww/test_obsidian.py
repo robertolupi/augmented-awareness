@@ -18,7 +18,8 @@ def test_vault():
 
 def test_daily_page():
     vault = obsidian.Vault(test_vault_path, 'journal', 'retrospectives')
-    page = vault.daily_page(date(2025, 3, 30))
+    d = date(2025, 3, 30)
+    page = vault.page(d, Level.daily)
     assert page.path.absolute() == (test_vault_path / 'journal/2025/03/2025-03-30.md').absolute()
     assert page.path.exists()
     assert page

@@ -38,7 +38,7 @@ def test_build_retrospective_tree(tmp_vault):
     assert len(tree) == 365 + 52 + 12 + 1
 
     one_day = datetime.date(2025, 1, 1)
-    daily = tmp_vault.retrospective_daily_page(one_day)
+    daily = tmp_vault.retrospective_page(one_day, Level.daily)
     assert tree[daily].retro_page == daily
     assert set(tree[daily].dates) == {one_day}
     assert tree[daily].level == Level.daily
@@ -46,13 +46,15 @@ def test_build_retrospective_tree(tmp_vault):
 
     january = list(days_between(2025, 1, 1,
                                 2025, 1, 31))
-    monthly = tmp_vault.retrospective_monthly_page(january[0])
+    d = january[0]
+    monthly = tmp_vault.retrospective_page(d, Level.monthly)
     assert tree[monthly].retro_page == monthly
     assert set(tree[monthly].dates) == set(january)
     assert tree[monthly].level == Level.monthly
     assert len(tree[monthly].sources) == 31 + 5
 
-    yearly = tmp_vault.retrospective_yearly_page(days_in_year[0])
+    d1 = days_in_year[0]
+    yearly = tmp_vault.retrospective_page(d1, Level.yearly)
     assert tree[yearly].retro_page == yearly
     assert set(tree[yearly].dates) == set(days_in_year)
     assert tree[yearly].level == Level.yearly
@@ -76,16 +78,17 @@ def test_recursive_retrospective_generator(tmp_vault):
     g = RecursiveRetrospectiveGeneratorForTesting(tmp_vault, days_in_year, Level.yearly)
     asyncio.run(g.run(context_levels=list(Level),
                       cache_policies=[retro.NoRootCachePolicy(), retro.NoLevelsCachePolicy(list(Level))]))
-    yearly = tmp_vault.retrospective_yearly_page(days_in_year[0])
+    d = days_in_year[0]
+    yearly = tmp_vault.retrospective_page(d, Level.yearly)
 
     march30 = datetime.date(2025, 3, 30)
     april1 = datetime.date(2025, 4, 1)
-    d1 = tmp_vault.retrospective_daily_page(march30)
-    d2 = tmp_vault.retrospective_daily_page(april1)
-    w1 = tmp_vault.retrospective_weekly_page(march30)
-    w2 = tmp_vault.retrospective_weekly_page(april1)
-    march = tmp_vault.retrospective_monthly_page(march30)
-    april = tmp_vault.retrospective_monthly_page(april1)
+    d1 = tmp_vault.retrospective_page(march30, Level.daily)
+    d2 = tmp_vault.retrospective_page(april1, Level.daily)
+    w1 = tmp_vault.retrospective_page(march30, Level.weekly)
+    w2 = tmp_vault.retrospective_page(april1, Level.weekly)
+    march = tmp_vault.retrospective_page(march30, Level.monthly)
+    april = tmp_vault.retrospective_page(april1, Level.monthly)
 
     sources_with_content = set(g.saved_nodes.keys())
     assert sources_with_content == {d1, d2, w1, w2, march, april, yearly}
