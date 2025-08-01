@@ -15,6 +15,7 @@ from aww.obsidian import Vault, Page, Level, Node, Tree, build_retrospective_tre
 
 
 def md5(s: str) -> str:
+    """Return the MD5 hash of the given string."""
     return hashlib.md5(s.encode("utf-8")).hexdigest()
 
 
@@ -23,6 +24,7 @@ MARKDOWN_RE = re.compile('```markdown\n(.*?)\n```', re.DOTALL | re.MULTILINE)
 
 @dataclass
 class RetrospectiveResult:
+    """Holds the result of a retrospective generation, including dates, output, and the associated page."""
     dates: list[date]
     output: str
     page: Page
@@ -33,25 +35,33 @@ import logging
 logger = logging.getLogger(__name__)
 
 CachePolicy = Callable[[Node, Tree], None]
+"""Type alias for cache policy functions that operate on a Node and Tree."""
 
 
 class NoRootCachePolicy(CachePolicy):
+    """Cache policy that disables cache for the root node."""
     def __call__(self, node: Node, tree: Tree):
+        """Disable cache for the given node (root)."""
         node.use_cache = False
 
 
 class NoLevelsCachePolicy(CachePolicy):
+    """Cache policy that disables cache for nodes at specified levels."""
     def __init__(self, levels: Sequence[Level]):
+        """Initialize with a sequence of levels for which cache should be disabled."""
         self.levels = set(levels)
 
     def __call__(self, node: Node, tree: Tree):
+        """Disable cache for sources of the node if their level is in the specified levels."""
         for source in node.sources:
             if source.level in self.levels:
                 source.use_cache = False
 
 
 class ModificationTimeCachePolicy(CachePolicy):
+    """Cache policy that disables cache if the source page is newer than the retro page."""
     def __call__(self, node: Node, tree: Tree):
+        """Disable cache for nodes where the source page modification time is newer than the retro page."""
         for n in tree.values():
             if not n.page or not n.retro_page:
                 continue
@@ -60,10 +70,13 @@ class ModificationTimeCachePolicy(CachePolicy):
 
 
 class TooOldCachePolicy(CachePolicy):
+    """Cache policy that disables cache for retro pages older than a given datetime limit."""
     def __init__(self, limit: datetime):
+        """Initialize with a datetime limit; retro pages older than this will not use cache."""
         self.limit = limit
 
     def __call__(self, node: Node, tree: Tree):
+        """Disable cache for nodes whose retro page modification time is older than the limit."""
         limit_ns = self.limit.timestamp() * 1e9
         for n in tree.values():
             if not n.retro_page:
@@ -74,6 +87,7 @@ class TooOldCachePolicy(CachePolicy):
 
 # Table-driven approach for extensible frontmatter metrics
 METRIC_FORMATTERS = {
+    # Table-driven approach for extensible frontmatter metrics
     'stress': 'Stress level {} of 10.',
     'kg': 'Weight {} kg.',
     'bmi': 'Body Mass Index (BMI) {}.',
@@ -91,6 +105,7 @@ METRIC_FORMATTERS = {
 
 
 async def page_content(node):
+    """Return the content of a node's page, including formatted frontmatter metrics if present."""
     content = [f'Page: [[{node.page.name}]]', node.page.content()]
     if fm := node.page.frontmatter():
         for key, fmt in METRIC_FORMATTERS.items():
@@ -100,6 +115,7 @@ async def page_content(node):
 
 
 async def prepare_output(node, result):
+    """Prepare the output for a retrospective, extracting markdown and formatting the title."""
     output = result.output.strip()
     if m := MARKDOWN_RE.match(output):
         output = m.group(1)
@@ -110,8 +126,16 @@ async def prepare_output(node, result):
 
 
 class RecursiveRetrospectiveGenerator:
+    """
+    Generates retrospectives recursively for a set of dates and a given level using an AI agent.
+    Handles cache policies, concurrency, and prompt management.
+    """
     def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level, concurrency_limit: int = 10,
                  prompts_path: Path | None = None):
+        """
+        Initialize the generator with model, vault, dates, level, concurrency limit, and optional prompts path.
+        Loads system prompts and sets up agents for each level.
+        """
         if not prompts_path:
             prompts_path = (Path(__file__).parent / 'retro')
 
@@ -126,6 +150,10 @@ class RecursiveRetrospectiveGenerator:
     async def run(self, context_levels: list[Level],
                   cache_policies: list[CachePolicy],
                   gather=asyncio.gather) -> RetrospectiveResult | None:
+        """
+        Run the retrospective generation for the configured dates and level.
+        Applies cache policies and generates the result for the root node.
+        """
         retro_page = self.vault.retrospective_page(self.dates[0], self.max_level)
         node = self.tree[retro_page]
         for policy in cache_policies:
@@ -134,6 +162,10 @@ class RecursiveRetrospectiveGenerator:
 
     async def _generate(self, node: Node, context_levels: set[Level],
                         gather=asyncio.gather) -> RetrospectiveResult | None:
+        """
+        Recursively generate retrospectives for the given node and its sources.
+        Returns a RetrospectiveResult or None if no content is available.
+        """
         if node.use_cache and node.retro_page:
             return RetrospectiveResult(dates=list(node.dates), output=node.retro_page.content(), page=node.retro_page)
 
@@ -174,6 +206,9 @@ class RecursiveRetrospectiveGenerator:
 
     @staticmethod
     async def save_retro_page(node, output, sources, levels, retro_frontmatter):
+        """
+        Save the generated retrospective page to disk, including frontmatter and source references.
+        """
         # ensure parent directory exists
         node.retro_page.path.parent.mkdir(parents=True, exist_ok=True)
         logger.info(
