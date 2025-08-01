@@ -142,9 +142,11 @@ def get_dates_for_level(level: Level, date: datetime.datetime, yesterday: bool) 
               multiple=True, help="Which levels of retrospectives to include as context. Can be specified multiple times.")
 @click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), help="How many concurrent LLM API calls to make.")
 @click.option('-y', '--yesterday', is_flag=True, default=False, help="Use yesterday's date (only for daily level).")
+@click.option('--output-file', type=click.Path(), help="File to write the output to.")
+@click.option('--plain-text', is_flag=True, default=False, help="Output plain text instead of markdown.")
 @click.pass_context
 def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[Level],
-                   concurrency_limit: int, yesterday: bool):
+                   concurrency_limit: int | None, yesterday: bool, output_file: str | None, plain_text: bool):
     """Generate retrospective(s)."""
     vault = ctx.obj['vault']
     llm_model = ctx.obj['llm_model']
@@ -197,7 +199,15 @@ def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[No
     result = asyncio.run(
         generator.run(context_levels=final_context, cache_policies=cache_policies, gather=tqdm.asyncio.tqdm.gather))
     if result:
-        rich.print(Markdown(result.output))
+        output_content = result.output
+        if output_file:
+            with open(output_file, 'w') as f:
+                f.write(output_content)
+            print(f"Output written to {output_file}")
+        if plain_text:
+            print(output_content)
+        else:
+            rich.print(Markdown(output_content))
 
 
 async def process_tool_call(
@@ -245,8 +255,10 @@ def chat(ctx, journal_cmd):
 @click.argument('prompt', type=str)
 @click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
 @click.option('-v', '--verbose', is_flag=True, default=False, help="Be verbose (show all sources)")
+@click.option('--output-file', type=click.Path(), help="File to write the output to.")
+@click.option('--plain-text', is_flag=True, default=False, help="Output plain text instead of markdown.")
 @click.pass_context
-def ask(ctx, date, yesterday, context, level, prompt, prompt_file, verbose):
+def ask(ctx, date, yesterday, context, level, prompt, prompt_file, verbose, output_file, plain_text):
     """Concatenate retrospectives and ask a question."""
     vault = ctx.obj['vault']
     llm_model = ctx.obj['llm_model']
@@ -269,7 +281,15 @@ def ask(ctx, date, yesterday, context, level, prompt, prompt_file, verbose):
     retros = [n.retro_page.content() for n in sources]
 
     result = ask_agent.run_sync(user_prompt=retros)
-    rich.print(Markdown(result.output))
+    output_content = result.output
+    if output_file:
+        with open(output_file, 'w') as f:
+            f.write(output_content)
+        print(f"Output written to {output_file}")
+    if plain_text:
+        print(output_content)
+    else:
+        rich.print(Markdown(output_content))
 
 
 @main.command(name="rewrite_prompt")
