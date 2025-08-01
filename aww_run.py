@@ -263,7 +263,7 @@ def ask(ctx, date, yesterday, context, level, prompt, prompt_file, verbose):
     sources = [n for n in node.sources if n.level in context]
     if node.level in context:
         sources.insert(0, node)
-    sources = [s for s in sources if s.retro_page.exists()]
+    sources = [s for s in sources if s.retro_page]
     if verbose:
         rich.print("Sources", [n.retro_page.name for n in sources])
     retros = [n.retro_page.content() for n in sources]
@@ -302,7 +302,7 @@ def rewrite_prompt(ctx, critique_local_model, critique_local_url, critique_gemin
     sources = [n for n in node.sources if n.level in context]
     if node.level in context:
         sources.insert(0, node)
-    content = [s.retro_page.content() for s in sources if s.retro_page.exists()]
+    content = [s.retro_page.content() for s in sources if s.retro_page]
     if level == Level.daily:
         page_content = asyncio.run(aww.retro.page_content(node))
         content.insert(0, page_content)

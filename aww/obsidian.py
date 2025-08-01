@@ -113,10 +113,6 @@ class Page:
         """Page is truthy if the file exists."""
         return self.path.exists()
 
-    def exists(self):
-        """Return True if the file exists."""
-        return self.path.exists()
-
     def mtime_ns(self):
         """Return the file's modification time in nanoseconds."""
         return self.path.stat().st_mtime_ns
