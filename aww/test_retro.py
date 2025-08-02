@@ -98,3 +98,27 @@ def test_recursive_retrospective_generator(tmp_vault):
     assert levels == set(Level)
     source_pages = set(s.retro_page for s in sources)
     assert len(source_pages) == 365 + 52 + 12
+
+def test_recursive_retrospective_generator_rename_on_disk(tmp_vault):
+    day = datetime.date(2025, 1, 1)
+    model = TestModel()
+
+    # Create a dummy journal file for the day
+    journal_path = tmp_vault.path / tmp_vault.journal_dir / f"{day.strftime('%Y')}/{day.strftime('%m')}/{day.strftime('%Y-%m-%d')}.md"
+    journal_path.parent.mkdir(parents=True, exist_ok=True)
+    with journal_path.open("w") as f:
+        f.write("# Test Journal Entry")
+
+    g = RecursiveRetrospectiveGenerator(model, tmp_vault, [day], Level.daily)
+
+    # Run the generator twice
+    asyncio.run(g.run(context_levels=list(Level),
+                      cache_policies=[retro.NoRootCachePolicy(), retro.NoLevelsCachePolicy(list(Level))]))
+    asyncio.run(g.run(context_levels=list(Level),
+                      cache_policies=[retro.NoRootCachePolicy(), retro.NoLevelsCachePolicy(list(Level))]))
+
+    retro_page = tmp_vault.retrospective_page(day, Level.daily)
+    renamed_page_path = retro_page.path.with_suffix('.1.md')
+
+    assert retro_page.path.exists()
+    assert renamed_page_path.exists()

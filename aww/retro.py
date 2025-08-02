@@ -208,9 +208,21 @@ class RecursiveRetrospectiveGenerator:
     async def save_retro_page(node, output, sources, levels, retro_frontmatter):
         """
         Save the generated retrospective page to disk, including frontmatter and source references.
+        If the file already exists, it will be renamed with a progressive number.
         """
         # ensure parent directory exists
         node.retro_page.path.parent.mkdir(parents=True, exist_ok=True)
+
+        if node.retro_page.path.exists():
+            # Find the next available progressive number
+            i = 1
+            while True:
+                new_path = node.retro_page.path.with_suffix(f'.{i}{node.retro_page.path.suffix}')
+                if not new_path.exists():
+                    node.retro_page.path.rename(new_path)
+                    break
+                i += 1
+
         logger.info(
             "Writing retrospective page %s (level=%s)",
             node.retro_page.path,
