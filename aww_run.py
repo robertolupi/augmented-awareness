@@ -16,7 +16,7 @@ import tqdm.asyncio
 import aww.obsidian
 from aww import retro
 from aww import config
-from aww.obsidian import Vault, Level
+from aww.obsidian import Vault, Level, Page
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio, CallToolFunc, ToolResult
 from pydantic_ai.models import Model
@@ -24,6 +24,7 @@ from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from rich.markdown import Markdown
+
 
 class Provider(enum.Enum):
     LOCAL = "local"
@@ -55,7 +56,8 @@ settings = config.Settings()
 @click.option('--journal_dir', type=str, default=settings.journal_dir)
 @click.option('--retrospectives_dir', type=str, default=settings.retrospectives_dir)
 @click.pass_context
-def main(ctx, provider, local_model, local_url, gemini_model, openai_model, vault_path, journal_dir, retrospectives_dir):
+def main(ctx, provider, local_model, local_url, gemini_model, openai_model, vault_path, journal_dir,
+         retrospectives_dir):
     llm_model = make_model(gemini_model, local_model, local_url, openai_model, provider)
     vault_path = os.path.expanduser(vault_path)
     vault = Vault(Path(vault_path), journal_dir, retrospectives_dir)
@@ -133,19 +135,34 @@ def get_dates_for_level(level: Level, date: datetime.datetime, yesterday: bool) 
             raise click.ClickException(f"Unknown level '{level}'")
 
 
+def write_output(output_file, plain_text, result):
+    output_content = result.output
+    if output_file:
+        with open(output_file, 'w') as f:
+            f.write(output_content)
+        print(f"Output written to {output_file}")
+    if plain_text:
+        print(output_content)
+    else:
+        rich.print(Markdown(output_content))
+
+
 @main.command(name="retro")
 @click.argument('level', type=click.Choice(Level, case_sensitive=False))
 @click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
 @click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
               multiple=True, help="Don't use cached results for the given level. Can be specified multiple times.")
 @click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
-              multiple=True, help="Which levels of retrospectives to include as context. Can be specified multiple times.")
-@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), help="How many concurrent LLM API calls to make.")
+              multiple=True,
+              help="Which levels of retrospectives to include as context. Can be specified multiple times.")
+@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1),
+              help="How many concurrent LLM API calls to make.")
 @click.option('-y', '--yesterday', is_flag=True, default=False, help="Use yesterday's date (only for daily level).")
 @click.option('--output-file', type=click.Path(), help="File to write the output to.")
 @click.option('--plain-text', is_flag=True, default=False, help="Output plain text instead of markdown.")
 @click.pass_context
-def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[Level],
+def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice],
+                   context: list[Level],
                    concurrency_limit: int | None, yesterday: bool, output_file: str | None, plain_text: bool):
     """Generate retrospective(s)."""
     vault = ctx.obj['vault']
@@ -199,15 +216,7 @@ def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[No
     result = asyncio.run(
         generator.run(context_levels=final_context, cache_policies=cache_policies, gather=tqdm.asyncio.tqdm.gather))
     if result:
-        output_content = result.output
-        if output_file:
-            with open(output_file, 'w') as f:
-                f.write(output_content)
-            print(f"Output written to {output_file}")
-        if plain_text:
-            print(output_content)
-        else:
-            rich.print(Markdown(output_content))
+        write_output(output_file, plain_text, result)
 
 
 async def process_tool_call(
@@ -281,15 +290,34 @@ def ask(ctx, date, yesterday, context, level, prompt, prompt_file, verbose, outp
     retros = [n.retro_page.content() for n in sources]
 
     result = ask_agent.run_sync(user_prompt=retros)
-    output_content = result.output
-    if output_file:
-        with open(output_file, 'w') as f:
-            f.write(output_content)
-        print(f"Output written to {output_file}")
-    if plain_text:
-        print(output_content)
-    else:
-        rich.print(Markdown(output_content))
+    write_output(output_file, plain_text, result)
+
+
+@main.command(name="compare")
+@click.argument('level', type=click.Choice(Level, case_sensitive=False))
+@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
+@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
+@click.option('--output-file', type=click.Path(), help="File to write the output to.")
+@click.option('--plain-text', is_flag=True, default=False, help="Output plain text instead of markdown.")
+@click.pass_context
+def compare(ctx, level, date, yesterday, output_file, plain_text):
+    """Compare and improve retrospectives.
+    
+    Given a retrospective, which has already alternative files (retro.md, retro.1.md, retro.2.md, etc.), use a LLM
+    to detect claims that are only present in a single file, so to synthesize a better version of the retrospective.
+    """
+    vault = ctx.obj['vault']
+    llm_model = ctx.obj['llm_model']
+    dates = get_dates_for_level(level, date, yesterday)
+    retro_page = vault.retrospective_page(dates[0], level)
+    glob_pattern = retro_page.path.with_suffix('').name + "*.md"
+    alternatives = [Page(p, retro_page.level) for p in retro_page.path.parent.glob(glob_pattern)]
+    rich.print("Alternatives", alternatives)
+
+    compare_agent = Agent(model=llm_model,
+                          system_prompt=(Path(aww.__file__).parent / "retro" / "compare.md").read_text())
+    result = compare_agent.run_sync(user_prompt=[p.content() for p in alternatives])
+    write_output(output_file, plain_text, result)
 
 
 @main.command(name="rewrite_prompt")
