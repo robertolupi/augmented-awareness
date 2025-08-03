@@ -3,7 +3,7 @@ import datetime
 
 import click
 import rich
-import tqdm
+from tqdm.asyncio import tqdm
 from rich.markdown import Markdown
 
 from aww import retro
@@ -122,7 +122,7 @@ def retrospectives(
         generator.run(
             context_levels=final_context,
             cache_policies=cache_policies,
-            gather=tqdm.asyncio.tqdm.gather,
+            gather=tqdm.gather,
         )
     )
     if result:
