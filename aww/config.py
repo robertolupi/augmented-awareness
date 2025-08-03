@@ -9,7 +9,8 @@ class Settings(BaseSettings):
     gemini_model: GoogleAIModel = "gemini-2.5-flash"
     local_model: str = ""
     local_base_url: str = "http://localhost:1234/v1"
-    
-    vault_path : str = "~/data/notes"
-    journal_dir : str = "journal"
-    retrospectives_dir : str = "retrospectives"
+
+    vault_path: str = "~/data/notes"
+    data_path: str = "~/data/aww"
+    journal_dir: str = "journal"
+    retrospectives_dir: str = "retrospectives"

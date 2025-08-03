@@ -78,6 +78,13 @@ class Vault:
         subpath = tpl.format(**params)
         return Page(self.path / base_folder / subpath, level)
 
+    def walk(self):
+        """Walk over all markdown files in the vault."""
+        for root, dirs, files in os.walk(self.path):
+            for file in files:
+                if file.endswith(".md"):
+                    yield Page(Path(root) / file, None)
+
 
 class Page:
     """

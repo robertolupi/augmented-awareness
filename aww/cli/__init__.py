@@ -65,6 +65,8 @@ def main(
         "llm_model": llm_model,
         "vault": vault,
         "settings": settings,
+        "provider": provider,
+        "local_url": local_url,
     }
 
 
