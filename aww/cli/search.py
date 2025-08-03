@@ -4,6 +4,8 @@ from pathlib import Path
 from lancedb.embeddings import get_registry
 import rich
 
+from pydantic_ai import Agent
+
 from aww.cli import main
 
 
@@ -22,8 +24,11 @@ from aww.cli import main
     default="all-mpnet-base-v2",
     help="The embedding model name.",
 )
+@click.option(
+    "-a", "--ask", is_flag=True, default=False, help="Ask LLM to compose the output."
+)
 @click.pass_context
-def search(ctx, query, rag, embedding_model_provider, embedding_model_name):
+def search(ctx, query, rag, embedding_model_provider, embedding_model_name, ask):
     """Searches the RAG index."""
     settings = ctx.obj["settings"]
     db_path = Path(settings.data_path) / "index"
@@ -41,4 +46,11 @@ def search(ctx, query, rag, embedding_model_provider, embedding_model_name):
     else:
         results = tbl.search(query).limit(10).to_df()
 
-    rich.print(results)
+    rich.print(results[["id"]])
+
+    if ask:
+        llm_model = ctx.obj["llm_model"]
+        ask_agent = Agent(model=llm_model, system_prompt=query)
+        ask_result = ask_agent.run_sync([c for c in results["content"]])
+
+        rich.print(ask_result.output)
