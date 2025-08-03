@@ -25,6 +25,7 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from rich.markdown import Markdown
 
+
 class Provider(enum.Enum):
     LOCAL = "local"
     GEMINI = "gemini"
@@ -32,44 +33,61 @@ class Provider(enum.Enum):
 
 
 class NoCachePolicyChoice(enum.Enum):
-    CACHE = 'do_cache'
-    ROOT = 'root'
-    DAILY = 'daily'
-    WEEKLY = 'weekly'
-    MONTHLY = 'monthly'
-    YEARLY = 'yearly'
-    MTIME = 'mtime'
-    ONE_HOUR = '1h'
+    CACHE = "do_cache"
+    ROOT = "root"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+    MTIME = "mtime"
+    ONE_HOUR = "1h"
 
 
 settings = config.Settings()
 
 
 @click.group()
-@click.option('--local_model', type=str, default=settings.local_model)
-@click.option('--local_url', type=str, default=settings.local_base_url)
-@click.option('--gemini_model', type=str, default=settings.gemini_model)
-@click.option('--openai_model', type=str, default=settings.openai_model)
-@click.option('-p', '--provider', type=click.Choice(Provider, case_sensitive=False), default='local')
-@click.option('--vault_path', type=click.Path(), default=settings.vault_path)
-@click.option('--journal_dir', type=str, default=settings.journal_dir)
-@click.option('--retrospectives_dir', type=str, default=settings.retrospectives_dir)
+@click.option("--local_model", type=str, default=settings.local_model)
+@click.option("--local_url", type=str, default=settings.local_base_url)
+@click.option("--gemini_model", type=str, default=settings.gemini_model)
+@click.option("--openai_model", type=str, default=settings.openai_model)
+@click.option(
+    "-p",
+    "--provider",
+    type=click.Choice(Provider, case_sensitive=False),
+    default="local",
+)
+@click.option("--vault_path", type=click.Path(), default=settings.vault_path)
+@click.option("--journal_dir", type=str, default=settings.journal_dir)
+@click.option("--retrospectives_dir", type=str, default=settings.retrospectives_dir)
 @click.pass_context
-def main(ctx, provider, local_model, local_url, gemini_model, openai_model, vault_path, journal_dir, retrospectives_dir):
+def main(
+    ctx,
+    provider,
+    local_model,
+    local_url,
+    gemini_model,
+    openai_model,
+    vault_path,
+    journal_dir,
+    retrospectives_dir,
+):
     llm_model = make_model(gemini_model, local_model, local_url, openai_model, provider)
     vault_path = os.path.expanduser(vault_path)
     vault = Vault(Path(vault_path), journal_dir, retrospectives_dir)
     ctx.obj = {
-        'llm_model': llm_model,
-        'vault': vault,
-        'settings': settings,
+        "llm_model": llm_model,
+        "vault": vault,
+        "settings": settings,
     }
 
 
 def make_model(gemini_model, local_model, local_url, openai_model, provider):
     match provider:
         case Provider.LOCAL:
-            model = OpenAIModel(model_name=local_model, provider=OpenAIProvider(base_url=local_url))
+            model = OpenAIModel(
+                model_name=local_model, provider=OpenAIProvider(base_url=local_url)
+            )
         case Provider.GEMINI:
             if "GEMINI_API_KEY" not in os.environ:
                 raise click.ClickException(
@@ -91,7 +109,10 @@ def whole_year(the_date: datetime.date) -> list[datetime.date]:
     year = the_date.year
     start_date = datetime.date(year, 1, 1)
     end_date = datetime.date(year, 12, 31)
-    dates = [start_date + datetime.timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+    dates = [
+        start_date + datetime.timedelta(days=i)
+        for i in range((end_date - start_date).days + 1)
+    ]
     return dates
 
 
@@ -109,14 +130,14 @@ def whole_week(the_date: datetime.date) -> list[datetime.date]:
     return [monday + datetime.timedelta(days=i) for i in range(7)]
 
 
-def get_dates_for_level(level: Level, date: datetime.datetime, yesterday: bool) -> list[datetime.date]:
+def get_dates_for_level(
+    level: Level, date: datetime.datetime, yesterday: bool
+) -> list[datetime.date]:
     """Calculates the list of dates for a given level, date, and yesterday flag."""
     the_date = date.date()
     if yesterday:
         if level != Level.daily:
-            raise click.ClickException(
-                "--yesterday can only be used with daily level"
-            )
+            raise click.ClickException("--yesterday can only be used with daily level")
         the_date = the_date - datetime.timedelta(days=1)
 
     match level:
@@ -134,22 +155,59 @@ def get_dates_for_level(level: Level, date: datetime.datetime, yesterday: bool) 
 
 
 @main.command(name="retro")
-@click.argument('level', type=click.Choice(Level, case_sensitive=False))
-@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('-n', '--no-cache', type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
-              multiple=True, help="Don't use cached results for the given level. Can be specified multiple times.")
-@click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
-              multiple=True, help="Which levels of retrospectives to include as context. Can be specified multiple times.")
-@click.option('-C', '--concurrency-limit', type=click.IntRange(min=1), help="How many concurrent LLM API calls to make.")
-@click.option('-y', '--yesterday', is_flag=True, default=False, help="Use yesterday's date (only for daily level).")
-@click.option('--output-file', type=click.Path(), help="File to write the output to.")
-@click.option('--plain-text', is_flag=True, default=False, help="Output plain text instead of markdown.")
+@click.argument("level", type=click.Choice(Level, case_sensitive=False))
+@click.option(
+    "-d", "--date", type=click.DateTime(), default=datetime.date.today().isoformat()
+)
+@click.option(
+    "-n",
+    "--no-cache",
+    type=click.Choice(NoCachePolicyChoice, case_sensitive=False),
+    multiple=True,
+    help="Don't use cached results for the given level. Can be specified multiple times.",
+)
+@click.option(
+    "-c",
+    "--context",
+    type=click.Choice(Level, case_sensitive=False),
+    multiple=True,
+    help="Which levels of retrospectives to include as context. Can be specified multiple times.",
+)
+@click.option(
+    "-C",
+    "--concurrency-limit",
+    type=click.IntRange(min=1),
+    help="How many concurrent LLM API calls to make.",
+)
+@click.option(
+    "-y",
+    "--yesterday",
+    is_flag=True,
+    default=False,
+    help="Use yesterday's date (only for daily level).",
+)
+@click.option("--output-file", type=click.Path(), help="File to write the output to.")
+@click.option(
+    "--plain-text",
+    is_flag=True,
+    default=False,
+    help="Output plain text instead of markdown.",
+)
 @click.pass_context
-def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[NoCachePolicyChoice], context: list[Level],
-                   concurrency_limit: int | None, yesterday: bool, output_file: str | None, plain_text: bool):
+def retrospectives(
+    ctx,
+    level: Level,
+    date: datetime.datetime,
+    no_cache: list[NoCachePolicyChoice],
+    context: list[Level],
+    concurrency_limit: int | None,
+    yesterday: bool,
+    output_file: str | None,
+    plain_text: bool,
+):
     """Generate retrospective(s)."""
-    vault = ctx.obj['vault']
-    llm_model = ctx.obj['llm_model']
+    vault = ctx.obj["vault"]
+    llm_model = ctx.obj["llm_model"]
     dates = get_dates_for_level(level, date, yesterday)
 
     # Set defaults based on level
@@ -191,17 +249,28 @@ def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[No
             case NoCachePolicyChoice.MTIME:
                 cache_policies.append(retro.ModificationTimeCachePolicy())
             case NoCachePolicyChoice.ONE_HOUR:
-                cache_policies.append(retro.TooOldCachePolicy(datetime.datetime.now() - datetime.timedelta(hours=1)))
+                cache_policies.append(
+                    retro.TooOldCachePolicy(
+                        datetime.datetime.now() - datetime.timedelta(hours=1)
+                    )
+                )
     if no_cache_levels:
         cache_policies.append(retro.NoLevelsCachePolicy(levels=no_cache_levels))
 
-    generator = retro.RecursiveRetrospectiveGenerator(llm_model, vault, dates, level, final_concurrency_limit)
+    generator = retro.RecursiveRetrospectiveGenerator(
+        llm_model, vault, dates, level, final_concurrency_limit
+    )
     result = asyncio.run(
-        generator.run(context_levels=final_context, cache_policies=cache_policies, gather=tqdm.asyncio.tqdm.gather))
+        generator.run(
+            context_levels=final_context,
+            cache_policies=cache_policies,
+            gather=tqdm.asyncio.tqdm.gather,
+        )
+    )
     if result:
         output_content = result.output
         if output_file:
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 f.write(output_content)
             print(f"Output written to {output_file}")
         if plain_text:
@@ -211,23 +280,23 @@ def retrospectives(ctx, level: Level, date: datetime.datetime, no_cache: list[No
 
 
 async def process_tool_call(
-        ctx: RunContext[int],
-        call_tool: CallToolFunc,
-        name: str,
-        tool_args: dict[str, Any],
+    ctx: RunContext[int],
+    call_tool: CallToolFunc,
+    name: str,
+    tool_args: dict[str, Any],
 ) -> ToolResult:
     """A tool call processor that passes along the deps."""
     print(f"Tool call {name}")
-    return await call_tool(name, tool_args, {'deps': ctx.deps})
+    return await call_tool(name, tool_args, {"deps": ctx.deps})
 
 
 @main.command(name="chat")
-@click.option('-j', '--journal_cmd', type=str, default="./journal")
+@click.option("-j", "--journal_cmd", type=str, default="./journal")
 @click.pass_context
 def chat(ctx, journal_cmd):
     """Interactive chat with LLM access to the user's vault."""
-    vault = ctx.obj['vault']
-    llm_model = ctx.obj['llm_model']
+    vault = ctx.obj["vault"]
+    llm_model = ctx.obj["llm_model"]
     server = MCPServerStdio(
         journal_cmd,
         args=["--vault", str(vault.path), "mcp"],
@@ -237,35 +306,68 @@ def chat(ctx, journal_cmd):
 
     @ask_agent.system_prompt
     def system_prompt():
-        return textwrap.dedent("""You are a helpful holistic assistant. 
+        return textwrap.dedent(
+            """You are a helpful holistic assistant. 
         Read the user retrospectives, weekly journal and pages as needed, then answer the user question.
         Call at most one tool at a time.
-        """)
+        """
+        )
 
     ask_agent.to_cli_sync(prog_name="aww")
 
 
 @main.command(name="ask")
-@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('-f', '--prompt_file', type=click.Path(exists=True), default=None)
-@click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
-              multiple=True, help="Context levels for retrospective",
-              default=[Level.daily, Level.weekly, Level.monthly, Level.yearly])
-@click.argument('level', type=click.Choice(Level, case_sensitive=False))
-@click.argument('prompt', type=str)
-@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
-@click.option('-v', '--verbose', is_flag=True, default=False, help="Be verbose (show all sources)")
-@click.option('--output-file', type=click.Path(), help="File to write the output to.")
-@click.option('--plain-text', is_flag=True, default=False, help="Output plain text instead of markdown.")
+@click.option(
+    "-d", "--date", type=click.DateTime(), default=datetime.date.today().isoformat()
+)
+@click.option("-f", "--prompt_file", type=click.Path(exists=True), default=None)
+@click.option(
+    "-c",
+    "--context",
+    type=click.Choice(Level, case_sensitive=False),
+    multiple=True,
+    help="Context levels for retrospective",
+    default=[Level.daily, Level.weekly, Level.monthly, Level.yearly],
+)
+@click.argument("level", type=click.Choice(Level, case_sensitive=False))
+@click.argument("prompt", type=str)
+@click.option(
+    "-y",
+    "--yesterday",
+    is_flag=True,
+    default=False,
+    help="Switch to previous date (only for daily level)",
+)
+@click.option(
+    "-v", "--verbose", is_flag=True, default=False, help="Be verbose (show all sources)"
+)
+@click.option("--output-file", type=click.Path(), help="File to write the output to.")
+@click.option(
+    "--plain-text",
+    is_flag=True,
+    default=False,
+    help="Output plain text instead of markdown.",
+)
 @click.pass_context
-def ask(ctx, date, yesterday, context, level, prompt, prompt_file, verbose, output_file, plain_text):
+def ask(
+    ctx,
+    date,
+    yesterday,
+    context,
+    level,
+    prompt,
+    prompt_file,
+    verbose,
+    output_file,
+    plain_text,
+):
     """Concatenate retrospectives and ask a question."""
-    vault = ctx.obj['vault']
-    llm_model = ctx.obj['llm_model']
+    vault = ctx.obj["vault"]
+    llm_model = ctx.obj["llm_model"]
     dates = get_dates_for_level(level, date, yesterday)
 
     if prompt_file:
-        prompt = open(prompt_file, 'r').read()
+        prompt = open(prompt_file, "r").read()
 
     ask_agent = Agent(model=llm_model, system_prompt=prompt)
 
@@ -283,7 +385,7 @@ def ask(ctx, date, yesterday, context, level, prompt, prompt_file, verbose, outp
     result = ask_agent.run_sync(user_prompt=retros)
     output_content = result.output
     if output_file:
-        with open(output_file, 'w') as f:
+        with open(output_file, "w") as f:
             f.write(output_content)
         print(f"Output written to {output_file}")
     if plain_text:
@@ -293,23 +395,51 @@ def ask(ctx, date, yesterday, context, level, prompt, prompt_file, verbose, outp
 
 
 @main.command(name="rewrite_prompt")
-@click.option('--critique_local_model', type=str)
-@click.option('--critique_local_url', type=str)
-@click.option('--critique_gemini_model', type=str)
-@click.option('--critique_openai_model', type=str)
-@click.option('-P', '--critique_provider', type=click.Choice(Provider, case_sensitive=False), default='local')
-@click.option('-d', '--date', type=click.DateTime(), default=datetime.date.today().isoformat())
-@click.option('-c', '--context', type=click.Choice(Level, case_sensitive=False),
-              multiple=True, help="Context levels for retrospective",
-              default=[Level.daily, Level.weekly, Level.monthly, Level.yearly])
-@click.argument('level', type=click.Choice(Level, case_sensitive=False))
-@click.option('-y', '--yesterday', is_flag=True, default=False, help="Switch to previous date (only for daily level)")
+@click.option("--critique_local_model", type=str)
+@click.option("--critique_local_url", type=str)
+@click.option("--critique_gemini_model", type=str)
+@click.option("--critique_openai_model", type=str)
+@click.option(
+    "-P",
+    "--critique_provider",
+    type=click.Choice(Provider, case_sensitive=False),
+    default="local",
+)
+@click.option(
+    "-d", "--date", type=click.DateTime(), default=datetime.date.today().isoformat()
+)
+@click.option(
+    "-c",
+    "--context",
+    type=click.Choice(Level, case_sensitive=False),
+    multiple=True,
+    help="Context levels for retrospective",
+    default=[Level.daily, Level.weekly, Level.monthly, Level.yearly],
+)
+@click.argument("level", type=click.Choice(Level, case_sensitive=False))
+@click.option(
+    "-y",
+    "--yesterday",
+    is_flag=True,
+    default=False,
+    help="Switch to previous date (only for daily level)",
+)
 @click.pass_context
-def rewrite_prompt(ctx, critique_local_model, critique_local_url, critique_gemini_model, critique_openai_model,
-                   critique_provider, date, yesterday, context, level):
-    vault = ctx.obj['vault']
-    llm_model = ctx.obj['llm_model']
-    settings = ctx.obj['settings']
+def rewrite_prompt(
+    ctx,
+    critique_local_model,
+    critique_local_url,
+    critique_gemini_model,
+    critique_openai_model,
+    critique_provider,
+    date,
+    yesterday,
+    context,
+    level,
+):
+    vault = ctx.obj["vault"]
+    llm_model = ctx.obj["llm_model"]
+    settings = ctx.obj["settings"]
     critique_local_model = critique_local_model or settings.local_model
     critique_local_url = critique_local_url or settings.local_base_url
     critique_gemini_model = critique_gemini_model or settings.gemini_model
@@ -327,20 +457,27 @@ def rewrite_prompt(ctx, critique_local_model, critique_local_url, critique_gemin
         page_content = asyncio.run(aww.retro.page_content(node))
         content.insert(0, page_content)
 
-    critique_model = make_model(critique_gemini_model, critique_local_model, critique_local_url, critique_openai_model,
-                                critique_provider)
+    critique_model = make_model(
+        critique_gemini_model,
+        critique_local_model,
+        critique_local_url,
+        critique_openai_model,
+        critique_provider,
+    )
     critique_agent = Agent(model=critique_model, output_type=str)
 
     @critique_agent.system_prompt
     def critique():
-        return textwrap.dedent("""
+        return textwrap.dedent(
+            """
         You are an expert at writing LLM prompts. You will receive:
         1) the prompt
         2) the output
         3) a series of input messages
         Your job is to write a revised prompt that is more performant.
         Write only the revised prompt in full, in markdown format.
-        """)
+        """
+        )
 
     prompt_file = Path(aww.__file__).parent / "retro" / f"{level.value}.md"
     prompt = prompt_file.read_text()
@@ -350,7 +487,9 @@ def rewrite_prompt(ctx, critique_local_model, critique_local_url, critique_gemin
     async def do_critique():
         gen_result = await gen_agent.run(user_prompt=content)
         gen_output = gen_result.output
-        critique_result = await critique_agent.run(user_prompt=[prompt, gen_output] + content)
+        critique_result = await critique_agent.run(
+            user_prompt=[prompt, gen_output] + content
+        )
         return critique_result.output
 
     result = asyncio.run(do_critique())
