@@ -100,9 +100,7 @@ class Index:
                             "id": page.name,
                             "path": str(page.path),
                             "mtime_ns": page.mtime_ns(),
-                            "frontmatter": json.dumps(
-                                page.frontmatter(), default=str
-                            ),
+                            "frontmatter": json.dumps(page.frontmatter(), default=str),
                             "content": page.content(),
                         }
                     )
@@ -114,7 +112,7 @@ class Index:
             if since_mtime_ns and ids_to_update:
                 ids_str = ", ".join([f"'{_id}'" for _id in ids_to_update])
                 try:
-                    self.tbl.delete(f'id IN ({ids_str})')
+                    self.tbl.delete(f"id IN ({ids_str})")
                 except Exception as e:
                     print(
                         f"Could not delete old entries for updating, may result in duplicates: {e}"
@@ -131,23 +129,8 @@ class Index:
         if self.tbl.count_rows() == 0:
             return 0
 
-        try:
-            # This is efficient if there's a scalar index on mtime_ns
-            df = (
-                self.tbl.search()
-                .select(["mtime_ns"])
-                .limit(1)
-                .sort_by("mtime_ns", ascending=False)
-                .to_df()
-            )
-            if not df.empty:
-                return int(df["mtime_ns"][0])
-        except Exception:
-            # Fallback for when sorting isn't supported (e.g., no index)
-            all_mtime = self.tbl.to_pandas(columns=["mtime_ns"])
-            if not all_mtime.empty:
-                return int(all_mtime["mtime_ns"].max())
-        return 0
+        df = self.tbl.to_pandas()
+        return df["mtime_ns"].max()
 
     def create_fts_index(self):
         """Creates the FTS index."""
@@ -161,7 +144,7 @@ class Index:
         if self.tbl is None:
             raise ValueError("Table not created or opened yet.")
         print("Creating scalar index on mtime_ns...")
-        self.tbl.create_index("mtime_ns")
+        self.tbl.create_scalar_index("mtime_ns")
 
     def create_vector_index(self):
         """Creates the vector index."""
@@ -181,6 +164,10 @@ class Index:
 
         if rag:
             query_vector = self.model.generate_embeddings([query])[0]
-            return self.tbl.search(query_vector).limit(10).to_df()
+            df = self.tbl.search(query_vector).limit(10).to_pandas()
         else:
-            return self.tbl.search(query).limit(10).to_df()
+            df = self.tbl.search(query).limit(10).to_pandas()
+            # Workaround for FTS returning all pages
+            # TODO: understand why FTS is broken
+            df = df[df["content"].apply(lambda content: query in content)]
+        return df
