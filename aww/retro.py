@@ -19,12 +19,13 @@ def md5(s: str) -> str:
     return hashlib.md5(s.encode("utf-8")).hexdigest()
 
 
-MARKDOWN_RE = re.compile('```markdown\n(.*?)\n```', re.DOTALL | re.MULTILINE)
+MARKDOWN_RE = re.compile("```markdown\n(.*?)\n```", re.DOTALL | re.MULTILINE)
 
 
 @dataclass
 class RetrospectiveResult:
     """Holds the result of a retrospective generation, including dates, output, and the associated page."""
+
     dates: list[date]
     output: str
     page: Page
@@ -40,6 +41,7 @@ CachePolicy = Callable[[Node, Tree], None]
 
 class NoRootCachePolicy(CachePolicy):
     """Cache policy that disables cache for the root node."""
+
     def __call__(self, node: Node, tree: Tree):
         """Disable cache for the given node (root)."""
         node.use_cache = False
@@ -47,6 +49,7 @@ class NoRootCachePolicy(CachePolicy):
 
 class NoLevelsCachePolicy(CachePolicy):
     """Cache policy that disables cache for nodes at specified levels."""
+
     def __init__(self, levels: Sequence[Level]):
         """Initialize with a sequence of levels for which cache should be disabled."""
         self.levels = set(levels)
@@ -60,6 +63,7 @@ class NoLevelsCachePolicy(CachePolicy):
 
 class ModificationTimeCachePolicy(CachePolicy):
     """Cache policy that disables cache if the source page is newer than the retro page."""
+
     def __call__(self, node: Node, tree: Tree):
         """Disable cache for nodes where the source page modification time is newer than the retro page."""
         for n in tree.values():
@@ -71,6 +75,7 @@ class ModificationTimeCachePolicy(CachePolicy):
 
 class TooOldCachePolicy(CachePolicy):
     """Cache policy that disables cache for retro pages older than a given datetime limit."""
+
     def __init__(self, limit: datetime):
         """Initialize with a datetime limit; retro pages older than this will not use cache."""
         self.limit = limit
@@ -88,38 +93,38 @@ class TooOldCachePolicy(CachePolicy):
 # Table-driven approach for extensible frontmatter metrics
 METRIC_FORMATTERS = {
     # Table-driven approach for extensible frontmatter metrics
-    'stress': 'Stress level {} of 10.',
-    'kg': 'Weight {} kg.',
-    'bmi': 'Body Mass Index (BMI) {}.',
-    'mood': 'Mood: {}',
-    'meditation': 'Meditation: {}',
-    'relax': 'Relax: {}',
-    'career': 'Career: {}',
-    'social': 'Social connections: {}',
-    'exercise': 'Exercise: {}',
-    'sleep_score': "Sleep Score: {} of 100.",
-    'vitals_score': "Vitals Score: {} of 100.",
-    'activity_score': "Activity Score: {} of 100.",
-    'relax_score': "Relax Score: {} of 100.",
+    "stress": "Stress level {} of 10.",
+    "kg": "Weight {} kg.",
+    "bmi": "Body Mass Index (BMI) {}.",
+    "mood": "Mood: {}",
+    "meditation": "Meditation: {}",
+    "relax": "Relax: {}",
+    "career": "Career: {}",
+    "social": "Social connections: {}",
+    "exercise": "Exercise: {}",
+    "sleep_score": "Sleep Score: {} of 100.",
+    "vitals_score": "Vitals Score: {} of 100.",
+    "activity_score": "Activity Score: {} of 100.",
+    "relax_score": "Relax Score: {} of 100.",
 }
 
 
-async def page_content(node):
+async def page_content(node) -> str:
     """Return the content of a node's page, including formatted frontmatter metrics if present."""
-    content = [f'Page: [[{node.page.name}]]', node.page.content()]
+    content = [f"Page: [[{node.page.name}]]", node.page.content()]
     if fm := node.page.frontmatter():
         for key, fmt in METRIC_FORMATTERS.items():
             if (value := fm.get(key)) is not None:
                 content.append(fmt.format(value))
-    return '\n'.join(content)
+    return "\n".join(content)
 
 
-async def prepare_output(node, result):
+async def prepare_output(node, result) -> str:
     """Prepare the output for a retrospective, extracting markdown and formatting the title."""
     output = result.output.strip()
     if m := MARKDOWN_RE.match(output):
         output = m.group(1)
-    output = output.replace('![[', '[[')
+    output = output.replace("![[", "[[")
     output_title = f"# {node.retro_page.name}"
     output = output_title + "\n\n" + output
     return output
@@ -130,26 +135,39 @@ class RecursiveRetrospectiveGenerator:
     Generates retrospectives recursively for a set of dates and a given level using an AI agent.
     Handles cache policies, concurrency, and prompt management.
     """
-    def __init__(self, model: Model, vault: Vault, dates: list[date], level: Level, concurrency_limit: int = 10,
-                 prompts_path: Path | None = None):
+
+    def __init__(
+        self,
+        model: Model,
+        vault: Vault,
+        dates: list[date],
+        level: Level,
+        concurrency_limit: int = 10,
+        prompts_path: Path | None = None,
+    ):
         """
         Initialize the generator with model, vault, dates, level, concurrency limit, and optional prompts path.
         Loads system prompts and sets up agents for each level.
         """
         if not prompts_path:
-            prompts_path = (Path(__file__).parent / 'retro')
+            prompts_path = Path(__file__).parent / "retro"
 
         self.prompts = {l: (prompts_path / f"{l.name}.md").read_text() for l in Level}
-        self.agents = {l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level}
+        self.agents = {
+            l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level
+        }
         self.vault = vault
         self.tree = build_retrospective_tree(vault, dates)
         self.dates = dates
         self.max_level = level
         self.semaphore = asyncio.Semaphore(concurrency_limit)
 
-    async def run(self, context_levels: list[Level],
-                  cache_policies: list[CachePolicy],
-                  gather=asyncio.gather) -> RetrospectiveResult | None:
+    async def run(
+        self,
+        context_levels: list[Level],
+        cache_policies: list[CachePolicy],
+        gather=asyncio.gather,
+    ) -> RetrospectiveResult | None:
         """
         Run the retrospective generation for the configured dates and level.
         Applies cache policies and generates the result for the root node.
@@ -160,19 +178,29 @@ class RecursiveRetrospectiveGenerator:
             policy(node, self.tree)
         return await self._generate(node, set(context_levels), gather)
 
-    async def _generate(self, node: Node, context_levels: set[Level],
-                        gather=asyncio.gather) -> RetrospectiveResult | None:
+    async def _generate(
+        self, node: Node, context_levels: set[Level], gather=asyncio.gather
+    ) -> RetrospectiveResult | None:
         """
         Recursively generate retrospectives for the given node and its sources.
         Returns a RetrospectiveResult or None if no content is available.
         """
         if node.use_cache and node.retro_page:
-            return RetrospectiveResult(dates=list(node.dates), output=node.retro_page.content(), page=node.retro_page)
+            return RetrospectiveResult(
+                dates=list(node.dates),
+                output=node.retro_page.content(),
+                page=node.retro_page,
+            )
 
         sources = list(sorted(node.sources))
 
         source_results = await gather(
-            *[self._generate(source, context_levels) for source in sources if source.level in context_levels])
+            *[
+                self._generate(source, context_levels)
+                for source in sources
+                if source.level in context_levels
+            ]
+        )
 
         source_content = [result.output for result in source_results if result]
         if node.page:
@@ -192,7 +220,7 @@ class RecursiveRetrospectiveGenerator:
             sys_prompt_hash=md5(sys_prompt),
             model_name=model_name,
             ctime=datetime.now().isoformat(),
-            user_prompt_hash=md5('\n'.join(source_content)),
+            user_prompt_hash=md5("\n".join(source_content)),
             request_tokens=usage.request_tokens,
             response_tokens=usage.response_tokens,
             total_tokens=usage.total_tokens,
@@ -201,8 +229,12 @@ class RecursiveRetrospectiveGenerator:
         )
 
         output = await prepare_output(node, result)
-        await self.save_retro_page(node, output, sources, context_levels, retro_frontmatter)
-        return RetrospectiveResult(dates=list(node.dates), output=output, page=node.retro_page)
+        await self.save_retro_page(
+            node, output, sources, context_levels, retro_frontmatter
+        )
+        return RetrospectiveResult(
+            dates=list(node.dates), output=output, page=node.retro_page
+        )
 
     @staticmethod
     async def save_retro_page(node, output, sources, levels, retro_frontmatter):
@@ -217,7 +249,9 @@ class RecursiveRetrospectiveGenerator:
             # Find the next available progressive number
             i = 1
             while True:
-                new_path = node.retro_page.path.with_suffix(f'.{i}{node.retro_page.path.suffix}')
+                new_path = node.retro_page.path.with_suffix(
+                    f".{i}{node.retro_page.path.suffix}"
+                )
                 if not new_path.exists():
                     node.retro_page.path.rename(new_path)
                     break
@@ -228,7 +262,7 @@ class RecursiveRetrospectiveGenerator:
             node.retro_page.path,
             node.level,
         )
-        with node.retro_page.path.open('w') as fd:
+        with node.retro_page.path.open("w") as fd:
             source_items = []
             if node.page:
                 source_items.append(f"[[{node.page.name}]]")
@@ -238,7 +272,7 @@ class RecursiveRetrospectiveGenerator:
                 if n.level in levels:
                     source_items.append(f"[[{n.retro_page.name}]]")
 
-            retro_frontmatter['sources'] = source_items
+            retro_frontmatter["sources"] = source_items
             fd.write("---\n")
             fd.write(yaml.dump(retro_frontmatter, default_flow_style=False))
             fd.write("---\n")

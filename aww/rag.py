@@ -2,11 +2,14 @@ import shutil
 from pathlib import Path
 import json
 import lancedb
+import pandas as pd
 from lancedb.pydantic import LanceModel, Vector
-from lancedb.embeddings import get_registry, EmbeddingFunctionConfig
+from lancedb import DBConnection
+from lancedb.embeddings import get_registry, EmbeddingFunctionConfig, EmbeddingFunction
+from lancedb.table import Table
 
 
-def get_page_schema(model):
+def get_page_schema(model) -> LanceModel:
     """Creates a Pydantic model for a Page with a vector of the correct dimension."""
 
     class Page(LanceModel):
@@ -25,6 +28,13 @@ def get_page_schema(model):
 
 class Index:
     """Encapsulates the LanceDB index."""
+
+    db_path: Path
+    embedding_model_provider: str
+    embedding_model_name: str
+    db: DBConnection
+    model: EmbeddingFunction
+    tbl: Table | None
 
     def __init__(
         self,
@@ -112,7 +122,7 @@ class Index:
             index_type="IVF_HNSW_SQ",
         )
 
-    def search(self, query, rag=False):
+    def search(self, query, rag=False) -> pd.DataFrame:
         """Searches the index."""
         if self.tbl is None:
             raise ValueError("Table not opened yet.")
