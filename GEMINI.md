@@ -59,7 +59,11 @@ The Python code provides tools for generating retrospectives from journal entrie
 
 #### Dependency Management
 
-Use `uv` for python dependencies and to run python programs, such as `aww.py` itself or `streamlit`.
+Use `uv add` for python dependencies and to run python programs, such as `aww.py` itself or `streamlit`.
+
+```bash
+uv add streamlit
+```
 
 
 ## Testing
@@ -69,12 +73,8 @@ Use `uv` for python dependencies and to run python programs, such as `aww.py` it
 To run all Go tests in this project, use the following command from the project root:
 
 ```bash
-go test ./internal/...
+go test ./...
 ```
-
-#### Why not `go test ./...`?
-
-The standard `go test ./...` command will fail because the Go portion of this project contains multiple `main` packages (in the `cmd/` directory and the root). The `go test` command is designed to test library packages, not executable `main` packages. The command `go test ./internal/...` specifically targets the testable library code within the `internal/` directory.
 
 ### Python Testing
 
