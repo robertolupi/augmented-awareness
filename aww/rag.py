@@ -15,6 +15,7 @@ def get_page_schema(model) -> LanceModel:
     class Page(LanceModel):
         id: str
         path: str
+        mtime_ns: int
         frontmatter: str
         content: str
         vector: Vector(model.ndims())
@@ -76,33 +77,77 @@ class Index:
 
     def open_table(self):
         """Opens the index table."""
-        self.tbl = self.db.open_table("pages")
+        try:
+            self.tbl = self.db.open_table("pages")
+        except FileNotFoundError:
+            self.tbl = None
 
-    def add_pages(self, vault):
-        """Adds pages from the vault to the index."""
+    def add_pages(self, vault, since_mtime_ns: int | None = None):
+        """Adds or updates pages from the vault to the index."""
         if self.tbl is None:
             raise ValueError("Table not created or opened yet.")
 
-        print("Adding pages...")
-        pages_to_add = []
+        print("Adding/updating pages...")
+        pages_to_process = []
         for page in vault.walk():
             if page.path.is_dir():
                 continue
-            try:
-                pages_to_add.append(
-                    {
-                        "id": page.name,
-                        "path": str(page.path),
-                        "frontmatter": json.dumps(page.frontmatter(), default=str),
-                        "content": page.content(),
-                    }
-                )
-            except TypeError as e:
-                print(f"Error processing {page.path}: {e}")
 
-        if pages_to_add:
-            self.tbl.add(pages_to_add)
-        return len(pages_to_add)
+            if not since_mtime_ns or page.mtime_ns() > since_mtime_ns:
+                try:
+                    pages_to_process.append(
+                        {
+                            "id": page.name,
+                            "path": str(page.path),
+                            "mtime_ns": page.mtime_ns(),
+                            "frontmatter": json.dumps(
+                                page.frontmatter(), default=str
+                            ),
+                            "content": page.content(),
+                        }
+                    )
+                except (TypeError, FileNotFoundError) as e:
+                    print(f"Error processing {page.path}: {e}")
+
+        if pages_to_process:
+            ids_to_update = [p["id"] for p in pages_to_process]
+            if since_mtime_ns and ids_to_update:
+                ids_str = ", ".join([f"'{_id}'" for _id in ids_to_update])
+                try:
+                    self.tbl.delete(f'id IN ({ids_str})')
+                except Exception as e:
+                    print(
+                        f"Could not delete old entries for updating, may result in duplicates: {e}"
+                    )
+
+            self.tbl.add(pages_to_process)
+        return len(pages_to_process)
+
+    def get_max_mtime_ns(self) -> int | None:
+        """Gets the maximum mtime_ns from the index."""
+        if self.tbl is None:
+            raise ValueError("Table not created or opened yet.")
+
+        if self.tbl.count_rows() == 0:
+            return 0
+
+        try:
+            # This is efficient if there's a scalar index on mtime_ns
+            df = (
+                self.tbl.search()
+                .select(["mtime_ns"])
+                .limit(1)
+                .sort_by("mtime_ns", ascending=False)
+                .to_df()
+            )
+            if not df.empty:
+                return int(df["mtime_ns"][0])
+        except Exception:
+            # Fallback for when sorting isn't supported (e.g., no index)
+            all_mtime = self.tbl.to_pandas(columns=["mtime_ns"])
+            if not all_mtime.empty:
+                return int(all_mtime["mtime_ns"].max())
+        return 0
 
     def create_fts_index(self):
         """Creates the FTS index."""
@@ -110,6 +155,13 @@ class Index:
             raise ValueError("Table not created or opened yet.")
         print("Creating FTS index...")
         self.tbl.create_fts_index("content")
+
+    def create_scalar_index(self):
+        """Creates a scalar index on mtime_ns."""
+        if self.tbl is None:
+            raise ValueError("Table not created or opened yet.")
+        print("Creating scalar index on mtime_ns...")
+        self.tbl.create_index("mtime_ns")
 
     def create_vector_index(self):
         """Creates the vector index."""
