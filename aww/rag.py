@@ -132,21 +132,21 @@ class Index:
         df = self.tbl.to_pandas()
         return df["mtime_ns"].max()
 
-    def create_fts_index(self):
+    def create_fts_index(self, replace: bool = False):
         """Creates the FTS index."""
         if self.tbl is None:
             raise ValueError("Table not created or opened yet.")
         print("Creating FTS index...")
-        self.tbl.create_fts_index("content")
+        self.tbl.create_fts_index("content", replace=replace)
 
-    def create_scalar_index(self):
+    def create_scalar_index(self, replace: bool = False):
         """Creates a scalar index on mtime_ns."""
         if self.tbl is None:
             raise ValueError("Table not created or opened yet.")
         print("Creating scalar index on mtime_ns...")
-        self.tbl.create_scalar_index("mtime_ns")
+        self.tbl.create_scalar_index("mtime_ns", replace=replace)
 
-    def create_vector_index(self):
+    def create_vector_index(self, replace: bool = False):
         """Creates the vector index."""
         if self.tbl is None:
             raise ValueError("Table not created or opened yet.")
@@ -155,6 +155,7 @@ class Index:
             metric="cosine",
             vector_column_name="vector",
             index_type="IVF_HNSW_SQ",
+            replace=replace,
         )
 
     def search(self, query, rag=False) -> pd.DataFrame:

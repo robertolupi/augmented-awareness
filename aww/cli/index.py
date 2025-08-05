@@ -58,9 +58,9 @@ def index(ctx, embedding_model_provider, embedding_model_name, clean, incr):
 
     if num_pages > 0:
         # Re-create indices if we've added anything
-        idx.create_fts_index()
-        idx.create_scalar_index()
-        idx.create_vector_index()
+        idx.create_fts_index(replace=incr)
+        idx.create_scalar_index(replace=incr)
+        idx.create_vector_index(replace=incr)
         print(f"Indexed {num_pages} pages in {db_path}")
-    else:
+    if not num_pages:
         print("No new or modified pages to index.")
