@@ -1,6 +1,7 @@
 import click
 from pathlib import Path
 import rich
+from rich.markdown import Markdown
 from pydantic_ai import Agent
 import asyncio
 from aww.cli import main
@@ -25,8 +26,24 @@ from aww.rag import Index
 @click.option(
     "-a", "--ask", is_flag=True, default=False, help="Ask LLM to compose the output."
 )
+@click.option("--output-file", type=click.Path(), help="File to write the output to.")
+@click.option(
+    "--plain-text",
+    is_flag=True,
+    default=False,
+    help="Output plain text instead of markdown.",
+)
 @click.pass_context
-def search(ctx, query, rag, embedding_model_provider, embedding_model_name, ask):
+def search(
+    ctx,
+    query,
+    rag,
+    embedding_model_provider,
+    embedding_model_name,
+    ask,
+    output_file,
+    plain_text,
+):
     """Searches the RAG index."""
 
     settings = ctx.obj["settings"]
@@ -43,4 +60,12 @@ def search(ctx, query, rag, embedding_model_provider, embedding_model_name, ask)
         ask_agent = Agent(model=llm_model, system_prompt=query)
         ask_result = asyncio.run(ask_agent.run([c for c in results["content"]]))
 
-        rich.print(ask_result.output)
+        output_content = ask_result.output
+        if output_file:
+            with open(output_file, "w") as f:
+                f.write(output_content)
+            print(f"Output written to {output_file}")
+        if plain_text:
+            print(output_content)
+        else:
+            rich.print(Markdown(output_content))
