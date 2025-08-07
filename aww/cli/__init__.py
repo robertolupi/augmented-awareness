@@ -1,21 +1,16 @@
 import enum
 import os
-
-import click
 from pathlib import Path
 
+import click
+
 from aww import config
+from aww.config import OpenAIConfig, GeminiConfig, LocalAIConfig
 from aww.obsidian import Vault
 from pydantic_ai.models import Model
 from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
-
-
-class Provider(enum.Enum):
-    LOCAL = "local"
-    GEMINI = "gemini"
-    OPENAI = "openai"
 
 
 class NoCachePolicyChoice(enum.Enum):
@@ -32,62 +27,62 @@ class NoCachePolicyChoice(enum.Enum):
 settings = config.Settings()
 
 
+def create_model(model_name: str) -> Model:
+    if model_name not in settings.models:
+        raise click.ClickException(f"Model '{model_name}' not found in settings.")
+
+    model_config = settings.models[model_name]
+
+    if isinstance(model_config, OpenAIConfig):
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise click.ClickException(
+                "Please set environment variable OPENAI_API_KEY or api_key in config."
+            )
+        return OpenAIModel(
+            model_name=model_config.model_name,
+            **model_config.model_settings,
+        )
+    elif isinstance(model_config, GeminiConfig):
+        if not os.environ.get("GEMINI_API_KEY"):
+            raise click.ClickException(
+                "Please set environment variable GEMINI_API_KEY or api_key in config."
+            )
+        return GeminiModel(
+            model_name=model_config.model_name,
+            **model_config.model_settings,
+        )
+    elif isinstance(model_config, LocalAIConfig):
+        return OpenAIModel(
+            model_name=model_config.model_name,
+            provider=OpenAIProvider(base_url=model_config.base_url),
+            **model_config.model_settings,
+        )
+    else:
+        # This should not be reached if config parsing is correct
+        raise click.ClickException(
+            f"Unknown provider for model '{model_name}' with config {model_config}"
+        )
+
+
 @click.group()
-@click.option("--local_model", type=str, default=settings.local_model)
-@click.option("--local_url", type=str, default=settings.local_base_url)
-@click.option("--gemini_model", type=str, default=settings.gemini_model)
-@click.option("--openai_model", type=str, default=settings.openai_model)
-@click.option(
-    "-p",
-    "--provider",
-    type=click.Choice(Provider, case_sensitive=False),
-    default="local",
-)
+@click.option("-m", "--model", "model_name", type=str, default=settings.default_model)
 @click.option("--vault_path", type=click.Path(), default=settings.vault_path)
 @click.option("--journal_dir", type=str, default=settings.journal_dir)
 @click.option("--retrospectives_dir", type=str, default=settings.retrospectives_dir)
 @click.pass_context
 def main(
     ctx,
-    provider,
-    local_model,
-    local_url,
-    gemini_model,
-    openai_model,
+    model_name,
     vault_path,
     journal_dir,
     retrospectives_dir,
 ):
-    llm_model = make_model(gemini_model, local_model, local_url, openai_model, provider)
+    llm_model = create_model(model_name)
     vault_path = os.path.expanduser(vault_path)
     vault = Vault(Path(vault_path), journal_dir, retrospectives_dir)
     ctx.obj = {
         "llm_model": llm_model,
         "vault": vault,
         "settings": settings,
-        "provider": provider,
-        "local_url": local_url,
+        "model_name": model_name,
     }
-
-
-def make_model(gemini_model, local_model, local_url, openai_model, provider):
-    match provider:
-        case Provider.LOCAL:
-            model = OpenAIModel(
-                model_name=local_model, provider=OpenAIProvider(base_url=local_url)
-            )
-        case Provider.GEMINI:
-            if "GEMINI_API_KEY" not in os.environ:
-                raise click.ClickException(
-                    "Please set environment variable GEMINI_API_KEY"
-                )
-            model = GeminiModel(model_name=gemini_model)
-        case Provider.OPENAI:
-            if "OPENAI_API_KEY" not in os.environ:
-                raise click.ClickException(
-                    "Please set environment variable OPENAI_API_KEY"
-                )
-            model = OpenAIModel(model_name=openai_model)
-        case _:
-            raise click.ClickException(f"Unknown provider: {provider}")
-    return model

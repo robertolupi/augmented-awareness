@@ -8,23 +8,14 @@ import rich
 from rich.markdown import Markdown
 
 import aww
-from aww.cli import main, Provider
+from aww.cli import main, create_model
 from aww.cli.utils import get_dates_for_level
 from aww.obsidian import Level
 from pydantic_ai import Agent
 
 
 @main.command(name="rewrite_prompt")
-@click.option("--critique_local_model", type=str)
-@click.option("--critique_local_url", type=str)
-@click.option("--critique_gemini_model", type=str)
-@click.option("--critique_openai_model", type=str)
-@click.option(
-    "-P",
-    "--critique_provider",
-    type=click.Choice(Provider, case_sensitive=False),
-    default="local",
-)
+@click.option("--critique-model", type=str)
 @click.option(
     "-d", "--date", type=click.DateTime(), default=datetime.date.today().isoformat()
 )
@@ -47,11 +38,7 @@ from pydantic_ai import Agent
 @click.pass_context
 def rewrite_prompt(
     ctx,
-    critique_local_model,
-    critique_local_url,
-    critique_gemini_model,
-    critique_openai_model,
-    critique_provider,
+    critique_model: str,
     date,
     yesterday,
     context,
@@ -60,10 +47,6 @@ def rewrite_prompt(
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
     settings = ctx.obj["settings"]
-    critique_local_model = critique_local_model or settings.local_model
-    critique_local_url = critique_local_url or settings.local_base_url
-    critique_gemini_model = critique_gemini_model or settings.gemini_model
-    critique_openai_model = critique_openai_model or settings.openai_model
     dates = get_dates_for_level(level, date, yesterday)
 
     tree = aww.obsidian.build_retrospective_tree(vault, dates)
@@ -77,14 +60,8 @@ def rewrite_prompt(
         page_content = asyncio.run(aww.retro.page_content(node))
         content.insert(0, page_content)
 
-    critique_model = main.make_model(
-        critique_gemini_model,
-        critique_local_model,
-        critique_local_url,
-        critique_openai_model,
-        critique_provider,
-    )
-    critique_agent = Agent(model=critique_model, output_type=str)
+    model = create_model(critique_model)
+    critique_agent = Agent(model=model, output_type=str)
 
     @critique_agent.system_prompt
     def critique():

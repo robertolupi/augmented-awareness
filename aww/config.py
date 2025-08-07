@@ -1,20 +1,47 @@
-from pathlib import Path
+from __future__ import annotations
 
+from pathlib import Path
+from typing import Dict, Literal, Union, Optional, Any
+
+from pydantic import Field, BaseModel
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     TomlConfigSettingsSource,
 )
 
-from pydantic_ai.models.openai import OpenAIModelName as OpenAIModel
-from pydantic_ai.models.google import GoogleModelName as GoogleAIModel
+
+class OpenAIConfig(BaseModel):
+    provider: Literal["openai"] = "openai"
+    model_name: str = "gpt-4.1"
+    model_settings: Dict[str, Any] = Field(default_factory=dict)
+
+
+class GeminiConfig(BaseModel):
+    provider: Literal["gemini"] = "gemini"
+    model_name: str = "gemini-2.5-flash"
+    model_settings: Dict[str, Any] = Field(default_factory=dict)
+
+
+class LocalAIConfig(BaseModel):
+    provider: Literal["local"] = "local"
+    model_name: str
+    base_url: str = "http://localhost:1234/v1"
+    model_settings: Dict[str, Any] = Field(default_factory=dict)
+
+
+ModelConfig = Union[OpenAIConfig, GeminiConfig, LocalAIConfig]
 
 
 class Settings(BaseSettings):
-    openai_model: OpenAIModel = "gpt-4.1"
-    gemini_model: GoogleAIModel = "gemini-2.5-flash"
-    local_model: str = ""
-    local_base_url: str = "http://localhost:1234/v1"
+    models: Dict[str, ModelConfig] = Field(
+        default_factory=lambda: {
+            "openai": OpenAIConfig(),
+            "gemini": GeminiConfig(),
+            "local": LocalAIConfig(model_name="local-model"),
+        }
+    )
+    default_model: str = "local"
 
     vault_path: str = "~/data/notes"
     data_path: str = "~/data/aww"
@@ -31,7 +58,8 @@ class Settings(BaseSettings):
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         return (
-            TomlConfigSettingsSource(settings_cls, Path("~/.aww.toml").expanduser()),
+            TomlConfigSettingsSource(settings_cls, Path("aww.toml")),
+            # TomlConfigSettingsSource(settings_cls, Path("~/.aww.toml").expanduser()),
             env_settings,
             dotenv_settings,
             init_settings,
