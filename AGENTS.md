@@ -68,6 +68,8 @@ uv add streamlit
 
 ## Testing
 
+Ignore `demo_vault` it is not relevant for development: it doesn't contain code or test data, but a demo based on a book (its length will overwhelm agents).
+
 ### Go Testing
 
 To run all Go tests in this project, use the following command from the project root:
