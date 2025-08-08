@@ -1,12 +1,12 @@
-# Gemini Code-Assist Guide
+# Agents Code-Assist Guide
 
-This document provides guidance for using Gemini to assist with development in this project. This is a multi-language project, which will include Go and Python.
+This document provides guidance for using agents to assist with development in this project. This is a multi-language project, which will include Go and Python.
 
 ## Obsidian Vault structure
 
 Markdown files hold notes inside the Obsidian vault.
 
-Augmented Awareness supports free-form vaults, but my vault is organized in the following directories:
+Augmented Awareness expect a vault organized in the following directories (journal, and retrospectives are mandatory; others are optional):
 
 - `0-inbox`: new notes, that I am still writing and working on.
 - `1-projects`: project notes (GTD projects).
