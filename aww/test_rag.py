@@ -86,7 +86,7 @@ def test_rag_search(temp_db_path: Path, test_vault: Vault):
     idx.add_pages(test_vault)
     idx.create_vector_index()
 
-    results = idx.search("what is yoga?", rag=True)
+    results = idx.search("yoga", rag=True)
     assert not results.empty
     assert len(results) > 0
     # The top result should be the page mentioning yoga

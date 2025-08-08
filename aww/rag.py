@@ -167,8 +167,5 @@ class Index:
             query_vector = self.model.generate_embeddings([query])[0]
             df = self.tbl.search(query_vector).limit(10).to_pandas()
         else:
-            df = self.tbl.search(query).limit(10).to_pandas()
-            # Workaround for FTS returning all pages
-            # TODO: understand why FTS is broken
-            df = df[df["content"].apply(lambda content: query in content)]
+            df = self.tbl.search(query, query_type="fts").limit(10).to_pandas()
         return df
