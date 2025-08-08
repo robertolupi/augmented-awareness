@@ -66,9 +66,9 @@ def create_model(model_name: str) -> Model:
 
 @click.group()
 @click.option("-m", "--model", "model_name", type=str, default=settings.default_model)
-@click.option("--vault_path", type=click.Path(), default=settings.vault_path)
-@click.option("--journal_dir", type=str, default=settings.journal_dir)
-@click.option("--retrospectives_dir", type=str, default=settings.retrospectives_dir)
+@click.option("--vault-path", type=click.Path(), default=settings.vault_path)
+@click.option("--journal-dir", type=str, default=settings.journal_dir)
+@click.option("--retrospectives-dir", type=str, default=settings.retrospectives_dir)
 @click.pass_context
 def main(
     ctx,

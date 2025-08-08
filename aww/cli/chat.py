@@ -20,7 +20,7 @@ async def process_tool_call(
 
 
 @main.command(name="chat")
-@click.option("-j", "--journal_cmd", type=str, default="./journal")
+@click.option("-j", "--journal-cmd", type=str, default="./journal")
 @click.pass_context
 def chat(ctx, journal_cmd):
     """Interactive chat with LLM access to the user's vault."""

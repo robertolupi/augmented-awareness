@@ -15,7 +15,7 @@ from pydantic_ai import Agent
 @click.option(
     "-d", "--date", type=click.DateTime(), default=datetime.date.today().isoformat()
 )
-@click.option("-f", "--prompt_file", type=click.Path(exists=True), default=None)
+@click.option("-f", "--prompt-file", type=click.Path(exists=True), default=None)
 @click.option(
     "-c",
     "--context",
