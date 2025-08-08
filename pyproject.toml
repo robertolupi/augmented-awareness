@@ -9,6 +9,7 @@ dependencies = [
     "lancedb>=0.24.2",
     "matplotlib>=3.10.3",
     "nltk>=3.9.1",
+    "pandas-stubs==2.3.0.250703",
     "pyarrow>=21.0.0",
     "pydantic>=2.11.7",
     "pydantic-ai==0.4.6",
