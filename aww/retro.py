@@ -1,42 +1,75 @@
-import asyncio
-import re
+import calendar
 from dataclasses import dataclass
-from datetime import date, datetime
-from pathlib import Path
-from typing import Callable, Sequence
-import hashlib
+import datetime
+from typing import Dict, Callable, Sequence
 
-from pydantic_ai import Agent
-from pydantic_ai.models import Model
-
-import yaml
-
-from aww.obsidian import Vault, Page, Level, Node, Tree, build_retrospective_tree
-
-
-def md5(s: str) -> str:
-    """Return the MD5 hash of the given string."""
-    return hashlib.md5(s.encode("utf-8")).hexdigest()
-
-
-MARKDOWN_RE = re.compile("```markdown\n(.*?)\n```", re.DOTALL | re.MULTILINE)
+from aww.obsidian import Level, Page, Vault
 
 
 @dataclass
-class RetrospectiveResult:
-    """Holds the result of a retrospective generation, including dates, output, and the associated page."""
+class Node:
+    """
+    Represents a node in the retrospective dependency tree.
+    Holds references to dates, level, associated pages, sources, and cache usage.
+    """
 
-    dates: list[date]
-    output: str
+    dates: set[datetime.date]
+    level: Level
+    retro_page: Page
     page: Page
+    sources: set["Node"]
+    use_cache: bool = True
+
+    def __eq__(self, other):
+        """Equality based on retro_page."""
+        return isinstance(other, Node) and (self.retro_page == other.retro_page)
+
+    def __hash__(self):
+        """Hash based on retro_page."""
+        return hash(self.retro_page)
+
+    def __lt__(self, other):
+        """Order nodes by retro_page name for sorting."""
+        if not isinstance(other, Node):
+            return NotImplemented
+        return self.retro_page.name < other.retro_page.name
 
 
-import logging
+# Type alias for a mapping from Page to Node in the retrospective tree.
+Tree = Dict[Page, Node]
 
-logger = logging.getLogger(__name__)
 
+def build_retrospective_tree(vault: Vault, dates: list[datetime.date]) -> Tree:
+    """
+    Build a dependency tree of retrospectives for the given dates and vault.
+    Each node represents a retrospective at a given level and date, with sources for lower levels.
+    """
+    tree = {}
+    for d in dates:
+        for l in Level:
+            retro_page = vault.retrospective_page(d, l)
+            if retro_page not in tree:
+                r = Node(
+                    dates=set(),
+                    level=l,
+                    retro_page=retro_page,
+                    page=vault.page(d, l),
+                    sources=set(),
+                )
+                tree[retro_page] = r
+            else:
+                r = tree[retro_page]
+            r.dates.add(d)
+            for i in Level:
+                if i == l:
+                    break
+                prev_retro_page = vault.retrospective_page(d, i)
+                r.sources.add(tree[prev_retro_page])
+    return tree
+
+
+# Type alias for cache policy functions that operate on a Node and Tree.
 CachePolicy = Callable[[Node, Tree], None]
-"""Type alias for cache policy functions that operate on a Node and Tree."""
 
 
 class NoRootCachePolicy(CachePolicy):
@@ -76,7 +109,7 @@ class ModificationTimeCachePolicy(CachePolicy):
 class TooOldCachePolicy(CachePolicy):
     """Cache policy that disables cache for retro pages older than a given datetime limit."""
 
-    def __init__(self, limit: datetime):
+    def __init__(self, limit: datetime.datetime):
         """Initialize with a datetime limit; retro pages older than this will not use cache."""
         self.limit = limit
 
@@ -90,190 +123,54 @@ class TooOldCachePolicy(CachePolicy):
                 n.use_cache = False
 
 
-# Table-driven approach for extensible frontmatter metrics
-METRIC_FORMATTERS = {
-    # Table-driven approach for extensible frontmatter metrics
-    "stress": "Stress level {} of 10.",
-    "kg": "Weight {} kg.",
-    "bmi": "Body Mass Index (BMI) {}.",
-    "mood": "Mood: {}",
-    "meditation": "Meditation: {}",
-    "relax": "Relax: {}",
-    "career": "Career: {}",
-    "social": "Social connections: {}",
-    "exercise": "Exercise: {}",
-    "sleep_score": "Sleep Score: {} of 100.",
-    "vitals_score": "Vitals Score: {} of 100.",
-    "activity_score": "Activity Score: {} of 100.",
-    "relax_score": "Relax Score: {} of 100.",
-}
-
-
-async def page_content(node) -> str:
-    """Return the content of a node's page, including formatted frontmatter metrics if present."""
-    content = [f"Page: [[{node.page.name}]]", node.page.content()]
-    if fm := node.page.frontmatter():
-        for key, fmt in METRIC_FORMATTERS.items():
-            if (value := fm.get(key)) is not None:
-                content.append(fmt.format(value))
-    return "\n".join(content)
-
-
-async def prepare_output(node, result) -> str:
-    """Prepare the output for a retrospective, extracting markdown and formatting the title."""
-    output = result.output.strip()
-    if m := MARKDOWN_RE.match(output):
-        output = m.group(1)
-    output = output.replace("![[", "[[")
-    output_title = f"# {node.retro_page.name}"
-    output = output_title + "\n\n" + output
-    return output
-
-
-class RecursiveRetrospectiveGenerator:
-    """
-    Generates retrospectives recursively for a set of dates and a given level using an AI agent.
-    Handles cache policies, concurrency, and prompt management.
-    """
+class Selection:
+    """A selection of retrospectives."""
 
     def __init__(
-        self,
-        model: Model,
-        vault: Vault,
-        dates: list[date],
-        level: Level,
-        concurrency_limit: int = 10,
-        prompts_path: Path | None = None,
+        self, vault: Vault, date: datetime.date | datetime.datetime, level: Level
     ):
-        """
-        Initialize the generator with model, vault, dates, level, concurrency limit, and optional prompts path.
-        Loads system prompts and sets up agents for each level.
-        """
-        if not prompts_path:
-            prompts_path = Path(__file__).parent / "retro"
-
-        self.prompts = {l: (prompts_path / f"{l.name}.md").read_text() for l in Level}
-        self.agents = {
-            l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level
-        }
         self.vault = vault
-        self.tree = build_retrospective_tree(vault, dates)
+        self.date = date.date() if isinstance(date, datetime.date) else date
+        match level:
+            case Level.daily:
+                dates = [self.date]
+            case Level.weekly:
+                dates = whole_week(self.date)
+            case Level.monthly:
+                dates = whole_month(self.date)
+            case Level.yearly:
+                dates = whole_year(self.date)
+            case _:
+                raise ValueError("Invalid selection level")
+        self.tree = build_retrospective_tree(self.vault, dates)
         self.dates = dates
-        self.max_level = level
-        self.semaphore = asyncio.Semaphore(concurrency_limit)
+        root_retro = self.vault.retrospective_page(date, level)
+        self.root = self.tree[root_retro]
 
-    async def run(
-        self,
-        context_levels: list[Level],
-        cache_policies: list[CachePolicy],
-        gather=asyncio.gather,
-    ) -> RetrospectiveResult | None:
-        """
-        Run the retrospective generation for the configured dates and level.
-        Applies cache policies and generates the result for the root node.
-        """
-        retro_page = self.vault.retrospective_page(self.dates[0], self.max_level)
-        node = self.tree[retro_page]
-        for policy in cache_policies:
-            policy(node, self.tree)
-        return await self._generate(node, set(context_levels), gather)
+    def apply_cache_policy(self, cache_policy: CachePolicy):
+        cache_policy(self.root, self.tree)
 
-    async def _generate(
-        self, node: Node, context_levels: set[Level], gather=asyncio.gather
-    ) -> RetrospectiveResult | None:
-        """
-        Recursively generate retrospectives for the given node and its sources.
-        Returns a RetrospectiveResult or None if no content is available.
-        """
-        if node.use_cache and node.retro_page:
-            return RetrospectiveResult(
-                dates=list(node.dates),
-                output=node.retro_page.content(),
-                page=node.retro_page,
-            )
 
-        sources = list(sorted(node.sources))
+def whole_year(the_date: datetime.date) -> list[datetime.date]:
+    year = the_date.year
+    start_date = datetime.date(year, 1, 1)
+    end_date = datetime.date(year, 12, 31)
+    dates = [
+        start_date + datetime.timedelta(days=i)
+        for i in range((end_date - start_date).days + 1)
+    ]
+    return dates
 
-        source_results = await gather(
-            *[
-                self._generate(source, context_levels)
-                for source in sources
-                if source.level in context_levels
-            ]
-        )
 
-        source_content = [result.output for result in source_results if result]
-        if node.page:
-            source_content.insert(0, await page_content(node))
-        if not source_content:
-            return None
+def whole_month(the_date: datetime.date) -> list[datetime.date]:
+    year = the_date.year
+    month = the_date.month
+    num_days = calendar.monthrange(year, month)[1]
+    dates = [datetime.date(year, month, day) for day in range(1, num_days + 1)]
+    return dates
 
-        agent = self.agents[node.level]
-        model_name = agent.model.model_name
-        sys_prompt = self.prompts[node.level]
 
-        async with self.semaphore:
-            result = await agent.run(user_prompt=source_content)
-
-        usage = result.usage()
-        retro_frontmatter = dict(
-            sys_prompt_hash=md5(sys_prompt),
-            model_name=model_name,
-            ctime=datetime.now().isoformat(),
-            user_prompt_hash=md5("\n".join(source_content)),
-            request_tokens=usage.request_tokens,
-            response_tokens=usage.response_tokens,
-            total_tokens=usage.total_tokens,
-            details=usage.details,
-            requests=usage.requests,
-        )
-
-        output = await prepare_output(node, result)
-        await self.save_retro_page(
-            node, output, sources, context_levels, retro_frontmatter
-        )
-        return RetrospectiveResult(
-            dates=list(node.dates), output=output, page=node.retro_page
-        )
-
-    @staticmethod
-    async def save_retro_page(node, output, sources, levels, retro_frontmatter):
-        """
-        Save the generated retrospective page to disk, including frontmatter and source references.
-        If the file already exists, it will be renamed with a progressive number.
-        """
-        # ensure parent directory exists
-        node.retro_page.path.parent.mkdir(parents=True, exist_ok=True)
-
-        if node.retro_page.path.exists():
-            # Find the next available progressive number
-            i = 1
-            while True:
-                new_path = node.retro_page.path.with_suffix(
-                    f".{i}{node.retro_page.path.suffix}"
-                )
-                if not new_path.exists():
-                    node.retro_page.path.rename(new_path)
-                    break
-                i += 1
-
-        logger.info(
-            "Writing retrospective page %s (level=%s)",
-            node.retro_page.path,
-            node.level,
-        )
-        with node.retro_page.path.open("w") as fd:
-            source_items = []
-            if node.page:
-                source_items.append(f"[[{node.page.name}]]")
-            for n in sources:
-                if not n.retro_page:
-                    continue
-                if n.level in levels:
-                    source_items.append(f"[[{n.retro_page.name}]]")
-
-            retro_frontmatter["sources"] = source_items
-            fd.write("---\n")
-            fd.write(yaml.dump(retro_frontmatter, default_flow_style=False))
-            fd.write("---\n")
-            fd.write(output)
+def whole_week(the_date: datetime.date) -> list[datetime.date]:
+    """Returns the weekly dates (Mon to Friday) for the week that contains the given date."""
+    monday = the_date - datetime.timedelta(days=the_date.weekday())
+    return [monday + datetime.timedelta(days=i) for i in range(7)]

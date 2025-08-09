@@ -5,8 +5,9 @@ import rich
 from rich.markdown import Markdown
 
 import aww.obsidian
+import aww.retro
+from aww import retro
 from aww.cli import main
-from aww.cli.utils import get_dates_for_level
 from aww.obsidian import Level
 from pydantic_ai import Agent
 
@@ -59,16 +60,17 @@ def ask(
     """Concatenate retrospectives and ask a question."""
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
-    dates = get_dates_for_level(level, date, yesterday)
+    if yesterday:
+        date = date - datetime.timedelta(days=1)
+
+    sel = retro.Selection(vault, date, level)
 
     if prompt_file:
         prompt = open(prompt_file, "r").read()
 
     ask_agent = Agent(model=llm_model, system_prompt=prompt)
 
-    tree = aww.obsidian.build_retrospective_tree(vault, dates)
-    retro_page = vault.retrospective_page(dates[0], level)
-    node = tree[retro_page]
+    node = sel.root
     sources = [n for n in node.sources if n.level in context]
     if node.level in context:
         sources.insert(0, node)

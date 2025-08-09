@@ -9,7 +9,7 @@ from aww.cli import main
 
 
 async def process_tool_call(
-    ctx: RunContext[int],
+    ctx: RunContext[Any],
     call_tool: CallToolFunc,
     name: str,
     tool_args: dict[str, Any],
