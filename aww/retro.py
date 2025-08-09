@@ -130,7 +130,13 @@ class Selection:
         self, vault: Vault, date: datetime.date | datetime.datetime, level: Level
     ):
         self.vault = vault
-        self.date = date.date() if isinstance(date, datetime.date) else date
+        # Accept both datetime.date and datetime.datetime
+        if isinstance(date, datetime.datetime):
+            self.date = date.date()
+        elif isinstance(date, datetime.date):
+            self.date = date
+        else:
+            raise TypeError("date must be datetime.date or datetime.datetime")
         match level:
             case Level.daily:
                 dates = [self.date]
@@ -144,7 +150,7 @@ class Selection:
                 raise ValueError("Invalid selection level")
         self.tree = build_retrospective_tree(self.vault, dates)
         self.dates = dates
-        root_retro = self.vault.retrospective_page(date, level)
+        root_retro = self.vault.retrospective_page(self.date, level)
         self.root = self.tree[root_retro]
 
     def apply_cache_policy(self, cache_policy: CachePolicy):

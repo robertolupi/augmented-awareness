@@ -12,9 +12,9 @@ from aww.test_retro import days_between, tmp_vault
 class RecursiveRetrospectiveGeneratorForTesting(
     retro_gen.RecursiveRetrospectiveGenerator
 ):
-    def __init__(self, vault: Vault, days: list[datetime.date], level: Level):
+    def __init__(self, sel: retro.Selection):
         model = TestModel()
-        super().__init__(model, vault, days, level)
+        super().__init__(model, sel)
         self.saved_nodes = {}
 
     async def save_retro_page(self, node, output, sources, levels, retro_frontmatter):
@@ -23,8 +23,8 @@ class RecursiveRetrospectiveGeneratorForTesting(
 
 
 def test_recursive_retrospective_generator(tmp_vault):
-    days_in_year = list(days_between(2025, 1, 1, 2025, 12, 31))
-    g = RecursiveRetrospectiveGeneratorForTesting(tmp_vault, days_in_year, Level.yearly)
+    sel = retro.Selection(tmp_vault, datetime.date(2025, 4, 1), Level.yearly)
+    g = RecursiveRetrospectiveGeneratorForTesting(sel)
     asyncio.run(
         g.run(
             context_levels=list(Level),
@@ -34,7 +34,7 @@ def test_recursive_retrospective_generator(tmp_vault):
             ],
         )
     )
-    d = days_in_year[0]
+    d = sel.dates[0]
     yearly = tmp_vault.retrospective_page(d, Level.yearly)
 
     march30 = datetime.date(2025, 3, 30)
@@ -58,6 +58,7 @@ def test_recursive_retrospective_generator(tmp_vault):
 
 def test_recursive_retrospective_generator_rename_on_disk(tmp_vault):
     day = datetime.date(2025, 1, 1)
+    sel = retro.Selection(tmp_vault, day, Level.daily)
     model = TestModel()
 
     # Create a fake journal file for the day
@@ -70,7 +71,7 @@ def test_recursive_retrospective_generator_rename_on_disk(tmp_vault):
     with journal_path.open("w") as f:
         f.write("# Test Journal Entry")
 
-    g = RecursiveRetrospectiveGenerator(model, tmp_vault, [day], Level.daily)
+    g = RecursiveRetrospectiveGenerator(model, sel)
 
     # Run the generator twice
     asyncio.run(
