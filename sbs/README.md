@@ -2,6 +2,7 @@ SBS — SvelteKit + Tailwind starter
 
 Quick start
 
+- Set the environment variable `VAULT_PATH` to your vault.
 - Install dependencies: `npm install` (or `pnpm install` / `yarn install`).
 - Start dev server: `npm run dev` then open the URL printed (usually http://localhost:5173).
 - Build for production: `npm run build` then `npm run preview`.
