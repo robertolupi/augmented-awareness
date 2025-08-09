@@ -126,31 +126,36 @@ class TooOldCachePolicy(CachePolicy):
 class Selection:
     """A selection of retrospectives."""
 
+    vault: Vault
+    dates: list[datetime.date]
+    tree: Tree
+    root: Node
+
     def __init__(
         self, vault: Vault, date: datetime.date | datetime.datetime, level: Level
     ):
         self.vault = vault
         # Accept both datetime.date and datetime.datetime
         if isinstance(date, datetime.datetime):
-            self.date = date.date()
+            d = date.date()
         elif isinstance(date, datetime.date):
-            self.date = date
+            d = date
         else:
             raise TypeError("date must be datetime.date or datetime.datetime")
         match level:
             case Level.daily:
-                dates = [self.date]
+                dates = [d]
             case Level.weekly:
-                dates = whole_week(self.date)
+                dates = whole_week(d)
             case Level.monthly:
-                dates = whole_month(self.date)
+                dates = whole_month(d)
             case Level.yearly:
-                dates = whole_year(self.date)
+                dates = whole_year(d)
             case _:
                 raise ValueError("Invalid selection level")
         self.tree = build_retrospective_tree(self.vault, dates)
         self.dates = dates
-        root_retro = self.vault.retrospective_page(self.date, level)
+        root_retro = self.vault.retrospective_page(d, level)
         self.root = self.tree[root_retro]
 
     def apply_cache_policy(self, cache_policy: CachePolicy):
