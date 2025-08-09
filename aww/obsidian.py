@@ -5,10 +5,9 @@ Provides classes and functions for working with Obsidian-style markdown vaults, 
 
 import enum
 import os
-from dataclasses import dataclass
 from datetime import date
 import re
-from typing import Dict, Any
+from typing import Any
 
 import yaml
 
@@ -144,65 +143,3 @@ class Page:
             except yaml.error.YAMLError:
                 return {}
         return {}
-
-
-@dataclass
-class Node:
-    """
-    Represents a node in the retrospective dependency tree.
-    Holds references to dates, level, associated pages, sources, and cache usage.
-    """
-
-    dates: set[date]
-    level: Level
-    retro_page: Page
-    page: Page
-    sources: set["Node"]
-    use_cache: bool = True
-
-    def __eq__(self, other):
-        """Equality based on retro_page."""
-        return isinstance(other, Node) and (self.retro_page == other.retro_page)
-
-    def __hash__(self):
-        """Hash based on retro_page."""
-        return hash(self.retro_page)
-
-    def __lt__(self, other):
-        """Order nodes by retro_page name for sorting."""
-        if not isinstance(other, Node):
-            return NotImplemented
-        return self.retro_page.name < other.retro_page.name
-
-
-Tree = Dict[Page, Node]
-"""Type alias for a mapping from Page to Node in the retrospective tree."""
-
-
-def build_retrospective_tree(vault: Vault, dates: list[date]) -> Tree:
-    """
-    Build a dependency tree of retrospectives for the given dates and vault.
-    Each node represents a retrospective at a given level and date, with sources for lower levels.
-    """
-    tree = {}
-    for d in dates:
-        for l in Level:
-            retro_page = vault.retrospective_page(d, l)
-            if retro_page not in tree:
-                r = Node(
-                    dates=set(),
-                    level=l,
-                    retro_page=retro_page,
-                    page=vault.page(d, l),
-                    sources=set(),
-                )
-                tree[retro_page] = r
-            else:
-                r = tree[retro_page]
-            r.dates.add(d)
-            for i in Level:
-                if i == l:
-                    break
-                prev_retro_page = vault.retrospective_page(d, i)
-                r.sources.add(tree[prev_retro_page])
-    return tree

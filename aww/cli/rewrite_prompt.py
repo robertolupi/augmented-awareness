@@ -8,14 +8,15 @@ import rich
 from rich.markdown import Markdown
 
 import aww
+import aww.retro, aww.retro_gen
+from aww import retro
 from aww.cli import main, create_model
-from aww.cli.utils import get_dates_for_level
 from aww.obsidian import Level
 from pydantic_ai import Agent
 
 
-@main.command(name="rewrite_prompt")
-@click.option("--critique-model", type=str)
+@main.command()
+@click.option("--critique-model", type=str, default="local")
 @click.option(
     "-d", "--date", type=click.DateTime(), default=datetime.date.today().isoformat()
 )
@@ -46,18 +47,17 @@ def rewrite_prompt(
 ):
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
-    settings = ctx.obj["settings"]
-    dates = get_dates_for_level(level, date, yesterday)
+    if yesterday:
+        date = date - datetime.timedelta(days=1)
 
-    tree = aww.obsidian.build_retrospective_tree(vault, dates)
-    retro_page = vault.retrospective_page(dates[0], level)
-    node = tree[retro_page]
+    sel = retro.Selection(vault, date, level)
+    node = sel.root
     sources = [n for n in node.sources if n.level in context]
     if node.level in context:
         sources.insert(0, node)
     content = [s.retro_page.content() for s in sources if s.retro_page]
     if level == Level.daily:
-        page_content = asyncio.run(aww.retro.page_content(node))
+        page_content = asyncio.run(aww.retro_gen.page_content(node))
         content.insert(0, page_content)
 
     model = create_model(critique_model)

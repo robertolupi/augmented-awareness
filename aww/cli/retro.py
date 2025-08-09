@@ -6,10 +6,10 @@ import rich
 from tqdm.asyncio import tqdm
 from rich.markdown import Markdown
 
-from aww import retro
+from aww import retro, retro_gen
 from aww.cli import NoCachePolicyChoice, main
-from aww.cli.utils import get_dates_for_level
 from aww.obsidian import Level
+from aww.retro import whole_week, whole_month, whole_year
 
 
 @main.command(name="retro")
@@ -66,7 +66,10 @@ def retrospectives(
     """Generate retrospective(s)."""
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
-    dates = get_dates_for_level(level, date, yesterday)
+    if yesterday:
+        date = date - datetime.timedelta(days=1)
+
+    sel = retro.Selection(vault, date, level)
 
     # Set defaults based on level
     final_no_cache = list(no_cache)
@@ -82,7 +85,14 @@ def retrospectives(
                 break
             final_context.append(l)
 
-    print("Generating", level.value, "retrospective from", dates[0], "to", dates[-1])
+    print(
+        "Generating",
+        level.value,
+        "retrospective from",
+        sel.dates[0],
+        "to",
+        sel.dates[-1],
+    )
     print("NoCache policy:", ",".join(c.value for c in final_no_cache))
     print("Context:", ",".join(c.value for c in final_context))
     print("Concurrency Limit:", final_concurrency_limit)
@@ -115,8 +125,8 @@ def retrospectives(
     if no_cache_levels:
         cache_policies.append(retro.NoLevelsCachePolicy(levels=no_cache_levels))
 
-    generator = retro.RecursiveRetrospectiveGenerator(
-        llm_model, vault, dates, level, final_concurrency_limit
+    generator = retro_gen.RecursiveRetrospectiveGenerator(
+        llm_model, sel, final_concurrency_limit
     )
     result = asyncio.run(
         generator.run(
@@ -135,3 +145,27 @@ def retrospectives(
             print(output_content)
         else:
             rich.print(Markdown(output_content))
+
+
+def get_dates_for_level(
+    level: Level, date: datetime.datetime, yesterday: bool
+) -> list[datetime.date]:
+    """Calculates the list of dates for a given level, date, and yesterday flag."""
+    the_date = date.date()
+    if yesterday:
+        if level != Level.daily:
+            raise click.ClickException("--yesterday can only be used with daily level")
+        the_date = the_date - datetime.timedelta(days=1)
+
+    match level:
+        case Level.daily:
+            return [the_date]
+        case Level.weekly:
+            return whole_week(the_date)
+        case Level.monthly:
+            return whole_month(the_date)
+        case Level.yearly:
+            return whole_year(the_date)
+        case _:
+            # Should not happen with click.Choice
+            raise click.ClickException(f"Unknown level '{level}'")
