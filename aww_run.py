@@ -3,6 +3,7 @@ from aww.cli import (
     ask,
     chat,
     compare,
+    motd,
     retro,
     rewrite_prompt,
     index,

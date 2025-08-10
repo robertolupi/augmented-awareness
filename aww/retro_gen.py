@@ -93,7 +93,7 @@ class RecursiveRetrospectiveGenerator:
         Loads system prompts and sets up agents for each level.
         """
         if not prompts_path:
-            prompts_path = Path(__file__).parent / "retro"
+            prompts_path = Path(__file__).parent / "prompts"
 
         self.prompts = {l: (prompts_path / f"{l.name}.md").read_text() for l in Level}
         self.agents = {

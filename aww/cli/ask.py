@@ -66,7 +66,7 @@ def ask(
     sel = retro.Selection(vault, date, level)
 
     if prompt_file:
-        prompt = open(prompt_file, "r").read()
+        prompt = prompt + "\n" + open(prompt_file, "r").read()
 
     ask_agent = Agent(model=llm_model, system_prompt=prompt)
 
