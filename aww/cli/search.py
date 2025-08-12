@@ -12,18 +12,6 @@ from aww.rag import Index
 @click.argument("query")
 @click.option("--rag", is_flag=True, default=False, help="Use RAG for searching.")
 @click.option(
-    "--embedding-model-provider",
-    type=str,
-    default="sentence-transformers",
-    help="The embedding model provider.",
-)
-@click.option(
-    "--embedding-model-name",
-    type=str,
-    default="all-mpnet-base-v2",
-    help="The embedding model name.",
-)
-@click.option(
     "-a", "--ask", is_flag=True, default=False, help="Ask LLM to compose the output."
 )
 @click.option("--output-file", type=click.Path(), help="File to write the output to.")
@@ -38,8 +26,6 @@ def search(
     ctx,
     query,
     rag,
-    embedding_model_provider,
-    embedding_model_name,
     ask,
     output_file,
     plain_text,
@@ -49,7 +35,11 @@ def search(
     settings = ctx.obj["settings"]
     db_path = Path(settings.data_path) / "index"
 
-    idx = Index(db_path, embedding_model_provider, embedding_model_name)
+    idx = Index(
+        db_path,
+        settings.rag.provider,
+        settings.rag.model_name,
+    )
     idx.open_table()
     results = idx.search(query, rag=rag)
 

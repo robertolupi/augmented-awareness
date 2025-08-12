@@ -33,6 +33,11 @@ class LocalAIConfig(BaseModel):
 ModelConfig = Union[OpenAIConfig, GeminiConfig, LocalAIConfig]
 
 
+class RagConfig(BaseModel):
+    provider: str = "sentence-transformers"
+    model_name: str = "all-mpnet-base-v2"
+
+
 class Settings(BaseSettings):
     models: Dict[str, ModelConfig] = Field(
         default_factory=lambda: {
@@ -41,6 +46,7 @@ class Settings(BaseSettings):
             "local": LocalAIConfig(model_name="local-model"),
         }
     )
+    rag: RagConfig = Field(default_factory=RagConfig)
     default_model: str = "local"
 
     vault_path: str = "~/data/notes"

@@ -6,18 +6,6 @@ from aww.rag import Index
 
 @main.command()
 @click.option(
-    "--embedding-model-provider",
-    type=str,
-    default="sentence-transformers",
-    help="The embedding model provider.",
-)
-@click.option(
-    "--embedding-model-name",
-    type=str,
-    default="all-mpnet-base-v2",
-    help="The embedding model name.",
-)
-@click.option(
     "--clean",
     is_flag=True,
     default=False,
@@ -30,13 +18,17 @@ from aww.rag import Index
     help="Incrementally update the index with new and modified pages.",
 )
 @click.pass_context
-def index(ctx, embedding_model_provider, embedding_model_name, clean, incr):
+def index(ctx, clean, incr):
     """Indexes the vault for RAG."""
     settings = ctx.obj["settings"]
     vault = ctx.obj["vault"]
     db_path = Path(settings.data_path) / "index"
 
-    idx = Index(db_path, embedding_model_provider, embedding_model_name)
+    idx = Index(
+        db_path,
+        settings.rag.provider,
+        settings.rag.model_name,
+    )
 
     since_mtime_ns = None
     if incr and not clean:

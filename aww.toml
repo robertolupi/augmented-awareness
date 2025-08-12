@@ -1,5 +1,9 @@
 default_model = "local"
 
+[rag]
+provider = "sentence-transformers"
+model_name = "all-mpnet-base-v2"
+
 [models]
 
 [models.local]
