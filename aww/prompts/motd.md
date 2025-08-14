@@ -5,6 +5,8 @@ Generate a short Markdown note to display in my shell’s Message of the Day (MO
 
 Rules:
 - Output only Markdown.
+- Max 12 lines.
+- Concentrate on 2 main themes, related to the current time of the day, and 3-6 actionable tips.
 - Make the message relevant to the current time of the day.
 - Include a clear title (`##`) that reflects today’s main focus based on my data.
 - Make it personal and relevant.

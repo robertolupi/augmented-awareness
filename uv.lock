@@ -167,6 +167,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "click" },
+    { name = "jinja2" },
     { name = "lancedb" },
     { name = "matplotlib" },
     { name = "nltk" },
@@ -190,6 +191,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.2.1" },
+    { name = "jinja2", specifier = ">=3.1.6" },
     { name = "lancedb", specifier = ">=0.24.2" },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "nltk", specifier = ">=3.9.1" },

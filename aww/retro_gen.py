@@ -11,6 +11,7 @@ from pydantic_ai.models import Model
 import yaml
 
 from aww.obsidian import Vault, Page, Level
+from aww.prompts import get_prompt_template
 from aww.retro import Node, build_retrospective_tree, CachePolicy, Selection
 
 
@@ -81,21 +82,13 @@ class RecursiveRetrospectiveGenerator:
     Handles cache policies, concurrency, and prompt management.
     """
 
-    def __init__(
-        self,
-        model: Model,
-        sel: Selection,
-        concurrency_limit: int = 10,
-        prompts_path: Path | None = None,
-    ):
+    def __init__(self, model: Model, sel: Selection, concurrency_limit: int = 10):
         """
         Initialize the generator with model, vault, dates, level, concurrency limit, and optional prompts path.
         Loads system prompts and sets up agents for each level.
         """
-        if not prompts_path:
-            prompts_path = Path(__file__).parent / "prompts"
 
-        self.prompts = {l: (prompts_path / f"{l.name}.md").read_text() for l in Level}
+        self.prompts = {l: get_prompt_template(f"{l.name}.md").render() for l in Level}
         self.agents = {
             l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level
         }

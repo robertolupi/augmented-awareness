@@ -11,6 +11,7 @@ from aww.cli import main
 from pydantic_ai import Agent
 
 from aww.obsidian import Level
+from aww.prompts import get_prompt_template
 
 
 @main.command()
@@ -32,7 +33,7 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly):
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
 
-    prompt = (Path(aww.__file__).parent / "prompts" / "motd.md").read_text()
+    prompt = get_prompt_template("motd.md").render()
 
     agent = Agent(model=llm_model, system_prompt=prompt)
 
