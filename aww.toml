@@ -11,6 +11,11 @@ provider = "local"
 model_name = "gpt-oss:20b"
 base_url = "http://127.0.0.1:11434/v1"
 
+[models.qwen3]
+provider = "local"
+model_name = "qwen3:30b"
+base_url = "http://127.0.0.1:11434/v1"
+
 [models.openai]
 provider = "openai"
 model_name = "gpt-5-mini-2025-08-07"
