@@ -11,7 +11,7 @@ from aww.cli import main
 from pydantic_ai import Agent
 
 from aww.obsidian import Level
-from aww.prompts import get_prompt_template
+from aww.prompts import select_prompt_template
 
 
 @main.command()
@@ -33,7 +33,21 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly):
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
 
-    prompt = get_prompt_template("motd.md").render()
+    now = datetime.datetime.now()
+    if now.time() < datetime.time(7, 0):
+        part_of_day = "early"
+    elif now.time() < datetime.time(12, 0):
+        part_of_day = "morning"
+    if now.time() < datetime.time(14, 0):
+        part_of_day = "lunch"
+    if now.time() < datetime.time(19, 0):
+        part_of_day = "afternoon"
+    if now.time() < datetime.time(21, 0):
+        part_of_day = "evening"
+    if now.time() < datetime.time(23, 0):
+        part_of_day = "night"
+
+    prompt = select_prompt_template([f"motd.{part_of_day}.md", "motd.md"]).render()
 
     agent = Agent(model=llm_model, system_prompt=prompt)
 
@@ -55,6 +69,8 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly):
             user_prompt += weekly_retro.content()
 
     user_prompt += f'Now, it is {datetime.datetime.now().strftime("%m/%d/%Y %H:%M")}'
+
+    user_prompt += "Write an impactful Message Of The Day (MOTD)"
 
     response = agent.run_sync(user_prompt)
     if plain_text:
