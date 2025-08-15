@@ -166,4 +166,4 @@ class Page:
         return {}
 
 
-EVENT_RE = re.compile(r"^(\d\d):(\d\d)(?: - (\d\d):(\d\d))?\s+(.*)$")
+EVENT_RE = re.compile(r"^(\d\d):(\d\d)(?:\s*-\s*(\d\d):(\d\d))?\s+(.*)$")
