@@ -1,18 +1,15 @@
-import asyncio
 from pathlib import Path
 import shutil
 import datetime
 import pytest
 
-from pydantic_ai.models.test import TestModel
-
 import aww
 import aww.obsidian
-from aww import retro
+import aww.retro
 from aww.obsidian import Vault, Level
-from aww.retro import RecursiveRetrospectiveGenerator
+from aww.retro import Selection, whole_week, whole_month
 
-test_vault_path = (Path(aww.__file__).parent.parent / 'test_vault').absolute()
+test_vault_path = (Path(aww.__file__).parent.parent / "test_vault").absolute()
 
 
 @pytest.fixture
@@ -20,7 +17,7 @@ def tmp_vault(tmp_path):
     """Copy test_vault_path contents into a temporary directory."""
     dest = tmp_path / "vault"
     shutil.copytree(test_vault_path, dest)
-    return Vault(Path(dest), 'journal', 'retrospectives')
+    return Vault(Path(dest), "journal", "retrospectives")
 
 
 def days_between(start_year, start_month, start_day, end_year, end_month, end_day):
@@ -32,9 +29,8 @@ def days_between(start_year, start_month, start_day, end_year, end_month, end_da
 
 
 def test_build_retrospective_tree(tmp_vault):
-    days_in_year = list(days_between(2025, 1, 1,
-                                     2025, 12, 31))
-    tree = aww.obsidian.build_retrospective_tree(tmp_vault, days_in_year)
+    days_in_year = list(days_between(2025, 1, 1, 2025, 12, 31))
+    tree = aww.retro.build_retrospective_tree(tmp_vault, days_in_year)
     assert len(tree) == 365 + 52 + 12 + 1
 
     one_day = datetime.date(2025, 1, 1)
@@ -44,8 +40,7 @@ def test_build_retrospective_tree(tmp_vault):
     assert tree[daily].level == Level.daily
     assert len(tree[daily].sources) == 0  # no other retrospective pages
 
-    january = list(days_between(2025, 1, 1,
-                                2025, 1, 31))
+    january = list(days_between(2025, 1, 1, 2025, 1, 31))
     d = january[0]
     monthly = tmp_vault.retrospective_page(d, Level.monthly)
     assert tree[monthly].retro_page == monthly
@@ -61,64 +56,87 @@ def test_build_retrospective_tree(tmp_vault):
     assert len(tree[yearly].sources) == len(tree) - 1
 
 
-class RecursiveRetrospectiveGeneratorForTesting(retro.RecursiveRetrospectiveGenerator):
-    def __init__(self, vault: Vault, days: list[datetime.date], level: Level):
-        model = TestModel()
-        super().__init__(model, vault, days, level)
-        self.saved_nodes = {}
-
-    async def save_retro_page(self, node, output, sources, levels, retro_frontmatter):
-        await super().save_retro_page(node, output, sources, levels, retro_frontmatter)
-        self.saved_nodes[node.retro_page] = (node, sources, levels)
+def _expected_tree_size(vault: Vault, dates: list[datetime.date]) -> int:
+    """Compute expected unique nodes in the tree for the given dates."""
+    daily = {vault.retrospective_page(d, Level.daily) for d in dates}
+    weekly = {vault.retrospective_page(d, Level.weekly) for d in dates}
+    monthly = {vault.retrospective_page(d, Level.monthly) for d in dates}
+    yearly = {vault.retrospective_page(d, Level.yearly) for d in dates}
+    return len(daily | weekly | monthly | yearly)
 
 
-def test_recursive_retrospective_generator(tmp_vault):
-    days_in_year = list(days_between(2025, 1, 1,
-                                     2025, 12, 31))
-    g = RecursiveRetrospectiveGeneratorForTesting(tmp_vault, days_in_year, Level.yearly)
-    asyncio.run(g.run(context_levels=list(Level),
-                      cache_policies=[retro.NoRootCachePolicy(), retro.NoLevelsCachePolicy(list(Level))]))
-    d = days_in_year[0]
-    yearly = tmp_vault.retrospective_page(d, Level.yearly)
+def test_selection_daily(tmp_vault):
+    # Use a date present in test_vault
+    d = datetime.date(2025, 4, 1)
+    sel = Selection(tmp_vault, d, Level.daily)
 
-    march30 = datetime.date(2025, 3, 30)
-    april1 = datetime.date(2025, 4, 1)
-    d1 = tmp_vault.retrospective_page(march30, Level.daily)
-    d2 = tmp_vault.retrospective_page(april1, Level.daily)
-    w1 = tmp_vault.retrospective_page(march30, Level.weekly)
-    w2 = tmp_vault.retrospective_page(april1, Level.weekly)
-    march = tmp_vault.retrospective_page(march30, Level.monthly)
-    april = tmp_vault.retrospective_page(april1, Level.monthly)
+    assert sel.dates == [d]
+    assert sel.root.level == Level.daily
+    assert sel.root.dates == {d}
+    assert len(sel.root.sources) == 0
 
-    sources_with_content = set(g.saved_nodes.keys())
-    assert sources_with_content == {d1, d2, w1, w2, march, april, yearly}
+    # Tree should contain one node per (daily, weekly, monthly, yearly) for that date
+    assert len(sel.tree) == _expected_tree_size(tmp_vault, [d])
 
-    node, sources, levels = g.saved_nodes[yearly]
-    assert node.retro_page == yearly
-    assert levels == set(Level)
-    source_pages = set(s.retro_page for s in sources)
-    assert len(source_pages) == 365 + 52 + 12
+    # Inspect other levels for correct source wiring
+    weekly_node = sel.tree[tmp_vault.retrospective_page(d, Level.weekly)]
+    monthly_node = sel.tree[tmp_vault.retrospective_page(d, Level.monthly)]
+    yearly_node = sel.tree[tmp_vault.retrospective_page(d, Level.yearly)]
 
-def test_recursive_retrospective_generator_rename_on_disk(tmp_vault):
-    day = datetime.date(2025, 1, 1)
-    model = TestModel()
+    assert len(weekly_node.sources) == 1  # daily
+    assert len(monthly_node.sources) == 2  # daily + weekly
+    assert len(yearly_node.sources) == 3  # daily + weekly + monthly
 
-    # Create a dummy journal file for the day
-    journal_path = tmp_vault.path / tmp_vault.journal_dir / f"{day.strftime('%Y')}/{day.strftime('%m')}/{day.strftime('%Y-%m-%d')}.md"
-    journal_path.parent.mkdir(parents=True, exist_ok=True)
-    with journal_path.open("w") as f:
-        f.write("# Test Journal Entry")
 
-    g = RecursiveRetrospectiveGenerator(model, tmp_vault, [day], Level.daily)
+def test_selection_weekly(tmp_vault):
+    d = datetime.date(2025, 3, 30)  # Sunday; week spans Mon-Sun
+    expected_week = whole_week(d)
+    sel = Selection(tmp_vault, d, Level.weekly)
 
-    # Run the generator twice
-    asyncio.run(g.run(context_levels=list(Level),
-                      cache_policies=[retro.NoRootCachePolicy(), retro.NoLevelsCachePolicy(list(Level))]))
-    asyncio.run(g.run(context_levels=list(Level),
-                      cache_policies=[retro.NoRootCachePolicy(), retro.NoLevelsCachePolicy(list(Level))]))
+    assert sel.root.level == Level.weekly
+    assert set(sel.root.dates) == set(expected_week)
+    assert len(sel.tree) == _expected_tree_size(tmp_vault, expected_week)
 
-    retro_page = tmp_vault.retrospective_page(day, Level.daily)
-    renamed_page_path = retro_page.path.with_suffix('.1.md')
+    # Weekly root should depend on all daily nodes of the week
+    daily_pages = {tmp_vault.retrospective_page(x, Level.daily) for x in expected_week}
+    daily_nodes = {sel.tree[p] for p in daily_pages}
+    assert sel.root.sources == daily_nodes
 
-    assert retro_page.path.exists()
-    assert renamed_page_path.exists()
+
+def test_selection_monthly(tmp_vault):
+    d = datetime.date(2025, 4, 1)
+    expected_month = whole_month(d)
+    sel = Selection(tmp_vault, d, Level.monthly)
+
+    assert sel.root.level == Level.monthly
+    assert set(sel.root.dates) == set(expected_month)
+    assert len(sel.tree) == _expected_tree_size(tmp_vault, expected_month)
+
+    # Monthly root should depend on all daily and weekly nodes in the month
+    daily_pages = {tmp_vault.retrospective_page(x, Level.daily) for x in expected_month}
+    weekly_pages = {tmp_vault.retrospective_page(x, Level.weekly) for x in expected_month}
+    expected_sources = {sel.tree[p] for p in (daily_pages | weekly_pages)}
+    assert sel.root.sources == expected_sources
+
+
+def test_selection_apply_cache_policies(tmp_vault):
+    d = datetime.date(2025, 3, 30)
+    sel = Selection(tmp_vault, d, Level.weekly)
+
+    # By default all nodes use cache
+    assert all(n.use_cache for n in sel.tree.values())
+
+    # Disable cache on root
+    sel.apply_cache_policy(aww.retro.NoRootCachePolicy())
+    assert sel.root.use_cache is False
+    # Others remain unchanged
+    assert all((n is sel.root) or n.use_cache for n in sel.tree.values())
+
+    # Now disable cache on daily sources of the weekly root
+    sel2 = Selection(tmp_vault, d, Level.weekly)
+    sel2.apply_cache_policy(aww.retro.NoLevelsCachePolicy([Level.daily]))
+    for n in sel2.root.sources:
+        if n.level == Level.daily:
+            assert n.use_cache is False
+        else:
+            assert n.use_cache is True

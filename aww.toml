@@ -1,0 +1,25 @@
+default_model = "local"
+
+[rag]
+provider = "sentence-transformers"
+model_name = "all-mpnet-base-v2"
+
+[models]
+
+[models.local]
+provider = "local"
+model_name = "gpt-oss:20b"
+base_url = "http://127.0.0.1:11434/v1"
+
+[models.qwen3]
+provider = "local"
+model_name = "qwen3:30b"
+base_url = "http://127.0.0.1:11434/v1"
+
+[models.openai]
+provider = "openai"
+model_name = "gpt-5-2025-08-07"
+
+[models.gemini]
+provider = "gemini"
+model_name = "gemini-2.5-flash"
