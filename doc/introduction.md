@@ -44,10 +44,6 @@ The Python component is responsible for the AI-powered generation of retrospecti
 
 An Obsidian plugin is available to help with navigation within the vault, making it easier to move between journal entries and their corresponding retrospectives.
 
-### 4. Side-by-Side (SBS) Viewer
-
-The `sbs` directory contains an interactive, full-stack SvelteKit application designed for debugging. It allows you to view journal pages and their corresponding generated retrospectives side-by-side in a web interface, which is useful for verifying the output and behavior of the generation tools.
-
 ## Getting Started
 
 The easiest way to begin using Augmented Awareness is to start with a pre-configured Obsidian vault. The `demo_vault` included in this project provides a ready-to-use setup with all the necessary plugins and folder structures.
