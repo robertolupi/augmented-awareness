@@ -3,9 +3,10 @@ Obsidian vault and note structure utilities for Augmented Awareness.
 Provides classes and functions for working with Obsidian-style markdown vaults, pages, and retrospectives.
 """
 
+import pandas as pd
 import enum
 import os
-from datetime import date
+from datetime import date, time
 import re
 from typing import Any
 
@@ -133,6 +134,26 @@ class Page:
         data = CODEBLOCKS_RE.sub("", data)
         return data
 
+    def events(self) -> pd.DataFrame:
+        lines = self.content().split("\n")
+        start_times = []
+        end_times = []
+        descriptions = []
+        for line in lines:
+            m = EVENT_RE.match(line)
+            if not m:
+                continue
+            start_hour, start_minute, end_hour, end_minute, description = m.groups()
+            start_times.append(time(int(start_hour), int(start_minute)))
+            if end_hour is not None:
+                end_times.append(time(int(end_hour), int(end_minute)))
+            else:
+                end_times.append(None)
+            descriptions.append(description)
+        return pd.DataFrame(
+            {"start": start_times, "end": end_times, "description": descriptions}
+        )
+
     def frontmatter(self) -> dict[str, Any]:
         """Return the parsed YAML frontmatter as a dict."""
         with self.path.open() as fd:
@@ -143,3 +164,6 @@ class Page:
             except yaml.error.YAMLError:
                 return {}
         return {}
+
+
+EVENT_RE = re.compile(r"^(\d\d):(\d\d)(?: - (\d\d):(\d\d))?\s+(.*)$")

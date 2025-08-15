@@ -35,6 +35,9 @@ with col1:
     if current_page:
         with st.expander("Frontmatter"):
             st.write(current_page.frontmatter())
+        events = current_page.events()
+        if len(events):
+            st.write(events)
         st.markdown(current_page.content())
     else:
         st.write("No page found")
