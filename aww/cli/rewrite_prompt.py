@@ -10,7 +10,8 @@ from rich.markdown import Markdown
 import aww
 import aww.retro, aww.retro_gen
 from aww import retro
-from aww.cli import main, create_model
+from aww.cli import main
+from aww.config import create_model
 from aww.obsidian import Level
 from pydantic_ai import Agent
 

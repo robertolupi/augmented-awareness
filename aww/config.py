@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Dict, Literal, Union, Optional, Any
 
+import click
 from pydantic import Field, BaseModel
+from pydantic_ai.models import Model
+from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -69,4 +75,42 @@ class Settings(BaseSettings):
             env_settings,
             dotenv_settings,
             init_settings,
+        )
+
+
+def create_model(model_name: str) -> Model:
+    settings = Settings()
+    if model_name not in settings.models:
+        raise click.ClickException(f"Model '{model_name}' not found in settings.")
+
+    model_config = settings.models[model_name]
+
+    if isinstance(model_config, OpenAIConfig):
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise click.ClickException(
+                "Please set environment variable OPENAI_API_KEY or api_key in config."
+            )
+        return OpenAIModel(
+            model_name=model_config.model_name,
+            **model_config.model_settings,
+        )
+    elif isinstance(model_config, GeminiConfig):
+        if not os.environ.get("GEMINI_API_KEY"):
+            raise click.ClickException(
+                "Please set environment variable GEMINI_API_KEY or api_key in config."
+            )
+        return GeminiModel(
+            model_name=model_config.model_name,
+            **model_config.model_settings,
+        )
+    elif isinstance(model_config, LocalAIConfig):
+        return OpenAIModel(
+            model_name=model_config.model_name,
+            provider=OpenAIProvider(base_url=model_config.base_url),
+            **model_config.model_settings,
+        )
+    else:
+        # This should not be reached if config parsing is correct
+        raise click.ClickException(
+            f"Unknown provider for model '{model_name}' with config {model_config}"
         )

@@ -7,8 +7,7 @@ from pydantic_ai.messages import (
     TextPart,
 )
 
-from aww.cli import create_model
-from aww.config import Settings
+from aww.config import Settings, create_model
 
 settings = Settings()
 model = None
