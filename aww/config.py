@@ -14,6 +14,7 @@ from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     TomlConfigSettingsSource,
+    SettingsConfigDict,
 )
 
 
@@ -45,6 +46,8 @@ class RagConfig(BaseModel):
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="AWW_", case_sensitive=False)
+
     models: Dict[str, ModelConfig] = Field(
         default_factory=lambda: {
             "openai": OpenAIConfig(),
@@ -70,10 +73,9 @@ class Settings(BaseSettings):
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         return (
-            TomlConfigSettingsSource(settings_cls, Path("aww.toml")),
-            # TomlConfigSettingsSource(settings_cls, Path("~/.aww.toml").expanduser()),
             env_settings,
             dotenv_settings,
+            TomlConfigSettingsSource(settings_cls, Path("aww.toml")),
             init_settings,
         )
 

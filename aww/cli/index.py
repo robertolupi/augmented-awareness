@@ -22,13 +22,8 @@ def index(ctx, clean, incr):
     """Indexes the vault for RAG."""
     settings = ctx.obj["settings"]
     vault = ctx.obj["vault"]
-    db_path = Path(settings.data_path) / "index"
 
-    idx = Index(
-        db_path,
-        settings.rag.provider,
-        settings.rag.model_name,
-    )
+    idx = Index.from_settings(settings)
 
     since_mtime_ns = None
     if incr and not clean:
@@ -53,6 +48,6 @@ def index(ctx, clean, incr):
         idx.create_fts_index(replace=incr)
         idx.create_scalar_index(replace=incr)
         idx.create_vector_index(replace=incr)
-        print(f"Indexed {num_pages} pages in {db_path}")
+        print(f"Indexed {num_pages} pages")
     if not num_pages:
         print("No new or modified pages to index.")

@@ -14,6 +14,8 @@ import yaml
 
 from pathlib import Path
 
+from aww.config import Settings
+
 FRONTMATTER_RE = re.compile("^---\n(.*?)\n---\n", re.DOTALL | re.MULTILINE)
 CODEBLOCKS_RE = re.compile("\n```([a-z]+)\n(.*?)\n```\n", re.DOTALL | re.MULTILINE)
 
@@ -47,9 +49,19 @@ class Vault:
         Level.yearly: "{year}/r{year}.md",
     }
 
-    def __init__(self, path: Path, journal_dir: str, retrospectives_dir: str) -> None:
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "Vault":
+        return cls(
+            settings.vault_path, settings.journal_dir, settings.retrospectives_dir
+        )
+
+    def __init__(
+        self, path: Path | str, journal_dir: str, retrospectives_dir: str
+    ) -> None:
         """Initialize the vault with root path and subdirectories for journals and retrospectives."""
-        self.path = path
+        self.path = Path(path).expanduser()
+        if not self.path.exists():
+            raise FileNotFoundError(self.path)
         self.journal_dir = journal_dir
         self.retrospectives_dir = retrospectives_dir
 

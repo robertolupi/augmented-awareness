@@ -33,13 +33,8 @@ def search(
     """Searches the RAG index."""
 
     settings = ctx.obj["settings"]
-    db_path = Path(settings.data_path) / "index"
 
-    idx = Index(
-        db_path,
-        settings.rag.provider,
-        settings.rag.model_name,
-    )
+    idx = Index.from_settings(settings)
     idx.open_table()
     results = idx.search(query, rag=rag)
 

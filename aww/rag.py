@@ -8,6 +8,8 @@ from lancedb import DBConnection
 from lancedb.embeddings import get_registry, EmbeddingFunctionConfig, EmbeddingFunction
 from lancedb.table import Table
 
+from aww.config import Settings
+
 
 def get_page_schema(model) -> LanceModel:
     """Creates a Pydantic model for a Page with a vector of the correct dimension."""
@@ -37,13 +39,17 @@ class Index:
     model: EmbeddingFunction
     tbl: Table | None
 
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "Index":
+        return cls(settings.data_path, settings.rag.provider, settings.rag.model_name)
+
     def __init__(
         self,
-        db_path,
-        embedding_model_provider="sentence-transformers",
-        embedding_model_name="all-mpnet-base-v2",
+        data_path: Path | str,
+        embedding_model_provider: str = "sentence-transformers",
+        embedding_model_name: str = "all-mpnet-base-v2",
     ):
-        self.db_path = Path(db_path)
+        self.db_path = Path(data_path) / "index"
         self.embedding_model_provider = embedding_model_provider
         self.embedding_model_name = embedding_model_name
         self.db = lancedb.connect(self.db_path)

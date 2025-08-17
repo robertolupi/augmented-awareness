@@ -1,6 +1,8 @@
 import click
 import rich
 
+import os
+
 from aww.cli import main
 
 

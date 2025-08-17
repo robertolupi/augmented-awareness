@@ -31,7 +31,7 @@ def test_vault() -> Vault:
 
 def test_index_creation_and_full_rebuild(temp_db_path: Path, test_vault: Vault):
     """Test creating a new index and adding all pages from the vault."""
-    idx = Index(db_path=temp_db_path)
+    idx = Index(data_path=temp_db_path)
 
     # 1. Create a clean table
     idx.create_table(clean=True)
@@ -57,7 +57,7 @@ def test_index_creation_and_full_rebuild(temp_db_path: Path, test_vault: Vault):
 
 def test_fts_search(temp_db_path: Path, test_vault: Vault):
     """Test full-text search functionality."""
-    idx = Index(db_path=temp_db_path)
+    idx = Index(data_path=temp_db_path)
     idx.create_table(clean=True)
     idx.add_pages(test_vault)
     idx.create_fts_index()
@@ -81,7 +81,7 @@ def test_fts_search(temp_db_path: Path, test_vault: Vault):
 
 def test_rag_search(temp_db_path: Path, test_vault: Vault):
     """Test vector search (RAG) functionality."""
-    idx = Index(db_path=temp_db_path)
+    idx = Index(data_path=temp_db_path)
     idx.create_table(clean=True)
     idx.add_pages(test_vault)
     idx.create_vector_index()
@@ -95,7 +95,7 @@ def test_rag_search(temp_db_path: Path, test_vault: Vault):
 
 def test_incremental_indexing(temp_db_path: Path, test_vault: Vault):
     """Test that incremental indexing only adds new or modified files."""
-    idx = Index(db_path=temp_db_path)
+    idx = Index(data_path=temp_db_path)
 
     # 1. Initial full index
     idx.create_table(clean=True)
