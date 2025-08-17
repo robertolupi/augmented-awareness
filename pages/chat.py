@@ -32,7 +32,11 @@ model = None
 agent = None
 
 with st.sidebar:
-    model_name = st.selectbox("Model", settings.models.keys())
+    model_name = st.selectbox(
+        "Model",
+        settings.models.keys(),
+        index=list(settings.models.keys()).index(settings.default_model),
+    )
     if model_name in settings.models.keys():
         model = create_model(model_name)
         agent = get_chat_agent(model)
