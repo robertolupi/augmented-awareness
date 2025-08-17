@@ -44,7 +44,7 @@ with st.sidebar:
     show_tool_calls = st.checkbox("Show tool calls", value=False)
 
 
-st.header("Chat")
+st.title("Chat")
 
 chat_history = st.session_state.get("chat_history")
 

@@ -88,7 +88,7 @@ with st.spinner("Loading retrospectives..."):
 
         st.header("Tags Analysis")
         # Convert dated_tags to a pandas.DataFrame
-        df1 = pandas.DataFrame({"date": dates, "tags": tags_list})
+        df1 = pandas.DataFrame({"date": dates, "tags": map(set, tags_list)})
         st.write(df1)
 
         # Convert dated_tags to a histogram count of tags, as a pandas.DataFrame
