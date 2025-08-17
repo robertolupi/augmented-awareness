@@ -68,6 +68,7 @@ def test_page_events():
     )
     events_with_end_time = page_with_end_time.events()
     assert len(events_with_end_time) == 3
+    assert events_with_end_time.index.to_list() == [15, 16, 17]
     assert events_with_end_time["start"].to_list() == [
         time(6, 4),
         time(7, 0),

@@ -147,14 +147,24 @@ class Page:
         return data
 
     def events(self) -> pd.DataFrame:
-        lines = self.content().split("\n")
+        with self.path.open() as fd:
+            lines = fd.readlines()
+        start_line = 0
+        if lines and lines[0] == "---":
+            for n, line in enumerate(lines[1:]):
+                if line == "---":
+                    start_line = n + 2
+                    break
+                raise ValueError(f"Malformed frontmatter in {self.path}")
+        line_numbers = []
         start_times = []
         end_times = []
         descriptions = []
-        for line in lines:
+        for n, line in enumerate(lines[start_line:]):
             m = EVENT_RE.match(line)
             if not m:
                 continue
+            line_numbers.append(n + start_line)
             start_hour, start_minute, end_hour, end_minute, description = m.groups()
             start_times.append(time(int(start_hour), int(start_minute)))
             if end_hour is not None:
@@ -163,7 +173,12 @@ class Page:
                 end_times.append(None)
             descriptions.append(description)
         return pd.DataFrame(
-            {"start": start_times, "end": end_times, "description": descriptions}
+            {
+                "start": start_times,
+                "end": end_times,
+                "description": descriptions,
+            },
+            index=line_numbers,
         )
 
     def frontmatter(self) -> dict[str, Any]:
