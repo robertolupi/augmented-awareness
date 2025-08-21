@@ -9,6 +9,7 @@ from aww.cli import (
     index,
     search,
     show_config,
+    taskscleanup,
 )  # keep
 
 if __name__ == "__main__":

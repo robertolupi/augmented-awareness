@@ -5,7 +5,7 @@ import pandas as pd
 
 import aww
 from aww import obsidian
-from aww.obsidian import Level
+from aww.obsidian import Level, TASK_RE
 
 test_vault_path = (Path(aww.__file__).parent.parent / "test_vault").absolute()
 
@@ -82,3 +82,24 @@ def test_page_events():
     assert pd.isna(events_with_end_time["end"].iloc[0])
     assert pd.isna(events_with_end_time["end"].iloc[1])
     assert events_with_end_time["end"].iloc[2] == time(9, 30)
+
+
+def test_page_task_re():
+    assert TASK_RE.match("- [x] task").groups() == ("x", "task")
+    assert TASK_RE.match(" - [ ] task ➕ 2025-04-03").groups() == (
+        " ",
+        "task ➕ 2025-04-03",
+    )
+
+
+def test_page_tasks():
+    page = obsidian.Page(test_vault_path / "journal/2025/03/2025-03-30.md", Level.daily)
+    tasks = page.tasks()
+    assert len(tasks) == 3
+    assert tasks["status"].to_list() == [" ", "x", "x"]
+    assert tasks["description"].to_list() == [
+        "task 1",
+        "task 2",
+        "task 3 🔁 every day when done ➕ 2025-04-03 🛫 2025-04-04 ⏳ 2025-04-03 📅 2025-04-06  ✅ 2025-04-04",
+    ]
+    assert tasks.index.to_list() == [16, 17, 18]
