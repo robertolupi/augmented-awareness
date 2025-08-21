@@ -146,25 +146,31 @@ class Page:
         data = CODEBLOCKS_RE.sub("", data)
         return data
 
-    def events(self) -> pd.DataFrame:
+    def _content_lines(self):
         with self.path.open() as fd:
-            lines = fd.readlines()
-        start_line = 0
-        if lines and lines[0] == "---":
-            for n, line in enumerate(lines[1:]):
-                if line == "---":
-                    start_line = n + 2
-                    break
-                raise ValueError(f"Malformed frontmatter in {self.path}")
+            lines = enumerate(fd.readlines())
+        in_frontmatter = None
+        for n, line in lines:
+            if n == 0 and line == "---\n":
+                in_frontmatter = True
+                continue
+            if in_frontmatter:
+                if line == "---\n":
+                    in_frontmatter = False
+                    continue
+                continue
+            yield n, line
+
+    def events(self) -> pd.DataFrame:
         line_numbers = []
         start_times = []
         end_times = []
         descriptions = []
-        for n, line in enumerate(lines[start_line:]):
+        for n, line in self._content_lines():
             m = EVENT_RE.match(line)
             if not m:
                 continue
-            line_numbers.append(n + start_line)
+            line_numbers.append(n)
             start_hour, start_minute, end_hour, end_minute, description = m.groups()
             start_times.append(time(int(start_hour), int(start_minute)))
             if end_hour is not None:
@@ -180,7 +186,26 @@ class Page:
             },
             index=line_numbers,
         )
-
+    
+    def tasks(self) -> pd.DataFrame:
+        line_numbers = []
+        statuses = []
+        descriptions = []
+        for n, line in self._content_lines():
+            m = TASK_RE.match(line)
+            if not m: continue
+            line_numbers.append(n)
+            statuses.append(m.group(1))
+            descriptions.append(m.group(2)) 
+            
+        return pd.DataFrame(
+            {
+                "status": statuses,
+                "description": descriptions,
+            },
+            index=line_numbers,
+        )
+    
     def frontmatter(self) -> dict[str, Any]:
         """Return the parsed YAML frontmatter as a dict."""
         with self.path.open() as fd:
@@ -194,3 +219,4 @@ class Page:
 
 
 EVENT_RE = re.compile(r"^(\d\d):(\d\d)(?:\s*-\s*(\d\d):(\d\d))?\s+(.*)$")
+TASK_RE = re.compile(r"^\s*- \[(.)\] (.*)$")
