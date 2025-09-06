@@ -1,7 +1,7 @@
 import calendar
 from dataclasses import dataclass
 import datetime
-from typing import Dict, Callable, Sequence
+from typing import Dict, Callable, Sequence, Protocol
 
 from aww.obsidian import Level, Page, Vault
 
@@ -68,8 +68,9 @@ def build_retrospective_tree(vault: Vault, dates: list[datetime.date]) -> Tree:
     return tree
 
 
-# Type alias for cache policy functions that operate on a Node and Tree.
-CachePolicy = Callable[[Node, Tree], None]
+class CachePolicy:
+    def __call__(self, node: Node, tree: Tree):
+        raise NotImplementedError("Subclass responsibility")
 
 
 class NoRootCachePolicy(CachePolicy):

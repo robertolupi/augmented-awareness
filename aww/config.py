@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Dict, Literal, Union, Optional, Any
+from typing import Dict, Literal, Union, Any
 
 import click
 from pydantic import Field, BaseModel
