@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import enum
 
 import click
 import rich
@@ -7,9 +8,20 @@ from tqdm.asyncio import tqdm
 from rich.markdown import Markdown
 
 from aww import retro, retro_gen
-from aww.cli import NoCachePolicyChoice, main
+from aww.cli import main
 from aww.obsidian import Level
 from aww.retro import whole_week, whole_month, whole_year
+
+
+class NoCachePolicyChoice(enum.Enum):
+    CACHE = "do_cache"
+    ROOT = "root"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+    MTIME = "mtime"
+    ONE_HOUR = "1h"
 
 
 @main.command(name="retro")
