@@ -6,6 +6,7 @@ import pandas as pd
 from lancedb.pydantic import LanceModel, Vector
 from lancedb import DBConnection
 from lancedb.embeddings import get_registry, EmbeddingFunctionConfig, EmbeddingFunction
+from lancedb.rerankers import CrossEncoderReranker
 from lancedb.table import Table
 
 from aww.config import Settings
@@ -19,11 +20,11 @@ def get_page_schema(model) -> LanceModel:
         path: str
         mtime_ns: int
         frontmatter: str
-        content: str
+        text: str
         vector: Vector(model.ndims())
 
         class Config:
-            text_key = "content"
+            text_key = "text"
             vector_key = "vector"
 
     return Page
@@ -75,7 +76,7 @@ class Index:
             embedding_functions=[
                 EmbeddingFunctionConfig(
                     vector_column="vector",
-                    source_column="content",
+                    source_column="text",
                     function=self.model,
                 )
             ],
@@ -107,7 +108,7 @@ class Index:
                             "path": str(page.path),
                             "mtime_ns": page.mtime_ns(),
                             "frontmatter": json.dumps(page.frontmatter(), default=str),
-                            "content": page.content(),
+                            "text": page.content(),
                         }
                     )
                 except (TypeError, FileNotFoundError) as e:
@@ -143,7 +144,7 @@ class Index:
         if self.tbl is None:
             raise ValueError("Table not created or opened yet.")
         print("Creating FTS index...")
-        self.tbl.create_fts_index("content", replace=replace)
+        self.tbl.create_fts_index("text", replace=replace)
 
     def create_scalar_index(self, replace: bool = False):
         """Creates a scalar index on mtime_ns."""
@@ -171,7 +172,10 @@ class Index:
 
         if rag:
             query_vector = self.model.generate_embeddings([query])[0]
-            df = self.tbl.search(query_vector).limit(10).to_pandas()
+            results = self.tbl.search(query_vector)
         else:
-            df = self.tbl.search(query, query_type="fts").limit(10).to_pandas()
-        return df
+            results = self.tbl.search(query, query_type="fts")
+        results = results.limit(20)
+        reranker = CrossEncoderReranker()
+        results = results.rerank(reranker).limit(10)
+        return results.to_pandas()
