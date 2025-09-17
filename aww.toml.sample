@@ -8,13 +8,13 @@ model_name = "all-mpnet-base-v2"
 
 [models.local]
 provider = "local"
-model_name = "gpt-oss:20b"
-base_url = "http://127.0.0.1:11434/v1"
+model_name = "openai/gpt-oss-20b"
+base_url = "http://127.0.0.1:1234/v1"
 
 [models.qwen3]
 provider = "local"
-model_name = "qwen3:30b"
-base_url = "http://127.0.0.1:11434/v1"
+model_name = "qwen/qwen3-next-80b"
+base_url = "http://127.0.0.1:1234/v1"
 
 [models.openai]
 provider = "openai"
