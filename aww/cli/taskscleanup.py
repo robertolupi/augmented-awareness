@@ -45,7 +45,12 @@ def tasks_cleanup(ctx, start_date, end_date, template):
         if not page:
             click.secho("Page not found", fg="red")
 
-        page_lines = page.path.open().readlines()
+        try:
+            page_lines = page.path.open().readlines()
+        except FileNotFoundError:
+            click.secho("Page not found", fg="red")
+            date = date + datetime.timedelta(days=1)
+            continue
 
         page_tasks = page.tasks()
         for index, row in page_tasks.iterrows():
