@@ -122,7 +122,7 @@ class Page:
         """Debug representation: Page(path)."""
         return "Page(" + repr(self.path) + ")"
 
-    def __eq__(self, other: "Page"):
+    def __eq__(self, other: object):
         """Equality based on file path."""
         return isinstance(other, Page) and (self.path == other.path)
 
