@@ -33,19 +33,20 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly):
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
 
-    now = datetime.datetime.now()
-    if now.time() < datetime.time(7, 0):
-        part_of_day = "early"
-    elif now.time() < datetime.time(12, 0):
-        part_of_day = "morning"
-    if now.time() < datetime.time(14, 0):
-        part_of_day = "lunch"
-    if now.time() < datetime.time(19, 0):
-        part_of_day = "afternoon"
-    if now.time() < datetime.time(21, 0):
-        part_of_day = "evening"
-    if now.time() < datetime.time(23, 0):
+    hour = datetime.datetime.now().hour
+    part_of_day = "full"
+    if hour in range(0, 4) or hour in range(21, 24):
         part_of_day = "night"
+    elif hour in range(4, 7):
+        part_of_day = "early_morning"
+    elif hour in range(7, 12):
+        part_of_day = "morning"
+    elif hour in range(12, 15):
+        part_of_day = "afternoon"
+    elif hour in range(15, 18):
+        part_of_day = "early_evening"
+    elif hour in range(18, 21):
+        part_of_day = "evening"
 
     prompt = select_prompt_template([f"motd.{part_of_day}.md", "motd.md"]).render()
 
