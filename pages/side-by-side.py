@@ -5,20 +5,20 @@ from aww import obsidian
 
 import streamlit as st
 
-from aww.obsidian import Level, Page
+from aww.config import Settings
+from aww.obsidian import Level, Page, Vault
 
 st.set_page_config(layout="wide")
 st.title("Side-By-Side Comparison")
 
 with st.sidebar:
-    vault_path = st.text_input("Vault Path", "~/data/notes")
     date = st.date_input("Date", datetime.date.today())
     level = st.selectbox(
         "Level",
         options=list(Level),
     )
 
-vault = obsidian.Vault(Path(vault_path).expanduser(), "journal", "retrospectives")
+vault = Vault.from_settings(Settings())
 
 
 current_page = vault.page(date, level)

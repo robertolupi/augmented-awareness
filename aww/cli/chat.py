@@ -17,18 +17,8 @@ def chat(ctx):
     """Interactive chat with LLM access to the user's vault."""
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
-    agent = get_chat_agent(llm_model)
+    agent = get_chat_agent(llm_model, vault)
 
-    scratchpad: Page | None = None
-    for page in vault.walk():
-        if page.name == 'aww-scratchpad':
-            scratchpad = page
 
-    @agent.system_prompt
-    def system_prompt():
-        result = select_prompt_template(["chat.md"]).render()
-        if scratchpad:
-            result += "The content of your memories in the [[aww-scratchpad]] page is:\n" + scratchpad.content()
-        return result
 
     agent.to_cli_sync(prog_name="aww")
