@@ -212,6 +212,29 @@ class Page:
                 return {}
         return {}
 
+    def feedback(self) -> list[dict[str, str]]:
+        """Return a list of feedback comments found in the page, with context."""
+        feedback_items = []
+        context_buffer = []
+        for _, line in self.enumerate_content_lines():
+            if m := FEEDBACK_RE.match(line):
+                feedback_items.append(
+                    {
+                        "comment": m.group(1),
+                        "context": "\n".join(context_buffer),
+                    }
+                )
+            else:
+                context_buffer.append(line)
+                if len(context_buffer) > 3:
+                    context_buffer.pop(0)
+        return feedback_items
+
+    def feedback_score(self) -> int | None:
+        """Return the feedback score from the frontmatter, if present."""
+        return self.frontmatter().get("feedback_score")
+
 
 EVENT_RE = re.compile(r"^(\d\d):(\d\d)(?:\s*-\s*(\d\d):(\d\d))?\s+(.*)$")
 TASK_RE = re.compile(r"\s*- \[(.)] (.*)$")
+FEEDBACK_RE = re.compile(r"^#feedback\s+(.*)$")
