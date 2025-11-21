@@ -95,6 +95,9 @@ def rewrite_prompt(
     gen_agent = Agent(model=llm_model, system_prompt=prompt)
 
     async def do_critique():
+        gen_result = await gen_agent.run(user_prompt=content)
+        gen_output = gen_result.output
+
         feedback_str = "\n".join(
             [f"Context:\n{f['context']}\nComment: {f['comment']}\n" for f in feedback]
         )
