@@ -17,6 +17,7 @@ from aww.prompts import select_prompt_template
     "-y", "--yesterday", is_flag=True, help="Include yesterday retrospective."
 )
 @click.option("-w", "--weekly", is_flag=True, help="Include weekly retrospective.")
+@click.option("-m", "--memory", is_flag=True, help="Use memory (aww-scratchpad) to generate prompt.")
 @click.option(
     "--plain-text",
     is_flag=True,
@@ -24,7 +25,7 @@ from aww.prompts import select_prompt_template
     help="Output plain text instead of markdown.",
 )
 @click.pass_context
-def motd(ctx, output_file, plain_text, daily, yesterday, weekly):
+def motd(ctx, output_file, plain_text, daily, yesterday, weekly, memory):
     """Show a motivational message of the day."""
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
@@ -53,17 +54,21 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly):
     if daily:
         daily_notes = vault.page(datetime.date.today(), Level.daily)
         if daily_notes:
-            user_prompt += daily_notes.content()
+            user_prompt += "=== DAILY NOTES ===\n" + daily_notes.content()
     if yesterday:
         yesterday_retro = vault.retrospective_page(
             datetime.date.today() - datetime.timedelta(days=1), Level.daily
         )
         if yesterday_retro:
-            user_prompt += yesterday_retro.content()
+            user_prompt += "=== YESTERDAY RETROSPECTIVE ===\n" + yesterday_retro.content()
     if weekly:
         weekly_retro = vault.retrospective_page(datetime.date.today(), Level.weekly)
         if weekly_retro:
-            user_prompt += weekly_retro.content()
+            user_prompt += "=== WEEKLY RETROSPECTIVE ===\n" + weekly_retro.content()
+    if memory:
+        scratchpad = vault.page_by_name("aww-scratchpad")
+        if scratchpad:
+            user_prompt += "=== AGENT MEMORIES ===\n" + scratchpad.content()
 
     user_prompt += f"Now, it is {datetime.datetime.now().strftime('%m/%d/%Y %H:%M')}"
 

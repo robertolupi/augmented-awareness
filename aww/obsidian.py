@@ -68,6 +68,12 @@ class Vault:
         """Return the journal Page for the given date and level."""
         return self._make_page(d, level, self.journal_dir, self._PAGE_TEMPLATES)
 
+    def page_by_name(self, name: str) -> "Page":
+        for page in self.walk():
+            if page.name == name:
+                return page
+        raise ValueError(f"Page with name '{name}' not found in vault")
+
     def retrospective_page(self, d: date, level: Level) -> "Page":
         """Return the retrospective Page for the given date and level."""
         return self._make_page(d, level, self.retrospectives_dir, self._RETRO_TEMPLATES)
