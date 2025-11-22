@@ -3,16 +3,15 @@ Obsidian vault and note structure utilities for Augmented Awareness.
 Provides classes and functions for working with Obsidian-style markdown vaults, pages, and retrospectives.
 """
 
-import pandas as pd
 import enum
 import os
-from datetime import date, time
 import re
+from datetime import date, time
+from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import yaml
-
-from pathlib import Path
 
 from aww.config import Settings
 

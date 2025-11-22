@@ -6,7 +6,7 @@ from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models import Model
 
-from aww.obsidian import Vault, Page
+from aww.obsidian import Page, Vault
 from aww.prompts import select_prompt_template
 
 
@@ -30,14 +30,17 @@ def get_chat_agent(model: Model, vault: Vault) -> Agent:
 
     scratchpad: Page | None = None
     for page in vault.walk():
-        if page.name == 'aww-scratchpad':
+        if page.name == "aww-scratchpad":
             scratchpad = page
 
     @agent.system_prompt
     def system_prompt():
         result = select_prompt_template(["chat.md"]).render(now=datetime.datetime.now())
         if scratchpad:
-            result += "The content of your memories in the [[aww-scratchpad]] page is:\n" + scratchpad.content()
+            result += (
+                "The content of your memories in the [[aww-scratchpad]] page is:\n"
+                + scratchpad.content()
+            )
         return result
 
     return agent

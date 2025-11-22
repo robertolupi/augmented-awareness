@@ -1,10 +1,9 @@
 import datetime
 
 import click
-import rich
 
 from aww.cli import main
-from aww.obsidian import Page, Level
+from aww.obsidian import Level, Page
 
 one_week_ago = datetime.datetime.now() - datetime.timedelta(weeks=1)
 yesterday = datetime.datetime.now() - datetime.timedelta(days=1)

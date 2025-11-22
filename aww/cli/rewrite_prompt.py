@@ -5,15 +5,16 @@ from pathlib import Path
 
 import click
 import rich
+from pydantic_ai import Agent
 from rich.markdown import Markdown
 
 import aww
-import aww.retro, aww.retro_gen
+import aww.retro
+import aww.retro_gen
 from aww import retro
 from aww.cli import main
 from aww.config import create_model
 from aww.obsidian import Level
-from pydantic_ai import Agent
 
 
 @main.command()
@@ -108,12 +109,10 @@ def rewrite_prompt(
         ]
         if scores:
             user_prompt.append(f"Retrospective Feedback Scores:\n{'\n'.join(scores)}")
-        
+
         user_prompt.extend(content)
 
-        critique_result = await critique_agent.run(
-            user_prompt=user_prompt
-        )
+        critique_result = await critique_agent.run(user_prompt=user_prompt)
         return critique_result.output
 
     result = asyncio.run(do_critique())

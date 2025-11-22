@@ -1,9 +1,10 @@
-import click
-from pathlib import Path
-import rich
-from rich.markdown import Markdown
-from pydantic_ai import Agent
 import asyncio
+
+import click
+import rich
+from pydantic_ai import Agent
+from rich.markdown import Markdown
+
 from aww.cli import main
 from aww.rag import Index
 

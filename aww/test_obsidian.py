@@ -5,7 +5,7 @@ import pandas as pd
 
 import aww
 from aww import obsidian
-from aww.obsidian import Level, TASK_RE
+from aww.obsidian import TASK_RE, Level
 
 test_vault_path = (Path(aww.__file__).parent.parent / "test_vault").absolute()
 
@@ -120,7 +120,7 @@ def test_page_feedback():
         }
         assert feedback[1]["comment"] == "Another feedback comment"
         assert feedback[2]["comment"] == "Whitespace handling"
-        
+
         assert page.feedback_score() == 8
     finally:
         if feedback_file.exists():

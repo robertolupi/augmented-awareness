@@ -2,14 +2,12 @@ import datetime
 
 import click
 import rich
+from pydantic_ai import Agent
 from rich.markdown import Markdown
 
-import aww.obsidian
-import aww.retro
 from aww import retro
 from aww.cli import main
 from aww.obsidian import Level
-from pydantic_ai import Agent
 
 
 @main.command(name="ask")

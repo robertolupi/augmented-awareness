@@ -1,15 +1,11 @@
 import datetime
-from pathlib import Path
 
 import click
-
 import rich
-from rich.markdown import Markdown
-import aww
-from aww.cli import main
-
 from pydantic_ai import Agent
+from rich.markdown import Markdown
 
+from aww.cli import main
 from aww.obsidian import Level
 from aww.prompts import select_prompt_template
 
@@ -69,7 +65,7 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly):
         if weekly_retro:
             user_prompt += weekly_retro.content()
 
-    user_prompt += f'Now, it is {datetime.datetime.now().strftime("%m/%d/%Y %H:%M")}'
+    user_prompt += f"Now, it is {datetime.datetime.now().strftime('%m/%d/%Y %H:%M')}"
 
     user_prompt += "Write an impactful Message Of The Day (MOTD)"
 

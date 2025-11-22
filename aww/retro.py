@@ -1,7 +1,7 @@
 import calendar
-from dataclasses import dataclass
 import datetime
-from typing import Dict, Callable, Sequence, Protocol
+from dataclasses import dataclass
+from typing import Dict, Sequence
 
 from aww.obsidian import Level, Page, Vault
 

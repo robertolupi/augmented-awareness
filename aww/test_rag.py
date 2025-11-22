@@ -1,11 +1,12 @@
-import time
-import pytest
-from pathlib import Path
-import tempfile
 import shutil
+import tempfile
+import time
+from pathlib import Path
 
-from aww.rag import Index
+import pytest
+
 from aww.obsidian import Vault
+from aww.rag import Index
 
 
 @pytest.fixture

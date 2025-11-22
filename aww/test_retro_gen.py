@@ -3,10 +3,10 @@ import datetime
 
 from pydantic_ai.models.test import TestModel
 
-from aww import retro_gen, retro
-from aww.obsidian import Vault, Level
+from aww import retro, retro_gen
+from aww.obsidian import Level
 from aww.retro_gen import RecursiveRetrospectiveGenerator
-from aww.test_retro import days_between, tmp_vault
+from aww.test_retro import tmp_vault  # keep
 
 
 class RecursiveRetrospectiveGeneratorForTesting(

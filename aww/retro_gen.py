@@ -1,18 +1,17 @@
 import asyncio
+import hashlib
+import logging
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from pathlib import Path
-import hashlib
 
+import yaml
 from pydantic_ai import Agent
 from pydantic_ai.models import Model
 
-import yaml
-
-from aww.obsidian import Vault, Page, Level
+from aww.obsidian import Level, Page
 from aww.prompts import get_prompt_template
-from aww.retro import Node, build_retrospective_tree, CachePolicy, Selection
+from aww.retro import CachePolicy, Node, Selection
 
 
 def md5(s: str) -> str:
@@ -31,8 +30,6 @@ class RetrospectiveResult:
     output: str
     page: Page
 
-
-import logging
 
 logger = logging.getLogger(__name__)
 

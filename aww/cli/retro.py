@@ -4,13 +4,13 @@ import enum
 
 import click
 import rich
-from tqdm.asyncio import tqdm
 from rich.markdown import Markdown
+from tqdm.asyncio import tqdm
 
 from aww import retro, retro_gen
 from aww.cli import main
 from aww.obsidian import Level
-from aww.retro import whole_week, whole_month, whole_year
+from aww.retro import whole_month, whole_week, whole_year
 
 
 class NoCachePolicyChoice(enum.Enum):
