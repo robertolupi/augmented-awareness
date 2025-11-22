@@ -1,6 +1,3 @@
-import datetime
-from pathlib import Path
-
 import streamlit as st
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
@@ -38,7 +35,7 @@ with st.sidebar:
     model_name = st.selectbox(
         "Model",
         settings.models.keys(),
-        index=list(settings.models.keys()).index(settings.default_model),
+        index=list(settings.models.keys()).index(settings.model),
     )
     if model_name in settings.models.keys():
         model = create_model(model_name)

@@ -56,7 +56,7 @@ class Settings(BaseSettings):
         }
     )
     rag: RagConfig = Field(default_factory=RagConfig)
-    default_model: str = "local"
+    model: str = "local"
 
     vault_path: str = "~/data/notes"
     data_path: str = "~/data/aww"
