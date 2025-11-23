@@ -10,6 +10,38 @@ from aww.obsidian import Level
 from aww.prompts import select_prompt_template
 
 
+def get_motd_context(
+    vault,
+    daily: bool = True,
+    yesterday: bool = True,
+    weekly: bool = True,
+    memory: bool = True,
+) -> list[str]:
+    """
+    Gather context for the MOTD prompt.
+    """
+    context = []
+    if daily:
+        daily_notes = vault.page(datetime.date.today(), Level.daily)
+        if daily_notes:
+            context.append("=== DAILY NOTES ===\n" + daily_notes.content())
+    if yesterday:
+        yesterday_retro = vault.retrospective_page(
+            datetime.date.today() - datetime.timedelta(days=1), Level.daily
+        )
+        if yesterday_retro:
+            context.append("=== YESTERDAY RETROSPECTIVE ===\n" + yesterday_retro.content())
+    if weekly:
+        weekly_retro = vault.retrospective_page(datetime.date.today(), Level.weekly)
+        if weekly_retro:
+            context.append("=== WEEKLY RETROSPECTIVE ===\n" + weekly_retro.content())
+    if memory:
+        scratchpad = vault.page_by_name("aww-scratchpad")
+        if scratchpad:
+            context.append("=== AGENT MEMORIES ===\n" + scratchpad.content())
+    return context
+
+
 @main.command()
 @click.option("--output-file", type=click.Path(), help="File to write the output to.")
 @click.option("-d", "--daily", is_flag=True, help="Include daily note.")
@@ -49,30 +81,13 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly, memory):
 
     agent = Agent(model=llm_model, system_prompt=prompt)
 
-    user_prompt = []
+    user_prompt = get_motd_context(vault, daily, yesterday, weekly, memory)
 
-    if daily:
-        daily_notes = vault.page(datetime.date.today(), Level.daily)
-        if daily_notes:
-            user_prompt += "=== DAILY NOTES ===\n" + daily_notes.content()
-    if yesterday:
-        yesterday_retro = vault.retrospective_page(
-            datetime.date.today() - datetime.timedelta(days=1), Level.daily
-        )
-        if yesterday_retro:
-            user_prompt += "=== YESTERDAY RETROSPECTIVE ===\n" + yesterday_retro.content()
-    if weekly:
-        weekly_retro = vault.retrospective_page(datetime.date.today(), Level.weekly)
-        if weekly_retro:
-            user_prompt += "=== WEEKLY RETROSPECTIVE ===\n" + weekly_retro.content()
-    if memory:
-        scratchpad = vault.page_by_name("aww-scratchpad")
-        if scratchpad:
-            user_prompt += "=== AGENT MEMORIES ===\n" + scratchpad.content()
+    user_prompt.append(
+        f"Now, it is {datetime.datetime.now().strftime('%m/%d/%Y %H:%M')}"
+    )
 
-    user_prompt += f"Now, it is {datetime.datetime.now().strftime('%m/%d/%Y %H:%M')}"
-
-    user_prompt += "Write an impactful Message Of The Day (MOTD)"
+    user_prompt.append("Write an impactful Message Of The Day (MOTD)")
 
     response = agent.run_sync(user_prompt)
     if plain_text:

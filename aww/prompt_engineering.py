@@ -17,36 +17,17 @@ from aww.config import create_model
 from aww.obsidian import Level, Vault
 
 
-def rewrite_prompt_logic(
+def optimize_prompt(
     critique_model_name: str,
     llm_model: Model,
-    vault: Vault,
-    date: datetime.date,
-    level: Level,
-    context_levels: List[Level],
     current_prompt: str,
+    test_inputs: List[str],
+    feedback: Optional[List[dict]] = None,
+    scores: Optional[List[str]] = None,
 ) -> str:
     """
-    Logic for rewriting prompts based on critique and feedback.
+    Core logic for rewriting prompts based on critique and feedback.
     """
-    sel = retro.Selection(vault, date, level)
-    node = sel.root
-    sources = [n for n in node.sources if n.level in context_levels]
-    if node.level in context_levels:
-        sources.insert(0, node)
-    content = [s.retro_page.content() for s in sources if s.retro_page]
-    feedback = []
-    scores = []
-    for s in sources:
-        if s.retro_page:
-            feedback.extend(s.retro_page.feedback())
-            if score := s.retro_page.feedback_score():
-                scores.append(f"{s.retro_page.name}: {score}")
-
-    if level == Level.daily:
-        page_content = asyncio.run(aww.retro_gen.page_content(node))
-        content.insert(0, page_content)
-
     model = create_model(critique_model_name)
     critique_agent = Agent(model=model, output_type=str)
 
@@ -70,12 +51,22 @@ def rewrite_prompt_logic(
     gen_agent = Agent(model=llm_model, system_prompt=current_prompt)
 
     async def do_critique():
-        gen_result = await gen_agent.run(user_prompt=content)
+        # Generate output for the test inputs using the current prompt
+        # For simplicity in this generalized version, we'll just use the first input
+        # or concatenate them if appropriate. In the original logic, 'content' was a list of strings.
+        # The gen_agent.run takes user_prompt which can be a string or list of content.
+        gen_result = await gen_agent.run(user_prompt=test_inputs)
         gen_output = gen_result.output
 
-        feedback_str = "\n".join(
-            [f"Context:\n{f['context']}\nComment: {f['comment']}\n" for f in feedback]
-        )
+        feedback_str = ""
+        if feedback:
+            feedback_str = "\n".join(
+                [
+                    f"Context:\n{f['context']}\nComment: {f['comment']}\n"
+                    for f in feedback
+                ]
+            )
+
         user_prompt = [
             current_prompt,
             gen_output,
@@ -84,10 +75,56 @@ def rewrite_prompt_logic(
         if scores:
             user_prompt.append(f"Retrospective Feedback Scores:\n{'\n'.join(scores)}")
 
-        user_prompt.extend(content)
+        user_prompt.extend(test_inputs)
 
         critique_result = await critique_agent.run(user_prompt=user_prompt)
         return critique_result.output
 
     result = asyncio.run(do_critique())
     return result
+
+
+def rewrite_prompt_logic(
+    critique_model_name: str,
+    llm_model: Model,
+    vault: Vault,
+    date: datetime.date,
+    level: Level,
+    context_levels: List[Level],
+    current_prompt: str,
+    external_feedback: Optional[List[str]] = None,
+) -> str:
+    """
+    Logic for rewriting prompts based on critique and feedback.
+    """
+    sel = retro.Selection(vault, date, level)
+    node = sel.root
+    sources = [n for n in node.sources if n.level in context_levels]
+    if node.level in context_levels:
+        sources.insert(0, node)
+    content = [s.retro_page.content() for s in sources if s.retro_page]
+    feedback = []
+    if external_feedback:
+        feedback.extend(
+            [{"comment": f, "context": "CLI Feedback"} for f in external_feedback]
+        )
+
+    scores = []
+    for s in sources:
+        if s.retro_page:
+            feedback.extend(s.retro_page.feedback())
+            if score := s.retro_page.feedback_score():
+                scores.append(f"{s.retro_page.name}: {score}")
+
+    if level == Level.daily:
+        page_content = asyncio.run(aww.retro_gen.page_content(node))
+        content.insert(0, page_content)
+
+    return optimize_prompt(
+        critique_model_name=critique_model_name,
+        llm_model=llm_model,
+        current_prompt=current_prompt,
+        test_inputs=content,
+        feedback=feedback,
+        scores=scores,
+    )
