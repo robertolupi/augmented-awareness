@@ -56,8 +56,11 @@ def get_motd_context(
     default=False,
     help="Output plain text instead of markdown.",
 )
+@click.option(
+    "-v", "--verbose", is_flag=True, default=False, help="Show verbose output (prints user prompt)."
+)
 @click.pass_context
-def motd(ctx, output_file, plain_text, daily, yesterday, weekly, memory):
+def motd(ctx, output_file, plain_text, daily, yesterday, weekly, memory, verbose):
     """Show a motivational message of the day."""
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
@@ -84,10 +87,14 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly, memory):
     user_prompt = get_motd_context(vault, daily, yesterday, weekly, memory)
 
     user_prompt.append(
-        f"Now, it is {datetime.datetime.now().strftime('%m/%d/%Y %H:%M')}"
+        f"Today, it is {datetime.datetime.now().strftime('%c')}"
     )
 
     user_prompt.append("Write an impactful Message Of The Day (MOTD)")
+
+    if verbose:
+        for part in user_prompt:
+            rich.print(part)
 
     response = agent.run_sync(user_prompt)
     if plain_text:
