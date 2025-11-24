@@ -87,7 +87,7 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly, memory, verbose
     user_prompt = get_motd_context(vault, daily, yesterday, weekly, memory)
 
     user_prompt.append(
-        f"Today, it is {datetime.datetime.now().strftime('%c')}"
+        f"Today, it is {datetime.datetime.now().strftime("%A %B %d %Y at %H:%M")}"
     )
 
     user_prompt.append("Write an impactful Message Of The Day (MOTD)")
