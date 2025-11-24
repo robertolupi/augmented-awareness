@@ -177,5 +177,8 @@ class Index:
             results = self.tbl.search(query, query_type="fts")
         results = results.limit(20)
         reranker = CrossEncoderReranker()
-        results = results.rerank(reranker).limit(10)
+        if rag:
+            results = results.rerank(reranker, query_string=query).limit(10)
+        else:
+            results = results.rerank(reranker).limit(10)
         return results.to_pandas()

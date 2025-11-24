@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Dict, Literal, Union, Any
+from typing import Any, Dict, Literal, Union
 
 import click
-from pydantic import Field, BaseModel
+from pydantic import BaseModel, Field
 from pydantic_ai.models import Model
 from pydantic_ai.models.gemini import GeminiModel
 from pydantic_ai.models.openai import OpenAIModel
@@ -13,8 +13,8 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
-    TomlConfigSettingsSource,
     SettingsConfigDict,
+    TomlConfigSettingsSource,
 )
 
 
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
         }
     )
     rag: RagConfig = Field(default_factory=RagConfig)
-    default_model: str = "local"
+    model: str = "local"
 
     vault_path: str = "~/data/notes"
     data_path: str = "~/data/aww"

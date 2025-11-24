@@ -83,7 +83,13 @@ go test ./...
 To run all Python tests in this project, use `pytest` from the project root:
 
 ```bash
-pytest
+PYTHONPATH=. uv run pytest
+```
+
+To run a specific test file:
+
+```bash
+PYTHONPATH=. uv run pytest path/to/test_file.py
 ```
 
 ### General Best Practices

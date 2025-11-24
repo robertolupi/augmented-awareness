@@ -1,13 +1,14 @@
-from pathlib import Path
-import shutil
 import datetime
+import shutil
+from pathlib import Path
+
 import pytest
 
 import aww
 import aww.obsidian
 import aww.retro
-from aww.obsidian import Vault, Level
-from aww.retro import Selection, whole_week, whole_month
+from aww.obsidian import Level, Vault
+from aww.retro import Selection, whole_month, whole_week
 
 test_vault_path = (Path(aww.__file__).parent.parent / "test_vault").absolute()
 
@@ -114,7 +115,9 @@ def test_selection_monthly(tmp_vault):
 
     # Monthly root should depend on all daily and weekly nodes in the month
     daily_pages = {tmp_vault.retrospective_page(x, Level.daily) for x in expected_month}
-    weekly_pages = {tmp_vault.retrospective_page(x, Level.weekly) for x in expected_month}
+    weekly_pages = {
+        tmp_vault.retrospective_page(x, Level.weekly) for x in expected_month
+    }
     expected_sources = {sel.tree[p] for p in (daily_pages | weekly_pages)}
     assert sel.root.sources == expected_sources
 

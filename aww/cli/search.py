@@ -1,9 +1,10 @@
-import click
-from pathlib import Path
-import rich
-from rich.markdown import Markdown
-from pydantic_ai import Agent
 import asyncio
+
+import click
+import rich
+from pydantic_ai import Agent
+from rich.markdown import Markdown
+
 from aww.cli import main
 from aww.rag import Index
 
@@ -43,7 +44,7 @@ def search(
     if ask:
         llm_model = ctx.obj["llm_model"]
         ask_agent = Agent(model=llm_model, system_prompt=query)
-        ask_result = asyncio.run(ask_agent.run([c for c in results["content"]]))
+        ask_result = asyncio.run(ask_agent.run([c for c in results["text"]]))
 
         output_content = ask_result.output
         if output_file:

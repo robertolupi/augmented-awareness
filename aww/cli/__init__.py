@@ -11,11 +11,11 @@ def main(
     ctx,
 ):
     settings = config.Settings()
-    llm_model = create_model(settings.default_model)
+    llm_model = create_model(settings.model)
     vault = Vault.from_settings(settings)
     ctx.obj = {
         "llm_model": llm_model,
         "vault": vault,
         "settings": settings,
-        "model_name": settings.default_model,
+        "model_name": settings.model,
     }

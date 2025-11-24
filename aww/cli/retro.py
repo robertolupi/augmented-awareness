@@ -4,13 +4,13 @@ import enum
 
 import click
 import rich
-from tqdm.asyncio import tqdm
 from rich.markdown import Markdown
+from tqdm.asyncio import tqdm
 
 from aww import retro, retro_gen
 from aww.cli import main
 from aww.obsidian import Level
-from aww.retro import whole_week, whole_month, whole_year
+from aww.retro import whole_month, whole_week, whole_year
 
 
 class NoCachePolicyChoice(enum.Enum):
@@ -109,9 +109,39 @@ def retrospectives(
     print("Context:", ",".join(c.value for c in final_context))
     print("Concurrency Limit:", final_concurrency_limit)
 
+    cache_policies = get_cache_policies(final_no_cache)
+
+    generator = retro_gen.RecursiveRetrospectiveGenerator(
+        llm_model, sel, final_concurrency_limit
+    )
+    result = asyncio.run(
+        generator.run(
+            context_levels=final_context,
+            cache_policies=cache_policies,
+            gather=tqdm.gather,
+        )
+    )
+    if result:
+        output_content = result.output
+        if output_file:
+            with open(output_file, "w") as f:
+                f.write(output_content)
+            print(f"Output written to {output_file}")
+        if plain_text:
+            print(output_content)
+        else:
+            rich.print(Markdown(output_content))
+
+
+def get_cache_policies(
+    no_cache_choices: list[NoCachePolicyChoice],
+) -> list[retro.CachePolicy]:
+    """
+    Converts a list of NoCachePolicyChoice enums into a list of CachePolicy objects.
+    """
     cache_policies = []
     no_cache_levels = []
-    for policy in final_no_cache:
+    for policy in no_cache_choices:
         match policy:
             case NoCachePolicyChoice.CACHE:
                 # No op, but clears final_no_cache defaults
@@ -136,27 +166,7 @@ def retrospectives(
                 )
     if no_cache_levels:
         cache_policies.append(retro.NoLevelsCachePolicy(levels=no_cache_levels))
-
-    generator = retro_gen.RecursiveRetrospectiveGenerator(
-        llm_model, sel, final_concurrency_limit
-    )
-    result = asyncio.run(
-        generator.run(
-            context_levels=final_context,
-            cache_policies=cache_policies,
-            gather=tqdm.gather,
-        )
-    )
-    if result:
-        output_content = result.output
-        if output_file:
-            with open(output_file, "w") as f:
-                f.write(output_content)
-            print(f"Output written to {output_file}")
-        if plain_text:
-            print(output_content)
-        else:
-            rich.print(Markdown(output_content))
+    return cache_policies
 
 
 def get_dates_for_level(

@@ -5,7 +5,7 @@ import pandas as pd
 
 import aww
 from aww import obsidian
-from aww.obsidian import Level, TASK_RE
+from aww.obsidian import TASK_RE, Level
 
 test_vault_path = (Path(aww.__file__).parent.parent / "test_vault").absolute()
 
@@ -103,3 +103,25 @@ def test_page_tasks():
         "task 3 🔁 every day when done ➕ 2025-04-03 🛫 2025-04-04 ⏳ 2025-04-03 📅 2025-04-06  ✅ 2025-04-04",
     ]
     assert tasks.index.to_list() == [16, 17, 18]
+
+
+def test_page_feedback():
+    feedback_file = test_vault_path / "journal/2025/04/2025-04-02.md"
+    feedback_file.write_text(
+        "---\nfeedback_score: 8\n---\n# 2025-04-02\n\nContext line 1\nContext line 2\nContext line 3\n#feedback This is a feedback comment\nSome content\n#feedback Another feedback comment\nMore content\n#feedback    Whitespace handling\n"
+    )
+    try:
+        page = obsidian.Page(feedback_file, Level.daily)
+        feedback = page.feedback()
+        assert len(feedback) == 3
+        assert feedback[0] == {
+            "comment": "This is a feedback comment",
+            "context": "Context line 1\nContext line 2\nContext line 3",
+        }
+        assert feedback[1]["comment"] == "Another feedback comment"
+        assert feedback[2]["comment"] == "Whitespace handling"
+
+        assert page.feedback_score() == 8
+    finally:
+        if feedback_file.exists():
+            feedback_file.unlink()

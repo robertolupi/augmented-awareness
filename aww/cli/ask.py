@@ -2,14 +2,13 @@ import datetime
 
 import click
 import rich
+from pydantic_ai import Agent
 from rich.markdown import Markdown
 
-import aww.obsidian
-import aww.retro
 from aww import retro
+import aww.ask
 from aww.cli import main
 from aww.obsidian import Level
-from pydantic_ai import Agent
 
 
 @main.command(name="ask")
@@ -63,24 +62,22 @@ def ask(
     if yesterday:
         date = date - datetime.timedelta(days=1)
 
-    sel = retro.Selection(vault, date, level)
-
     if prompt_file:
         prompt = prompt + "\n" + open(prompt_file, "r").read()
 
-    ask_agent = Agent(model=llm_model, system_prompt=prompt)
+    # Convert datetime to date for the logic function
+    query_date = date.date() if isinstance(date, datetime.datetime) else date
 
-    node = sel.root
-    sources = [n for n in node.sources if n.level in context]
-    if node.level in context:
-        sources.insert(0, node)
-    sources = [s for s in sources if s.retro_page]
-    if verbose:
-        rich.print("Sources", [n.retro_page.name for n in sources])
-    retros = [n.retro_page.content() for n in sources]
+    output_content = aww.ask.ask_question(
+        vault=vault,
+        llm_model=llm_model,
+        date=query_date,
+        level=level,
+        prompt=prompt,
+        context_levels=list(context),
+        verbose=verbose,
+    )
 
-    result = ask_agent.run_sync(user_prompt=retros)
-    output_content = result.output
     if output_file:
         with open(output_file, "w") as f:
             f.write(output_content)

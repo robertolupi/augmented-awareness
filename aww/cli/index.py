@@ -1,5 +1,5 @@
 import click
-from pathlib import Path
+
 from aww.cli import main
 from aww.rag import Index
 

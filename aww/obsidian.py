@@ -3,16 +3,15 @@ Obsidian vault and note structure utilities for Augmented Awareness.
 Provides classes and functions for working with Obsidian-style markdown vaults, pages, and retrospectives.
 """
 
-import pandas as pd
 import enum
 import os
-from datetime import date, time
 import re
+from datetime import date, time
+from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import yaml
-
-from pathlib import Path
 
 from aww.config import Settings
 
@@ -69,6 +68,12 @@ class Vault:
         """Return the journal Page for the given date and level."""
         return self._make_page(d, level, self.journal_dir, self._PAGE_TEMPLATES)
 
+    def page_by_name(self, name: str) -> "Page":
+        for page in self.walk():
+            if page.name == name:
+                return page
+        raise ValueError(f"Page with name '{name}' not found in vault")
+
     def retrospective_page(self, d: date, level: Level) -> "Page":
         """Return the retrospective Page for the given date and level."""
         return self._make_page(d, level, self.retrospectives_dir, self._RETRO_TEMPLATES)
@@ -122,7 +127,7 @@ class Page:
         """Debug representation: Page(path)."""
         return "Page(" + repr(self.path) + ")"
 
-    def __eq__(self, other: "Page"):
+    def __eq__(self, other: object):
         """Equality based on file path."""
         return isinstance(other, Page) and (self.path == other.path)
 
@@ -212,6 +217,29 @@ class Page:
                 return {}
         return {}
 
+    def feedback(self) -> list[dict[str, str]]:
+        """Return a list of feedback comments found in the page, with context."""
+        feedback_items = []
+        context_buffer = []
+        for _, line in self.enumerate_content_lines():
+            if m := FEEDBACK_RE.match(line):
+                feedback_items.append(
+                    {
+                        "comment": m.group(1),
+                        "context": "\n".join(context_buffer),
+                    }
+                )
+            else:
+                context_buffer.append(line)
+                if len(context_buffer) > 3:
+                    context_buffer.pop(0)
+        return feedback_items
+
+    def feedback_score(self) -> int | None:
+        """Return the feedback score from the frontmatter, if present."""
+        return self.frontmatter().get("feedback_score")
+
 
 EVENT_RE = re.compile(r"^(\d\d):(\d\d)(?:\s*-\s*(\d\d):(\d\d))?\s+(.*)$")
 TASK_RE = re.compile(r"\s*- \[(.)] (.*)$")
+FEEDBACK_RE = re.compile(r"^#feedback\s+(.*)$")

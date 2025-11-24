@@ -1,5 +1,3 @@
-import datetime
-
 import streamlit as st
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
@@ -7,6 +5,7 @@ from pydantic_ai.messages import (
     TextPart,
 )
 
+from aww import obsidian
 from aww.config import Settings, create_model
 from aww.chat import get_chat_agent
 
@@ -28,6 +27,7 @@ def render_messages(messages, show_tool_calls):
 
 
 settings = Settings()
+vault = obsidian.Vault.from_settings(settings)
 model = None
 agent = None
 
@@ -35,11 +35,11 @@ with st.sidebar:
     model_name = st.selectbox(
         "Model",
         settings.models.keys(),
-        index=list(settings.models.keys()).index(settings.default_model),
+        index=list(settings.models.keys()).index(settings.model),
     )
     if model_name in settings.models.keys():
         model = create_model(model_name)
-        agent = get_chat_agent(model)
+        agent = get_chat_agent(model, vault)
 
     show_tool_calls = st.checkbox("Show tool calls", value=False)
 
