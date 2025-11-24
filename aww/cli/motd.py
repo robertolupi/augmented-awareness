@@ -8,6 +8,7 @@ from rich.markdown import Markdown
 from aww.cli import main
 from aww.obsidian import Level
 from aww.prompts import select_prompt_template
+from aww.retro_gen import METRIC_FORMATTERS
 
 
 def get_motd_context(
@@ -25,6 +26,13 @@ def get_motd_context(
         daily_notes = vault.page(datetime.date.today(), Level.daily)
         if daily_notes:
             context.append("=== DAILY NOTES ===\n" + daily_notes.content())
+            if fm := daily_notes.frontmatter():
+                metrics = []
+                for key, fmt in METRIC_FORMATTERS.items():
+                    if (value := fm.get(key)) is not None:
+                        metrics.append(fmt.format(value))
+                if metrics:
+                    context.append("=== TODAY'S METRICS ===\n" + "\n".join(metrics))
     if yesterday:
         yesterday_retro = vault.retrospective_page(
             datetime.date.today() - datetime.timedelta(days=1), Level.daily
