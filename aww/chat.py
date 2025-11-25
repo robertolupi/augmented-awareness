@@ -9,6 +9,7 @@ from aww.obsidian import Page, Vault
 from aww.prompts import select_prompt_template
 
 
+from aww.deps import ChatDeps
 from aww.tools import (
     datetime_tool,
     read_journal_tool,
@@ -25,10 +26,10 @@ def is_executable(path: Path) -> bool:
     return path.is_file() and os.access(path, os.X_OK)
 
 
-def get_chat_agent(model: Model, vault: Vault) -> Agent[Vault]:
+def get_chat_agent(model: Model, vault: Vault) -> Agent[ChatDeps]:
     agent = Agent(
         model,
-        deps_type=Vault,
+        deps_type=ChatDeps,
         tools=[
             datetime_tool,
             read_journal_tool,
@@ -47,7 +48,7 @@ def get_chat_agent(model: Model, vault: Vault) -> Agent[Vault]:
         pass
 
     @agent.system_prompt
-    def system_prompt(ctx: RunContext[Vault]):
+    def system_prompt(ctx: RunContext[ChatDeps]):
         result = select_prompt_template(["chat.md"]).render(now=datetime.datetime.now())
         if scratchpad:
             result += (

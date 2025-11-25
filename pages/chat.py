@@ -8,6 +8,8 @@ from pydantic_ai.messages import (
 from aww import obsidian
 from aww.config import Settings, create_model
 from aww.chat import get_chat_agent
+from aww.deps import ChatDeps
+from aww.rag import Index
 
 
 def render_messages(messages, show_tool_calls):
@@ -28,6 +30,9 @@ def render_messages(messages, show_tool_calls):
 
 settings = Settings()
 vault = obsidian.Vault.from_settings(settings)
+index = Index.from_settings(settings)
+deps = ChatDeps(vault=vault, index=index)
+
 model = None
 agent = None
 
@@ -59,7 +64,7 @@ if agent:
             st.write(prompt)
 
         with st.spinner("Waiting for response..."):
-            response = agent.run_sync(prompt, message_history=chat_history, deps=vault)
+            response = agent.run_sync(prompt, message_history=chat_history, deps=deps)
             render_messages((response.new_messages()), show_tool_calls)
 
             st.session_state["chat_history"] = response.all_messages()

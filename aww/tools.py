@@ -4,10 +4,11 @@ from typing import List
 
 from pydantic_ai import RunContext
 
-from aww.obsidian import Level, Vault, Page
+from aww.deps import ChatDeps
+from aww.obsidian import Level
 
 
-def datetime_tool(ctx: RunContext[Vault]) -> str:
+def datetime_tool(ctx: RunContext[ChatDeps]) -> str:
     """
     Get the date and time as of today.
     """
@@ -23,22 +24,19 @@ def datetime_tool(ctx: RunContext[Vault]) -> str:
     return "\n".join(output)
 
 
-def read_journal_tool(ctx: RunContext[Vault]) -> str:
+def read_journal_tool(ctx: RunContext[ChatDeps]) -> str:
     """
     Read journal for the past week, up to and including today.
     """
-    vault = ctx.deps
+    vault = ctx.deps.vault
     today = datetime.date.today()
     output = []
     
-    # Add current datetime info first, similar to Go implementation
+    # Add current datetime info first
     output.append(datetime_tool(ctx))
     output.append("\nThe user journal for the past week is as follows:\n")
 
     for i in range(7):
-        # Go loop was 0 to 6, adding to start date (which was today - 6 days)
-        # So it went from today-6 to today.
-        # Let's replicate that:
         d = today - datetime.timedelta(days=6 - i)
         
         # Daily page
@@ -54,14 +52,14 @@ def read_journal_tool(ctx: RunContext[Vault]) -> str:
     return "\n".join(output)
 
 
-def read_pages_tool(ctx: RunContext[Vault], pages: List[str]) -> str:
+def read_pages_tool(ctx: RunContext[ChatDeps], pages: List[str]) -> str:
     """
     Read one or more pages from the vault, and return their content in markdown format.
     
     Args:
         pages: Names of pages to read, e.g. 2023-10-01 or [[2023-10-01]].
     """
-    vault = ctx.deps
+    vault = ctx.deps.vault
     output = []
     
     for name in pages:
@@ -76,11 +74,11 @@ def read_pages_tool(ctx: RunContext[Vault], pages: List[str]) -> str:
     return "\n".join(output)
 
 
-def read_retro_tool(ctx: RunContext[Vault]) -> str:
+def read_retro_tool(ctx: RunContext[ChatDeps]) -> str:
     """
     Read yearly/monthly/weekly/daily retrospectives for the given date (today).
     """
-    vault = ctx.deps
+    vault = ctx.deps.vault
     today = datetime.date.today()
     output = []
     
@@ -98,7 +96,7 @@ def read_retro_tool(ctx: RunContext[Vault]) -> str:
 
 
 def read_tasks_tool(
-    ctx: RunContext[Vault], 
+    ctx: RunContext[ChatDeps], 
     start: str = None, 
     end: str = None, 
     include_done: str = "false"
@@ -111,7 +109,7 @@ def read_tasks_tool(
         end: End date (YYYY-MM-DD). Defaults to today.
         include_done: Whether to include completed tasks ("true"/"false"). Defaults to "false".
     """
-    vault = ctx.deps
+    vault = ctx.deps.vault
     today = datetime.date.today()
     
     if start:
@@ -157,21 +155,17 @@ def read_tasks_tool(
     return "\n".join(output)
 
 
-def remember_tool(ctx: RunContext[Vault], fact: str) -> str:
+def remember_tool(ctx: RunContext[ChatDeps], fact: str) -> str:
     """
     Remember a fact or piece of information. Facts will be stored in a page called 'aww-scratchpad' in the vault.
     
     Args:
         fact: The fact or information to remember, in markdown format.
     """
-    vault = ctx.deps
+    vault = ctx.deps.vault
     try:
         page = vault.page_by_name("aww-scratchpad")
     except ValueError:
-        # If page doesn't exist, we might need to create it. 
-        # But for now, let's assume it exists or fail as per Go implementation which seemed to expect it.
-        # Actually Go impl: page, err := app.Vault.Page("aww-scratchpad") -> implies it might fetch or error.
-        # Let's try to append to it.
         return "Error: 'aww-scratchpad' page not found."
 
     # Append to file
@@ -181,33 +175,34 @@ def remember_tool(ctx: RunContext[Vault], fact: str) -> str:
     return "Fact remembered successfully!"
 
 
-def search_tool(ctx: RunContext[Vault], query: str) -> str:
+def search_tool(ctx: RunContext[ChatDeps], query: str) -> str:
     """
-    Search for pages in the vault.
+    Search for pages in the vault using RAG (Retrieval Augmented Generation).
     
     Args:
-        query: The regexp query to search for in page names.
+        query: The query to search for.
     """
-    vault = ctx.deps
-    matches = []
-    
+    if not ctx.deps.index:
+        return "Search is not available (index not initialized)."
+        
     try:
-        pattern = re.compile(query)
-    except re.error:
-        return "Invalid regex query."
-        
-    for page in vault.walk():
-        if pattern.search(page.name):
-            matches.append(page)
+        # Open table if not already open
+        if ctx.deps.index.tbl is None:
+            ctx.deps.index.open_table()
             
-    if not matches:
-        return "No pages found matching your search query."
+        if ctx.deps.index.tbl is None:
+             return "Search index not found. Please run 'aww index' first."
+
+        results_df = ctx.deps.index.search(query)
         
-    # Limit to 10 results
-    matches = matches[:10]
-    
-    output = []
-    for page in matches:
-        output.append(f"# {page.name}\n{page.content()}\n")
+        if results_df.empty:
+            return "No pages found matching your search query."
+            
+        output = []
+        for _, row in results_df.iterrows():
+            output.append(f"# {row['id']}\n{row['text']}\n")
+            
+        return "\n".join(output)
         
-    return "\n".join(output)
+    except Exception as e:
+        return f"Error performing search: {str(e)}"
