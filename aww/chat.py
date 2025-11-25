@@ -2,12 +2,22 @@ import datetime
 import os
 from pathlib import Path
 
-from pydantic_ai import Agent
-from pydantic_ai.mcp import MCPServerStdio
+from pydantic_ai import Agent, RunContext
 from pydantic_ai.models import Model
 
 from aww.obsidian import Page, Vault
 from aww.prompts import select_prompt_template
+
+
+from aww.tools import (
+    datetime_tool,
+    read_journal_tool,
+    read_pages_tool,
+    read_retro_tool,
+    read_tasks_tool,
+    remember_tool,
+    search_tool,
+)
 
 
 def is_executable(path: Path) -> bool:
@@ -15,26 +25,29 @@ def is_executable(path: Path) -> bool:
     return path.is_file() and os.access(path, os.X_OK)
 
 
-def get_chat_agent(model: Model, vault: Vault) -> Agent:
-    toolsets = []
-
-    journal = Path(__file__).parent.parent / "journal"
-    if journal.exists() and is_executable(journal):
-        journal_mcp = MCPServerStdio(
-            str(journal.absolute()),
-            args=["mcp"],
-        )
-        toolsets.append(journal_mcp)
-
-    agent = Agent(model, toolsets=toolsets)
+def get_chat_agent(model: Model, vault: Vault) -> Agent[Vault]:
+    agent = Agent(
+        model,
+        deps_type=Vault,
+        tools=[
+            datetime_tool,
+            read_journal_tool,
+            read_pages_tool,
+            read_retro_tool,
+            read_tasks_tool,
+            remember_tool,
+            search_tool,
+        ],
+    )
 
     scratchpad: Page | None = None
-    for page in vault.walk():
-        if page.name == "aww-scratchpad":
-            scratchpad = page
+    try:
+        scratchpad = vault.page_by_name("aww-scratchpad")
+    except ValueError:
+        pass
 
     @agent.system_prompt
-    def system_prompt():
+    def system_prompt(ctx: RunContext[Vault]):
         result = select_prompt_template(["chat.md"]).render(now=datetime.datetime.now())
         if scratchpad:
             result += (

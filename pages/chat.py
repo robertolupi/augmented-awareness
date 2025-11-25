@@ -59,7 +59,7 @@ if agent:
             st.write(prompt)
 
         with st.spinner("Waiting for response..."):
-            response = agent.run_sync(prompt, message_history=chat_history)
+            response = agent.run_sync(prompt, message_history=chat_history, deps=vault)
             render_messages((response.new_messages()), show_tool_calls)
 
             st.session_state["chat_history"] = response.all_messages()

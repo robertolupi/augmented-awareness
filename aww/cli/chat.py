@@ -12,4 +12,4 @@ def chat(ctx):
     llm_model = ctx.obj["llm_model"]
     agent = get_chat_agent(llm_model, vault)
 
-    agent.to_cli_sync(prog_name="aww")
+    agent.to_cli_sync(prog_name="aww", deps=vault)
