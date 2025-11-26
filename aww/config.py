@@ -94,7 +94,7 @@ def create_model(model_name: str) -> Model:
             )
         return OpenAIModel(
             model_name=model_config.model_name,
-            **model_config.model_settings,
+            settings=model_config.model_settings,
         )
     elif isinstance(model_config, GeminiConfig):
         if not os.environ.get("GEMINI_API_KEY"):
@@ -103,13 +103,13 @@ def create_model(model_name: str) -> Model:
             )
         return GeminiModel(
             model_name=model_config.model_name,
-            **model_config.model_settings,
+            settings=model_config.model_settings,
         )
     elif isinstance(model_config, LocalAIConfig):
         return OpenAIModel(
             model_name=model_config.model_name,
             provider=OpenAIProvider(base_url=model_config.base_url),
-            **model_config.model_settings,
+            settings=model_config.model_settings,
         )
     else:
         # This should not be reached if config parsing is correct
