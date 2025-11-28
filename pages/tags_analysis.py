@@ -111,10 +111,12 @@ with st.spinner("Loading retrospectives..."):
 
         st.header("Content-based Clustering")
         default_perplexity = min(30, len(contents) - 1)
+        max_slider_value = min(50, len(contents) - 1)
+        min_slider_value = min(3, max_slider_value - 1)
         perplexity = st.slider(
             "Perplexity",
-            min_value=3,
-            max_value=min(50, len(contents) - 1),
+            min_value=min_slider_value,
+            max_value=max_slider_value,
             value=default_perplexity,
         )
 
