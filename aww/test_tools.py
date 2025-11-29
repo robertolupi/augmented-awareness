@@ -127,7 +127,7 @@ def test_search_tool(mock_ctx):
     
     assert "# FoundPage" in result
     assert "Content 1" in result
-    mock_ctx.deps.index.search.assert_called_with("Found", rag=True)
+    mock_ctx.deps.index.search.assert_called_with("Found")
 
 
 def test_remember_tool(mock_ctx):
