@@ -14,7 +14,7 @@ from aww.rag import Index
 @click.option(
     "--incr",
     is_flag=True,
-    default=False,
+    default=True,
     help="Incrementally update the index with new and modified pages.",
 )
 @click.pass_context
