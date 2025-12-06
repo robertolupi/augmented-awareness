@@ -13,7 +13,8 @@ from aww.rag import Index
 @click.argument("query")
 @click.option("--rag", is_flag=True, default=False, help="Use RAG for searching.")
 @click.option(
-    "-a", "--ask", is_flag=True, default=False, help="Ask LLM to compose the output."
+    "-a", "--ask", default=None, help="Ask LLM to compose the output.",
+    type=str,
 )
 @click.option("--output-file", type=click.Path(), help="File to write the output to.")
 @click.option(
@@ -43,7 +44,7 @@ def search(
 
     if ask:
         llm_model = ctx.obj["llm_model"]
-        ask_agent = Agent(model=llm_model, system_prompt=query)
+        ask_agent = Agent(model=llm_model, system_prompt=ask)
         ask_result = asyncio.run(ask_agent.run([c for c in results["text"]]))
 
         output_content = ask_result.output
