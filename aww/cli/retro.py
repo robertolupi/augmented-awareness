@@ -15,6 +15,7 @@ from aww.retro import whole_month, whole_week, whole_year
 
 class NoCachePolicyChoice(enum.Enum):
     CACHE = "do_cache"
+    ALL = "all"  # no cache at all
     ROOT = "root"
     DAILY = "daily"
     WEEKLY = "weekly"
@@ -164,6 +165,20 @@ def get_cache_policies(
                         datetime.datetime.now() - datetime.timedelta(hours=1)
                     )
                 )
+            case NoCachePolicyChoice.ALL:
+                cache_policies.extend(
+                    [retro.NoRootCachePolicy(),
+                     retro.ModificationTimeCachePolicy()]
+                )
+                no_cache_levels.extend(
+                    [
+                        Level.daily,
+                        Level.weekly,
+                        Level.monthly,
+                        Level.yearly,
+                    ]
+                )
+
     if no_cache_levels:
         cache_policies.append(retro.NoLevelsCachePolicy(levels=no_cache_levels))
     return cache_policies
