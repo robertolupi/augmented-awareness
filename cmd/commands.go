@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"journal/internal/application"
 	"journal/internal/config"
 	"log"
 	"os"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -59,6 +60,7 @@ func init() {
 	initSearchCmd()
 	initIndexCmd()
 	initTasksCleanupCmd()
+	initPomodoroCmd()
 }
 
 func initApp() {
