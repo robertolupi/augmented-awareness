@@ -13,6 +13,7 @@ from aww.tools import (
     read_retro_tool,
     read_tasks_tool,
     remember_tool,
+    save_page_tool,
     search_tool,
 )
 import pandas as pd
@@ -141,3 +142,34 @@ def test_remember_tool(mock_ctx):
         assert "Fact remembered successfully!" in result
         mock_open.assert_called_with("dummy_path", "a")
         mock_open.return_value.__enter__.return_value.write.assert_called_with("\nRemember this")
+
+
+def test_save_page_tool_creates_new_page(tmp_path):
+    vault = MagicMock(spec=Vault)
+    vault.path = tmp_path
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    result = save_page_tool(ctx, "notes/Idea", "# Title")
+    assert "saved successfully" in result
+    saved_path = tmp_path / "notes" / "Idea.md"
+    assert saved_path.exists()
+    assert saved_path.read_text() == "# Title"
+
+
+def test_save_page_tool_refuses_overwrite(tmp_path):
+    existing_path = tmp_path / "Existing.md"
+    existing_path.write_text("Existing content")
+
+    vault = MagicMock(spec=Vault)
+    vault.path = tmp_path
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    result = save_page_tool(ctx, "Existing", "New content")
+    assert "already exists" in result
+    assert existing_path.read_text() == "Existing content"

@@ -1,5 +1,6 @@
 import datetime
 import re
+from pathlib import Path
 from typing import List
 
 from pydantic_ai import RunContext
@@ -173,6 +174,44 @@ def remember_tool(ctx: RunContext[ChatDeps], fact: str) -> str:
         f.write(f"\n{fact}")
         
     return "Fact remembered successfully!"
+
+
+def save_page_tool(ctx: RunContext[ChatDeps], name: str, content: str) -> str:
+    """
+    Save content to a new page in the vault. Refuses to overwrite existing pages.
+
+    Args:
+        name: Page name or relative path (e.g. Notes/Idea or [[Notes/Idea]]).
+        content: Page content in markdown format.
+    """
+    vault = ctx.deps.vault
+    clean_name = name.replace("[[", "").replace("]]", "").strip()
+    if not clean_name:
+        return "Error: page name is empty."
+
+    if clean_name.endswith(".md"):
+        rel_path = Path(clean_name)
+    else:
+        rel_path = Path(f"{clean_name}.md")
+
+    vault_root = vault.path.resolve()
+    target_path = (vault.path / rel_path).resolve()
+    try:
+        target_path.relative_to(vault_root)
+    except ValueError:
+        return "Error: page path must be inside the vault."
+
+    if target_path.exists():
+        return f"Error: page '{clean_name}' already exists."
+
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(target_path, "x") as f:
+            f.write(content)
+    except FileExistsError:
+        return f"Error: page '{clean_name}' already exists."
+
+    return f"Page '{clean_name}' saved successfully."
 
 
 def search_tool(ctx: RunContext[ChatDeps], query: str) -> str:

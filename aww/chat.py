@@ -17,6 +17,7 @@ from aww.tools import (
     read_retro_tool,
     read_tasks_tool,
     remember_tool,
+    save_page_tool,
     search_tool,
 )
 
@@ -37,6 +38,7 @@ def get_chat_agent(model: Model, vault: Vault) -> Agent[ChatDeps]:
             read_retro_tool,
             read_tasks_tool,
             remember_tool,
+            save_page_tool,
             search_tool,
         ],
     )
