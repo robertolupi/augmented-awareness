@@ -27,3 +27,10 @@ dependencies = [
     "tqdm>=4.67.1",
     "watchdog>=6.0.0",
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:You should use `Logger` instead\\.:DeprecationWarning",
+    "ignore:You should use `LoggerProvider` instead\\.:DeprecationWarning",
+    "ignore:You should use `ProxyLoggerProvider` instead\\.:DeprecationWarning",
+]

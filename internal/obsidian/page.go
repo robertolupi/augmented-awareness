@@ -8,6 +8,7 @@ import (
 	"journal/internal/datetime"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -199,7 +200,7 @@ func (p *Page) Save() error {
 		}
 	}
 
-	fullPath := path.Join(p.Vault.Path, p.Path)
+	fullPath := filepath.Join(p.Vault.Path, p.Path)
 	file, err := os.OpenFile(fullPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open file for writing: %w", err)

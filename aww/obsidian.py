@@ -212,7 +212,10 @@ class Page:
             data = fd.read()
         if m := FRONTMATTER_RE.match(data):
             try:
-                return yaml.load(m.group(1), Loader=yaml.Loader)
+                frontmatter = yaml.safe_load(m.group(1))
+                if isinstance(frontmatter, dict):
+                    return frontmatter
+                return {}
             except yaml.error.YAMLError:
                 return {}
         return {}

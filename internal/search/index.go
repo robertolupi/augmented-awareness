@@ -7,7 +7,7 @@ import (
 	"journal/internal/obsidian"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -18,17 +18,17 @@ type Index struct {
 // NewIndex creates a new search index using the provided path.
 func NewIndex(dataPath string) (*Index, error) {
 
-	indexPath := path.Join(dataPath, "journal_index.bleve")
+	indexPath := filepath.Join(dataPath, "journal_index.bleve")
 	if indexPath[0] == '~' {
 		// Expand the tilde to the home directory
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get home directory: %w", err)
 		}
-		indexPath = path.Join(homeDir, strings.TrimPrefix(indexPath, "~"))
+		indexPath = filepath.Join(homeDir, strings.TrimPrefix(indexPath, "~"))
 	}
 
-	indexPath = path.Clean(indexPath)
+	indexPath = filepath.Clean(indexPath)
 
 	index, err := bleve.Open(indexPath)
 	if errors.Is(err, bleve.ErrorIndexPathDoesNotExist) {

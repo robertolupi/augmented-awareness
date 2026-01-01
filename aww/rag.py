@@ -1,6 +1,8 @@
+import json
 import shutil
 from pathlib import Path
-import json
+
+from pydantic import ConfigDict
 import lancedb
 import pandas as pd
 from lancedb.pydantic import LanceModel, Vector
@@ -23,9 +25,10 @@ def get_page_schema(model) -> LanceModel:
         text: str
         vector: Vector(model.ndims())
 
-        class Config:
-            text_key = "text"
-            vector_key = "vector"
+        model_config = ConfigDict(
+            text_key="text",
+            vector_key="vector",
+        )
 
     return Page
 

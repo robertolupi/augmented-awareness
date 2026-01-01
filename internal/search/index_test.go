@@ -54,8 +54,6 @@ func TestNewIndex(t *testing.T) {
 }
 
 func TestIndex_Search(t *testing.T) {
-	t.Skip("Skipping test for now, needs investigation")
-
 	index := NewTestIndex(t)
 	defer func() {
 		if err := index.Close(); err != nil {
@@ -63,11 +61,10 @@ func TestIndex_Search(t *testing.T) {
 		}
 	}()
 
-	// TODO: understand why this is not working, but the program works
 	results, err := index.Search("did some personal development")
 	assert.NoError(t, err)
 	assert.NotNil(t, results)
 	assert.NotZero(t, len(results.Hits))
-	assert.Equal(t, "2025-04-01.md", results.Hits[0].ID)
+	assert.Equal(t, "journal/2025/04/2025-04-01.md", results.Hits[0].ID)
 	assert.Equal(t, "2025-04-01", results.Hits[0].Fields["name"])
 }
