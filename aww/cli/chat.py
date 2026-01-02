@@ -1,3 +1,5 @@
+import os
+
 import click
 
 from aww.chat import get_chat_agent
@@ -13,10 +15,12 @@ def chat(ctx):
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
     settings = ctx.obj["settings"]
-    
+
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
     index = Index.from_settings(settings)
     deps = ChatDeps(vault=vault, index=index)
-    
+
     agent = get_chat_agent(llm_model, vault)
 
     agent.to_cli_sync(prog_name="aww", deps=deps)

@@ -1,15 +1,19 @@
+import os
+
 import streamlit as st
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
-    UserPromptPart,
     TextPart,
+    UserPromptPart,
 )
 
 from aww import obsidian
-from aww.config import Settings, create_model
 from aww.chat import get_chat_agent
+from aww.config import Settings, create_model
 from aww.deps import ChatDeps
 from aww.rag import Index
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def render_messages(messages, show_tool_calls):
