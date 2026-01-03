@@ -52,6 +52,36 @@ with st.sidebar:
 
     show_tool_calls = st.checkbox("Show tool calls", value=False)
 
+    st.divider()
+    st.subheader("Save to Obsidian")
+    chat_title = st.text_input("Chat Title", value="New Chat")
+
+    if st.button("Save to Obsidian", disabled=not st.session_state.get("chat_history")):
+        history = st.session_state.get("chat_history", [])
+        if history:
+            from datetime import date
+            today = date.today().isoformat()
+            filename = f"{today} {chat_title}.md"
+            chats_dir = vault.path / "Chats"
+            chats_dir.mkdir(parents=True, exist_ok=True)
+            filepath = chats_dir / filename
+
+            # Format history as markdown
+            md_lines = [f"# {chat_title}\n"]
+            for msg in history:
+                for part in msg.parts:
+                    match part:
+                        case UserPromptPart(content):
+                            md_lines.append(f"### User\n{content}\n")
+                        case TextPart(content):
+                            md_lines.append(f"### AI\n{content}\n")
+            
+            try:
+                filepath.write_text("\n".join(md_lines))
+                st.success(f"Saved to {filepath}")
+            except Exception as e:
+                st.error(f"Failed to save: {e}")
+
 
 st.title("Chat")
 
