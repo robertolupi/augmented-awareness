@@ -54,3 +54,35 @@ def test_get_motd_context_no_metrics(mock_vault):
     
     assert "=== DAILY NOTES ===" in full_context
     assert "=== TODAY'S METRICS ===" not in full_context
+
+def test_get_motd_context_with_weekly_goals(mock_vault):
+    # Mock weekly retrospective
+    weekly_retro = MagicMock(spec=Page)
+    weekly_retro.content.return_value = "Weekly retro content"
+    
+    # Mock weekly journal note with Weekly Goals section
+    weekly_note = MagicMock(spec=Page)
+    weekly_note.section.side_effect = lambda title: "Goal 1\nGoal 2" if title == "Weekly Goals" else None
+    
+    # Configure vault to return these pages
+    # mock_vault.page(d, Level.weekly) -> weekly_note
+    # mock_vault.retrospective_page(d, Level.weekly) -> weekly_retro
+    def side_effect(d, level):
+        if level == Level.weekly:
+            if mock_vault.retrospective_page.called_with(d, level):
+                return weekly_retro
+            return weekly_note
+        return None
+
+    mock_vault.retrospective_page.side_effect = lambda d, l: weekly_retro if l == Level.weekly else None
+    mock_vault.page.side_effect = lambda d, l: weekly_note if l == Level.weekly else None
+    mock_vault.page_by_name.return_value = None
+
+    context = get_motd_context(mock_vault, daily=False, yesterday=False, weekly=True, memory=False)
+    
+    full_context = "\n".join(context)
+    
+    assert "=== WEEKLY RETROSPECTIVE ===" in full_context
+    assert "Weekly retro content" in full_context
+    assert "=== WEEKLY GOALS ===" in full_context
+    assert "Goal 1\nGoal 2" in full_context

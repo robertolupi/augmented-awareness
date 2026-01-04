@@ -36,14 +36,14 @@ class Vault:
 
     _PAGE_TEMPLATES: dict[Level, str] = {
         Level.daily: "{year}/{month:02d}/{year}-{month:02d}-{day:02d}.md",
-        Level.weekly: "{year}/weeks/{year}-W{week:02d}.md",
+        Level.weekly: "{iso_year}/weeks/{iso_year}-W{week:02d}.md",
         Level.monthly: "{year}/months/{year}-{month:02d}.md",
         Level.yearly: "{year}/Y{year}.md",
     }
 
     _RETRO_TEMPLATES: dict[Level, str] = {
         Level.daily: "{year}/{month:02d}/r{year}-{month:02d}-{day:02d}.md",
-        Level.weekly: "{year}/weeks/r{year}-W{week:02d}.md",
+        Level.weekly: "{iso_year}/weeks/r{iso_year}-W{week:02d}.md",
         Level.monthly: "{year}/months/r{year}-{month:02d}.md",
         Level.yearly: "{year}/r{year}.md",
     }
@@ -87,11 +87,13 @@ class Vault:
     ) -> "Page":
         """Helper to construct a Page object for the given date, level, folder, and template mapping."""
         tpl = templates[level]
+        iso_year, week, _ = d.isocalendar()
         params = {
             "year": d.year,
+            "iso_year": iso_year,
             "month": d.month,
             "day": d.day,
-            "week": d.isocalendar().week,
+            "week": week,
         }
         subpath = tpl.format(**params)
         return Page(self.path / base_folder / subpath, level)
@@ -241,6 +243,47 @@ class Page:
     def feedback_score(self) -> int | None:
         """Return the feedback score from the frontmatter, if present."""
         return self.frontmatter().get("feedback_score")
+
+    def section(self, title: str) -> str | None:
+        """
+        Extract the content of a section with the given title.
+        Matches any header level (e.g., # title, ## title).
+        Returns all content until the next header of the same or higher level.
+        """
+        if not self.path.exists():
+            return None
+
+        with self.path.open() as fd:
+            lines = fd.readlines()
+
+        content = []
+        found = False
+        start_level = 0
+
+        # Pattern to match headers like: ## Title
+        header_re = re.compile(r"^(#+)\s+(.*)$")
+
+        for line in lines:
+            if m := header_re.match(line):
+                level = len(m.group(1))
+                current_title = m.group(2).strip()
+
+                if found:
+                    # If we found it, stop at the next header of the same or higher level
+                    if level <= start_level:
+                        break
+                elif current_title.lower() == title.lower():
+                    found = True
+                    start_level = level
+                    continue
+
+            if found:
+                content.append(line)
+
+        if not found:
+            return None
+
+        return "".join(content).strip()
 
 
 EVENT_RE = re.compile(r"^(\d\d):(\d\d)(?:\s*-\s*(\d\d):(\d\d))?\s+(.*)$")

@@ -43,6 +43,11 @@ def get_motd_context(
         weekly_retro = vault.retrospective_page(datetime.date.today(), Level.weekly)
         if weekly_retro:
             context.append("=== WEEKLY RETROSPECTIVE ===\n" + weekly_retro.content())
+
+        weekly_note = vault.page(datetime.date.today(), Level.weekly)
+        if weekly_note:
+            if goals := weekly_note.section("Weekly Goals"):
+                context.append("=== WEEKLY GOALS ===\n" + goals)
     if memory:
         scratchpad = vault.page_by_name("aww-scratchpad")
         if scratchpad:
