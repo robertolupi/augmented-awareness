@@ -9,6 +9,7 @@ from aww.cli import (
     index,
     search,
     show_config,
+    tags,
     taskscleanup,
 )  # keep
 

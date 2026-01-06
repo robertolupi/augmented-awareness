@@ -53,7 +53,8 @@ def test_recursive_retrospective_generator(tmp_vault):
     assert node.retro_page == yearly
     assert levels == set(Level)
     source_pages = set(s.retro_page for s in sources)
-    assert len(source_pages) == 365 + 52 + 12
+    # 2025 has 53 ISO weeks
+    assert len(source_pages) == 365 + 53 + 12
 
 
 def test_recursive_retrospective_generator_rename_on_disk(tmp_vault):

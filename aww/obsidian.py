@@ -285,7 +285,28 @@ class Page:
 
         return "".join(content).strip()
 
+    def tags(self) -> set[str]:
+        """Return a set of tags found in the page (frontmatter and content)."""
+        tags = set()
+
+        # From frontmatter
+        fm = self.frontmatter()
+        if "tags" in fm:
+            raw_tags = fm["tags"]
+            if isinstance(raw_tags, str):
+                tags.update(t.strip() for t in raw_tags.split(",") if t.strip())
+            elif isinstance(raw_tags, list):
+                tags.update(str(t) for t in raw_tags)
+
+        # From content
+        content = self.content()
+        for m in TAG_RE.finditer(content):
+            tags.add(m.group(1))
+
+        return tags
+
 
 EVENT_RE = re.compile(r"^(\d\d):(\d\d)(?:\s*-\s*(\d\d):(\d\d))?\s+(.*)$")
 TASK_RE = re.compile(r"\s*- \[(.)] (.*)$")
 FEEDBACK_RE = re.compile(r"^#feedback\s+(.*)$")
+TAG_RE = re.compile(r"(?:^|\s)#([a-zA-Z_/-][a-zA-Z0-9_/-]*)")

@@ -125,3 +125,29 @@ def test_page_feedback():
     finally:
         if feedback_file.exists():
             feedback_file.unlink()
+
+
+def test_page_tags():
+    page = obsidian.Page(
+        test_vault_path / "journal/2025/04/2025-04-01.md", Level.daily
+    )
+    tags = page.tags()
+    assert "tag1" in tags
+    assert "tag2" in tags
+    assert "tag3/with-parts" in tags
+    assert "aww" in tags
+    assert "work" in tags
+    assert "create/write/blog" in tags
+    assert len(tags) == 6
+
+
+def test_page_tags_frontmatter():
+    temp_file = test_vault_path / "temp_tags.md"
+    temp_file.write_text("---\ntags: fm-tag1, fm-tag2\n---\n# Content #content-tag\n")
+    try:
+        page = obsidian.Page(temp_file, None)
+        tags = page.tags()
+        assert tags == {"fm-tag1", "fm-tag2", "content-tag"}
+    finally:
+        if temp_file.exists():
+            temp_file.unlink()
