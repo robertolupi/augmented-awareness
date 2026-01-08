@@ -47,7 +47,7 @@ METRIC_FORMATTERS = {
     "exercise": "Exercise: {}",
     "sleep_score": "Sleep Score: {} of 100.",
     "vitals_score": "Vitals Score: {} of 100.",
-    "activity_score": "Activity Score: {} of 100.",
+    "activity_score": "Physical Activity Score: {} of 100.",
     "relax_score": "Relax Score: {} of 100.",
 }
 
