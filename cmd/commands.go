@@ -51,6 +51,7 @@ func init() {
 	}
 
 	initRecordCmd()
+	initStopCmd()
 	initBusyCmd()
 	initListCmd()
 	initAmendCmd()
