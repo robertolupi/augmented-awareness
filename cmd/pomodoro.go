@@ -20,42 +20,29 @@ const (
 	breakToIdle = "break_to_idle"
 )
 
-type Payload struct {
+type Pomodoro struct {
 	StartTime  uint64 `json:"start_time"`
 	EventTime  uint64 `json:"event_time"`
 	Transition string `json:"transition"`
 	WorkFlavor string `json:"work_flavor"`
 }
 
-func (p *Payload) ToPomodoro() *Pomodoro {
+func (p *Pomodoro) ToDateAndEvent() (datetime.Date, *obsidian.Event) {
+	var startTime = time.Unix(int64(p.StartTime), 0)
 	var endTime time.Time
 	if p.Transition == workToIdle || p.Transition == workToBreak {
 		endTime = time.Unix(int64(p.EventTime), 0)
 	}
-	return &Pomodoro{
-		StartTime: time.Unix(int64(p.StartTime), 0),
-		EndTime:   endTime,
-		Flavor:    p.WorkFlavor,
-	}
-}
 
-type Pomodoro struct {
-	StartTime time.Time
-	EndTime   time.Time
-	Flavor    string
-}
-
-func (p *Pomodoro) ToDateAndEvent() (datetime.Date, *obsidian.Event) {
-	var startTime = datetime.Time(p.StartTime.Format("15:04"))
-	var endTime datetime.Time = datetime.EmptyTime
-	if !p.EndTime.IsZero() {
-		endTime = datetime.Time(p.EndTime.Format("15:04"))
+	var endtime2 datetime.Time = datetime.EmptyTime
+	if !endTime.IsZero() {
+		endtime2 = datetime.Time(endTime.Format("15:04"))
 	}
-	return datetime.Date(p.StartTime.Format("2006-01-02")), &obsidian.Event{
-		StartTime: startTime,
-		EndTime:   endTime,
-		Text:      fmt.Sprintf("Pomodoro #%s", p.Flavor),
-		Tags:      []string{p.Flavor},
+	return datetime.Date(startTime.Format("2006-01-02")), &obsidian.Event{
+		StartTime: datetime.Time(startTime.Format("15:04")),
+		EndTime:   endtime2,
+		Text:      fmt.Sprintf("Pomodoro #%s", p.WorkFlavor),
+		Tags:      []string{p.WorkFlavor},
 	}
 }
 
@@ -81,7 +68,7 @@ var (
 				// extract transition id
 				id := strings.Split(r.URL.Path, "/")[2]
 				// Decode JSON body
-				var data Payload
+				var data Pomodoro
 				err := json.NewDecoder(r.Body).Decode(&data)
 				if err != nil {
 					w.WriteHeader(http.StatusBadRequest)
@@ -89,7 +76,7 @@ var (
 					return
 				}
 
-				date, event := data.ToPomodoro().ToDateAndEvent()
+				date, event := data.ToDateAndEvent()
 
 				fmt.Println("Received pomodoro transition for id:", id)
 				fmt.Printf("Date: %s\n", date)
