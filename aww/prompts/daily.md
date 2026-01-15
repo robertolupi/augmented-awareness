@@ -48,6 +48,13 @@ You are an analyst assistant. Read the provided journal entry and output a conci
 
 ### 9 Tags
 * 3–7 lowercase hashtags.
+* Prefer canonical tags when meaning matches:
+{% if canonical_tags %}
+{{ canonical_tags_block }}
+{% else %}
+No canonical tags configured.
+{% endif %}
+* You may introduce a new tag if no canonical fits or if a source page already uses it. Normalize to lowercase, use underscores, namespaces with `/` allowed.
 
 **Additional Constraints**
 

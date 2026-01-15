@@ -99,3 +99,18 @@ def test_recursive_retrospective_generator_rename_on_disk(tmp_vault):
 
     assert retro_page.path.exists()
     assert renamed_page_path.exists()
+
+
+def test_retro_prompt_includes_canonical_tags(tmp_vault, monkeypatch):
+    monkeypatch.setenv(
+        "AWW_TAGS",
+        '{"work":"Career/work tasks and outcomes","mental_health":"Mood and care"}',
+    )
+    sel = retro.Selection(tmp_vault, datetime.date(2025, 4, 1), Level.daily)
+    model = TestModel()
+    g = RecursiveRetrospectiveGenerator(model, sel)
+
+    prompt = g.prompts[Level.daily]
+    assert "#work" in prompt
+    assert "Career/work tasks and outcomes" in prompt
+    assert "#mental_health" in prompt

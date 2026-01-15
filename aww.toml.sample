@@ -1,5 +1,18 @@
 model = "local"
 
+[tags]
+# Example canonical tags (edit to your needs):
+work = "Work tasks, projects, and outcomes."
+health = "Health and wellbeing."
+sleep = "Sleep quality and schedule."
+exercise = "Exercise and physical activity."
+planning = "Planning and prioritization."
+reflection = "Reflection and self-assessment."
+learning = "Learning and skill development."
+relationships = "Relationships and connection."
+creative = "Creative work and expression."
+"habits/bad" = "Unhelpful habits to reduce."
+
 [rag]
 provider = "sentence-transformers"
 model_name = "all-mpnet-base-v2"

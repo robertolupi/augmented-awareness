@@ -29,5 +29,13 @@ Provide 3-5 concrete, actionable suggestions for the upcoming month. These shoul
 ### 5. Summary Tags
 Provide 5-7 hashtags that capture the core themes and patterns of the month.
 
+**Canonical Tags (Preferred)**
+{% if canonical_tags %}
+{{ canonical_tags_block }}
+{% else %}
+No canonical tags configured.
+{% endif %}
+If no canonical tag fits, you may introduce a new one, especially when it appears in source entries. Normalize to lowercase, use underscores, namespaces with `/` allowed.
+
 ### The Path Forward
 *Conclude with a brief, encouraging paragraph that summarizes the month's growth, acknowledges the effort, and points toward the path forward based on the analysis.*

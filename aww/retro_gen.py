@@ -9,6 +9,7 @@ import yaml
 from pydantic_ai import Agent
 from pydantic_ai.models import Model
 
+from aww.config import Settings
 from aww.obsidian import Level, Page
 from aww.prompts import get_prompt_template
 from aww.retro import CachePolicy, Node, Selection
@@ -86,8 +87,31 @@ class RecursiveRetrospectiveGenerator:
         Initialize the generator with model, vault, dates, level, concurrency limit, and optional prompts path.
         Loads system prompts and sets up agents for each level.
         """
+        settings = Settings()
+        normalized_tags = {}
+        for tag, desc in (settings.tags or {}).items():
+            normalized_tag = tag.strip().lower().replace(" ", "_")
+            if not normalized_tag:
+                continue
+            normalized_tags[normalized_tag] = (desc or "").strip()
 
-        self.prompts = {l: get_prompt_template(f"{l.name}.md").render() for l in Level}
+        canonical_tags = sorted(normalized_tags.keys())
+        canonical_tags_block_lines = []
+        for tag in canonical_tags:
+            desc = normalized_tags[tag]
+            if desc:
+                canonical_tags_block_lines.append(f"- #{tag}: {desc}")
+            else:
+                canonical_tags_block_lines.append(f"- #{tag}")
+        canonical_tags_block = "\n".join(canonical_tags_block_lines)
+
+        self.prompts = {
+            l: get_prompt_template(f"{l.name}.md").render(
+                canonical_tags=canonical_tags,
+                canonical_tags_block=canonical_tags_block,
+            )
+            for l in Level
+        }
         self.agents = {
             l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level
         }

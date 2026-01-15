@@ -26,6 +26,14 @@ Structure the retrospective under the following sections. Begin with a compellin
 
 8.  **Summary Tags:** Provide a list of 8-10 thematic hashtags that capture the essence of the year's journey (e.g., #SpiritualCrisisAndRebirth, #IntentionVsAction).
 
+**Canonical Tags (Preferred)**
+{% if canonical_tags %}
+{{ canonical_tags_block }}
+{% else %}
+No canonical tags configured.
+{% endif %}
+If no canonical tag fits, you may introduce a new one, especially when it appears in source entries. Normalize to lowercase, use underscores, namespaces with `/` allowed.
+
 9.  **Actionable Suggestions:** Propose 2-3 concrete, small, actionable *experiments* designed to interrupt a key negative pattern or nurture an emerging positive one. These should be things you are not already explicitly planning to do. Frame them as low-stakes, compassionate explorations, not as strict prescriptions.
 
 Produce only the final markdown document. Do not include any preamble, introduction, or explanation of your process.

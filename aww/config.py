@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     data_path: str = "~/data/aww"
     journal_dir: str = "journal"
     retrospectives_dir: str = "retrospectives"
+    tags: Dict[str, str] = Field(default_factory=dict)
 
     @classmethod
     def settings_customise_sources(

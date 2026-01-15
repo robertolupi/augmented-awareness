@@ -27,6 +27,14 @@ Produce a Markdown document with **exactly 10 numbered sections** (no extra head
 | 9 | **Commitments & Follow‑Through** | List stated intentions and whether they were acted upon. Note gaps. |
 |10 | **Summary Tags** | 3–7 concise hashtags, lowercase, underscore‑separated (e.g., `#time_blocking`, `#mental_health`). |
 
+**Canonical Tags (Preferred)**
+{% if canonical_tags %}
+{{ canonical_tags_block }}
+{% else %}
+No canonical tags configured.
+{% endif %}
+If no canonical tag fits, you may introduce a new one, especially when it appears in source entries. Normalize to lowercase, use underscores, namespaces with `/` allowed.
+
 **Word Limit** – Entire document **≤ 400 words**. Each section should be concise.
 
 ### 3. Style & Fidelity Rules  
