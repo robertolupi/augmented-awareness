@@ -4,6 +4,7 @@ import click
 import rich
 from pydantic_ai import Agent
 from rich.markdown import Markdown
+from tqdm.asyncio import tqdm
 
 from aww import retro
 import aww.ask
@@ -23,6 +24,20 @@ from aww.obsidian import Level
     multiple=True,
     help="Context levels for retrospective",
     default=[Level.daily, Level.weekly, Level.monthly, Level.yearly],
+)
+@click.option(
+    "-r",
+    "--recursive",
+    is_flag=True,
+    default=False,
+    help="Recursive map-reduce over journal entries.",
+)
+@click.option(
+    "-n",
+    "--no-cache",
+    is_flag=True,
+    default=False,
+    help="Don't use cached results for the current query.",
 )
 @click.argument("level", type=click.Choice(Level, case_sensitive=False))
 @click.argument("prompt", type=str)
@@ -49,6 +64,8 @@ def ask(
     date,
     yesterday,
     context,
+    recursive,
+    no_cache,
     level,
     prompt,
     prompt_file,
@@ -68,6 +85,10 @@ def ask(
     # Convert datetime to date for the logic function
     query_date = date.date() if isinstance(date, datetime.datetime) else date
 
+    cache_policies = None
+    if no_cache:
+        cache_policies = [retro.NoRootCachePolicy(), retro.NoLevelsCachePolicy(list(Level))]
+
     output_content = aww.ask.ask_question(
         vault=vault,
         llm_model=llm_model,
@@ -76,6 +97,9 @@ def ask(
         prompt=prompt,
         context_levels=list(context),
         verbose=verbose,
+        recursive=recursive,
+        cache_policies=cache_policies,
+        gather=tqdm.gather,
     )
 
     if output_file:

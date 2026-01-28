@@ -24,8 +24,8 @@ MARKDOWN_RE = re.compile("```markdown\n(.*?)\n```", re.DOTALL | re.MULTILINE)
 
 
 @dataclass
-class RetrospectiveResult:
-    """Holds the result of a retrospective generation, including dates, output, and the associated page."""
+class RecursiveResult:
+    """Holds the result of a recursive generation, including dates, output, and the associated page."""
 
     dates: list[date]
     output: str
@@ -65,28 +65,41 @@ async def page_content(node) -> str:
     return "\n".join(content)
 
 
-async def prepare_output(node, result) -> str:
-    """Prepare the output for a retrospective, extracting markdown and formatting the title."""
+async def prepare_output(node, result, target_page) -> str:
+    """Prepare the output for a recursive generation, extracting markdown and formatting the title."""
     output = result.output.strip()
     if m := MARKDOWN_RE.match(output):
         output = m.group(1)
     output = output.replace("![[", "[[")
-    output_title = f"# {node.retro_page.name}"
+    output_title = f"# {target_page.name}"
     output = output_title + "\n\n" + output
     return output
 
 
-class RecursiveRetrospectiveGenerator:
+class RecursiveGenerator:
     """
-    Generates retrospectives recursively for a set of dates and a given level using an AI agent.
+    Generates content recursively for a set of dates and a given level using an AI agent.
     Handles cache policies, concurrency, and prompt management.
     """
 
-    def __init__(self, model: Model, sel: Selection, concurrency_limit: int = 10):
+    def __init__(
+        self,
+        model: Model,
+        sel: Selection,
+        concurrency_limit: int = 10,
+        prompt_prefix: str = "",
+        extra_vars: dict = None,
+        get_target_page=None,
+    ):
         """
-        Initialize the generator with model, vault, dates, level, concurrency limit, and optional prompts path.
+        Initialize the generator with model, selection, and other parameters.
         Loads system prompts and sets up agents for each level.
         """
+        self.extra_vars = extra_vars or {}
+        self.prompt_prefix = prompt_prefix
+        # Default target page is the retro_page from the node
+        self.get_target_page = get_target_page or (lambda node: node.retro_page)
+
         settings = Settings()
         normalized_tags = {}
         for tag, desc in (settings.tags or {}).items():
@@ -106,9 +119,10 @@ class RecursiveRetrospectiveGenerator:
         canonical_tags_block = "\n".join(canonical_tags_block_lines)
 
         self.prompts = {
-            l: get_prompt_template(f"{l.name}.md").render(
+            l: get_prompt_template(f"{self.prompt_prefix}{l.name}.md").render(
                 canonical_tags=canonical_tags,
                 canonical_tags_block=canonical_tags_block,
+                **self.extra_vars,
             )
             for l in Level
         }
@@ -123,9 +137,9 @@ class RecursiveRetrospectiveGenerator:
         context_levels: list[Level],
         cache_policies: list[CachePolicy],
         gather=asyncio.gather,
-    ) -> RetrospectiveResult | None:
+    ) -> RecursiveResult | None:
         """
-        Run the retrospective generation for the configured dates and level.
+        Run the content generation for the configured selection.
         Applies cache policies and generates the result for the root node.
         """
         for policy in cache_policies:
@@ -134,23 +148,25 @@ class RecursiveRetrospectiveGenerator:
 
     async def _generate(
         self, node: Node, context_levels: set[Level], gather=asyncio.gather
-    ) -> RetrospectiveResult | None:
+    ) -> RecursiveResult | None:
         """
-        Recursively generate retrospectives for the given node and its sources.
-        Returns a RetrospectiveResult or None if no content is available.
+        Recursively generate content for the given node and its sources.
+        Returns a RecursiveResult or None if no content is available.
         """
-        if node.use_cache and node.retro_page:
-            return RetrospectiveResult(
+        target_page = self.get_target_page(node)
+
+        if node.use_cache and target_page and target_page.path.exists():
+            return RecursiveResult(
                 dates=list(node.dates),
-                output=node.retro_page.content(),
-                page=node.retro_page,
+                output=target_page.content(),
+                page=target_page,
             )
 
         sources = list(sorted(node.sources))
 
         source_results = await gather(
             *[
-                self._generate(source, context_levels)
+                self._generate(source, context_levels, gather)
                 for source in sources
                 if source.level in context_levels
             ]
@@ -170,7 +186,7 @@ class RecursiveRetrospectiveGenerator:
             result = await agent.run(user_prompt=source_content)
 
         usage = result.usage()
-        retro_frontmatter = dict(
+        frontmatter = dict(
             sys_prompt_hash=md5(sys_prompt),
             model_name=model_name,
             ctime=datetime.now().isoformat(),
@@ -182,52 +198,53 @@ class RecursiveRetrospectiveGenerator:
             requests=usage.requests,
         )
 
-        output = await prepare_output(node, result)
-        await self.save_retro_page(
-            node, output, sources, context_levels, retro_frontmatter
+        output = await prepare_output(node, result, target_page)
+        await self.save_page(
+            target_page, output, sources, context_levels, frontmatter, node.page
         )
-        return RetrospectiveResult(
-            dates=list(node.dates), output=output, page=node.retro_page
+        return RecursiveResult(
+            dates=list(node.dates), output=output, page=target_page
         )
 
     @staticmethod
-    async def save_retro_page(node, output, sources, levels, retro_frontmatter):
+    async def save_page(
+        target_page, output, sources, levels, frontmatter, source_page=None
+    ):
         """
-        Save the generated retrospective page to disk, including frontmatter and source references.
+        Save the generated page to disk, including frontmatter and source references.
         If the file already exists, it will be renamed with a progressive number.
         """
         # ensure parent directory exists
-        node.retro_page.path.parent.mkdir(parents=True, exist_ok=True)
+        target_page.path.parent.mkdir(parents=True, exist_ok=True)
 
-        if node.retro_page.path.exists():
+        if target_page.path.exists():
             # Find the next available progressive number
             i = 1
             while True:
-                new_path = node.retro_page.path.with_suffix(
-                    f".{i}{node.retro_page.path.suffix}"
+                new_path = target_page.path.with_suffix(
+                    f".{i}{target_page.path.suffix}"
                 )
                 if not new_path.exists():
-                    node.retro_page.path.rename(new_path)
+                    target_page.path.rename(new_path)
                     break
                 i += 1
 
         logger.info(
-            "Writing retrospective page %s (level=%s)",
-            node.retro_page.path,
-            node.level,
+            "Writing generated page %s",
+            target_page.path,
         )
-        with node.retro_page.path.open("w") as fd:
+        with target_page.path.open("w") as fd:
             source_items = []
-            if node.page:
-                source_items.append(f"[[{node.page.name}]]")
+            if source_page:
+                source_items.append(f"[[{source_page.name}]]")
             for n in sources:
                 if not n.retro_page:
                     continue
                 if n.level in levels:
                     source_items.append(f"[[{n.retro_page.name}]]")
 
-            retro_frontmatter["sources"] = source_items
+            frontmatter["sources"] = source_items
             fd.write("---\n")
-            fd.write(yaml.dump(retro_frontmatter, default_flow_style=False))
+            fd.write(yaml.dump(frontmatter, default_flow_style=False))
             fd.write("---\n")
             fd.write(output)

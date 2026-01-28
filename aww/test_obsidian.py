@@ -11,7 +11,7 @@ test_vault_path = (Path(aww.__file__).parent.parent / "test_vault").absolute()
 
 
 def test_vault():
-    vault = obsidian.Vault(test_vault_path, "journal", "retrospectives")
+    vault = obsidian.Vault(test_vault_path, "journal", "retrospectives", "retrospectives/queries")
     assert vault.path == test_vault_path
     assert vault.journal_dir == "journal"
     assert vault.retrospectives_dir == "retrospectives"
@@ -19,7 +19,7 @@ def test_vault():
 
 
 def test_daily_page():
-    vault = obsidian.Vault(test_vault_path, "journal", "retrospectives")
+    vault = obsidian.Vault(test_vault_path, "journal", "retrospectives", "retrospectives/queries")
     d = date(2025, 3, 30)
     page = vault.page(d, Level.daily)
     assert (

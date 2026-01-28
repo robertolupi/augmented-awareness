@@ -51,18 +51,26 @@ class Vault:
     @classmethod
     def from_settings(cls, settings: Settings) -> "Vault":
         return cls(
-            settings.vault_path, settings.journal_dir, settings.retrospectives_dir
+            settings.vault_path,
+            settings.journal_dir,
+            settings.retrospectives_dir,
+            settings.queries_dir,
         )
 
     def __init__(
-        self, path: Path | str, journal_dir: str, retrospectives_dir: str
+        self,
+        path: Path | str,
+        journal_dir: str,
+        retrospectives_dir: str,
+        queries_dir: str,
     ) -> None:
-        """Initialize the vault with root path and subdirectories for journals and retrospectives."""
+        """Initialize the vault with root path and subdirectories."""
         self.path = Path(path).expanduser()
         if not self.path.exists():
             raise FileNotFoundError(self.path)
         self.journal_dir = journal_dir
         self.retrospectives_dir = retrospectives_dir
+        self.queries_dir = queries_dir
 
     def page(self, d: date, level: Level) -> "Page":
         """Return the journal Page for the given date and level."""
@@ -77,6 +85,12 @@ class Vault:
     def retrospective_page(self, d: date, level: Level) -> "Page":
         """Return the retrospective Page for the given date and level."""
         return self._make_page(d, level, self.retrospectives_dir, self._RETRO_TEMPLATES)
+
+    def query_page(self, query_id: str, d: date, level: Level) -> "Page":
+        """Return the query result Page for the given date, level, and query_id."""
+        return self._make_page(
+            d, level, f"{self.queries_dir}/{query_id}", self._RETRO_TEMPLATES
+        )
 
     def _make_page(
         self,

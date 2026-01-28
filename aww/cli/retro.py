@@ -112,7 +112,7 @@ def retrospectives(
 
     cache_policies = get_cache_policies(final_no_cache)
 
-    generator = retro_gen.RecursiveRetrospectiveGenerator(
+    generator = retro_gen.RecursiveGenerator(
         llm_model, sel, final_concurrency_limit
     )
     result = asyncio.run(

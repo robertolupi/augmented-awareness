@@ -5,26 +5,26 @@ from pydantic_ai.models.test import TestModel
 
 from aww import retro, retro_gen
 from aww.obsidian import Level
-from aww.retro_gen import RecursiveRetrospectiveGenerator
+from aww.retro_gen import RecursiveGenerator
 from aww.test_retro import tmp_vault  # keep
 
 
-class RecursiveRetrospectiveGeneratorForTesting(
-    retro_gen.RecursiveRetrospectiveGenerator
+class RecursiveGeneratorForTesting(
+    retro_gen.RecursiveGenerator
 ):
     def __init__(self, sel: retro.Selection):
         model = TestModel()
         super().__init__(model, sel)
         self.saved_nodes = {}
 
-    async def save_retro_page(self, node, output, sources, levels, retro_frontmatter):
-        await super().save_retro_page(node, output, sources, levels, retro_frontmatter)
-        self.saved_nodes[node.retro_page] = (node, sources, levels)
+    async def save_page(self, target_page, output, sources, levels, frontmatter, source_page=None):
+        await super().save_page(target_page, output, sources, levels, frontmatter, source_page)
+        self.saved_nodes[target_page] = (target_page, sources, levels)
 
 
-def test_recursive_retrospective_generator(tmp_vault):
+def test_recursive_generator(tmp_vault):
     sel = retro.Selection(tmp_vault, datetime.date(2025, 4, 1), Level.yearly)
-    g = RecursiveRetrospectiveGeneratorForTesting(sel)
+    g = RecursiveGeneratorForTesting(sel)
     asyncio.run(
         g.run(
             context_levels=list(Level),
@@ -49,15 +49,15 @@ def test_recursive_retrospective_generator(tmp_vault):
     sources_with_content = set(g.saved_nodes.keys())
     assert sources_with_content == {d1, d2, w1, w2, march, april, yearly}
 
-    node, sources, levels = g.saved_nodes[yearly]
-    assert node.retro_page == yearly
+    page, sources, levels = g.saved_nodes[yearly]
+    assert page == yearly
     assert levels == set(Level)
     source_pages = set(s.retro_page for s in sources)
     # 2025 has 53 ISO weeks
     assert len(source_pages) == 365 + 53 + 12
 
 
-def test_recursive_retrospective_generator_rename_on_disk(tmp_vault):
+def test_recursive_generator_rename_on_disk(tmp_vault):
     day = datetime.date(2025, 1, 1)
     sel = retro.Selection(tmp_vault, day, Level.daily)
     model = TestModel()
@@ -72,7 +72,7 @@ def test_recursive_retrospective_generator_rename_on_disk(tmp_vault):
     with journal_path.open("w") as f:
         f.write("# Test Journal Entry")
 
-    g = RecursiveRetrospectiveGenerator(model, sel)
+    g = RecursiveGenerator(model, sel)
 
     # Run the generator twice
     asyncio.run(
@@ -108,7 +108,7 @@ def test_retro_prompt_includes_canonical_tags(tmp_vault, monkeypatch):
     )
     sel = retro.Selection(tmp_vault, datetime.date(2025, 4, 1), Level.daily)
     model = TestModel()
-    g = RecursiveRetrospectiveGenerator(model, sel)
+    g = RecursiveGenerator(model, sel)
 
     prompt = g.prompts[Level.daily]
     assert "#work" in prompt

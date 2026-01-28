@@ -18,7 +18,7 @@ def tmp_vault(tmp_path):
     """Copy test_vault_path contents into a temporary directory."""
     dest = tmp_path / "vault"
     shutil.copytree(test_vault_path, dest)
-    return Vault(Path(dest), "journal", "retrospectives")
+    return Vault(Path(dest), "journal", "retrospectives", "retrospectives/queries")
 
 
 def days_between(start_year, start_month, start_day, end_year, end_month, end_day):
