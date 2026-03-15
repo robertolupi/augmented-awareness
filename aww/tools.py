@@ -158,7 +158,9 @@ def read_tasks_tool(
 
 def remember_tool(ctx: RunContext[ChatDeps], fact: str) -> str:
     """
-    Remember a fact or piece of information. Facts will be stored in a page called 'aww-scratchpad' in the vault.
+    Remember a fact or piece of information to retain memory of our prior conversations.
+    Facts will be stored in a page called 'aww-scratchpad' in the vault. This provides
+    contextual memory across conversations, as the scratchpad is loaded in every session.
     
     Args:
         fact: The fact or information to remember, in markdown format.
@@ -217,6 +219,9 @@ def save_page_tool(ctx: RunContext[ChatDeps], name: str, content: str) -> str:
 def search_tool(ctx: RunContext[ChatDeps], query: str) -> str:
     """
     Search for pages in the vault using RAG (Retrieval Augmented Generation).
+    This performs a deep archival search across the full archive with semantic depth,
+    allowing you to query years of journaling and scattered notes for patterns,
+    recurring questions, thematic analysis, and contextual memory.
     
     Args:
         query: The query to search for.

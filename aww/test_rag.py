@@ -26,7 +26,7 @@ def test_vault() -> Vault:
     # Assuming the test is run from the project root
     vault_path = Path.cwd() / "test_vault"
     return Vault(
-        path=vault_path, journal_dir="journal", retrospectives_dir="retrospectives"
+        path=vault_path, journal_dir="journal", retrospectives_dir="retrospectives", queries_dir="queries"
     )
 
 

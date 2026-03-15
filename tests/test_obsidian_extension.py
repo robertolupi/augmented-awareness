@@ -12,7 +12,7 @@ def temp_vault_dir(tmp_path):
     return tmp_path
 
 def test_iso_year_weekly_path(temp_vault_dir):
-    v = Vault(temp_vault_dir, "journal", "retrospectives")
+    v = Vault(temp_vault_dir, "journal", "retrospectives", "queries")
     # 2025-12-29 is Monday of W01 2026
     d = datetime.date(2025, 12, 29)
     p = v.page(d, Level.weekly)
