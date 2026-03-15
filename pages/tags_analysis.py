@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 from aww import obsidian
+from aww.config import Settings
+from aww.obsidian import Vault
 
 
 # It's good practice to cache the model loading
@@ -25,14 +27,8 @@ def build_palette(size: int, cmap_name: str) -> list[str]:
 
 
 with st.sidebar:
-    vault_path = st.text_input("Vault Path", value="~/data/notes")
-    journal_dir = st.text_input("Journal Dir", value="journal")
-    retrospectives_dir = st.text_input("Retrospectives", value="retrospectives")
-    if vault_path and journal_dir and retrospectives_dir:
-        vault_path = Path(vault_path).expanduser()
-        if vault_path.exists():
-            vault = obsidian.Vault(vault_path, journal_dir, retrospectives_dir)
-            st.badge("Vault OK", color="green")
+    settings = Settings()
+    vault = Vault.from_settings(settings)
 
     date_start = st.date_input("Date", datetime.date.today())
     scope = st.selectbox("Scope", ["Weekly", "Monthly", "Yearly"])
