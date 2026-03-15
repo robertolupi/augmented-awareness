@@ -258,7 +258,7 @@ def list_dates_tool(
     end: str = None,
 ) -> str:
     """
-    List all journal notes and retrospectives within a date range and extract hashtags from them.
+    List all journal notes and retrospectives within a date range and extract hashtags and tasks from them.
     
     Args:
         start: Start date (YYYY-MM-DD). Defaults to the first day of the current month.
@@ -288,9 +288,20 @@ def list_dates_tool(
         page = vault.page(current, Level.daily)
         if page:
             tags = page.tags()
-            if tags:
-                formatted_tags = ", ".join([f"#{t}" for t in sorted(tags)])
-                journal_output.append(f"{page.name}.md: {formatted_tags}")
+            tasks_df = page.tasks()
+            
+            if tags or not tasks_df.empty:
+                if tags:
+                    formatted_tags = ", ".join([f"#{t}" for t in sorted(tags)])
+                    journal_output.append(f"{page.name}.md: {formatted_tags}")
+                else:
+                    journal_output.append(f"{page.name}.md:")
+                    
+                if not tasks_df.empty:
+                    for _, row in tasks_df.iterrows():
+                        status = row['status']
+                        description = row['description']
+                        journal_output.append(f"  - [{status}] {description}")
                 
         # Check retrospective
         retro_page = vault.retrospective_page(current, Level.daily)
@@ -314,6 +325,6 @@ def list_dates_tool(
         output.extend(retro_output)
         
     if not output:
-        return f"No tags found in the range {start_date} to {end_date}."
+        return f"No tags or tasks found in the range {start_date} to {end_date}."
         
     return "\n".join(output)

@@ -180,6 +180,10 @@ def test_list_dates_tool(mock_ctx):
     mock_journal = MagicMock(spec=Page)
     mock_journal.name = "2026-03-10"
     mock_journal.tags.return_value = {"hash/tag", "journal-tag"}
+    mock_journal.tasks.return_value = pd.DataFrame({
+        "status": [" ", "x"],
+        "description": ["Task 1", "Task 2"]
+    })
     
     mock_retro = MagicMock(spec=Page)
     mock_retro.name = "r2026-03-10"
@@ -201,6 +205,8 @@ def test_list_dates_tool(mock_ctx):
     
     assert "Journal:" in result
     assert "2026-03-10.md: #hash/tag, #journal-tag" in result
+    assert "  - [ ] Task 1" in result
+    assert "  - [x] Task 2" in result
     assert "Retrospectives:" in result
     assert "r2026-03-10.md: #hash/tag, #retro-tag" in result
 
