@@ -250,3 +250,70 @@ def search_tool(ctx: RunContext[ChatDeps], query: str) -> str:
         
     except Exception as e:
         return f"Error performing search: {str(e)}"
+
+
+def list_dates_tool(
+    ctx: RunContext[ChatDeps],
+    start: str = None,
+    end: str = None,
+) -> str:
+    """
+    List all journal notes and retrospectives within a date range and extract hashtags from them.
+    
+    Args:
+        start: Start date (YYYY-MM-DD). Defaults to the first day of the current month.
+        end: End date (YYYY-MM-DD). Defaults to the last day of the current month.
+    """
+    vault = ctx.deps.vault
+    today = datetime.date.today()
+    
+    if start:
+        start_date = datetime.date.fromisoformat(start)
+    else:
+        start_date = today.replace(day=1)
+        
+    if end:
+        end_date = datetime.date.fromisoformat(end)
+    else:
+        # Last day of current month
+        next_month = start_date.replace(day=28) + datetime.timedelta(days=4)
+        end_date = next_month - datetime.timedelta(days=next_month.day)
+        
+    journal_output = []
+    retro_output = []
+    
+    current = start_date
+    while current <= end_date:
+        # Check journal
+        page = vault.page(current, Level.daily)
+        if page:
+            tags = page.tags()
+            if tags:
+                formatted_tags = ", ".join([f"#{t}" for t in sorted(tags)])
+                journal_output.append(f"{page.name}.md: {formatted_tags}")
+                
+        # Check retrospective
+        retro_page = vault.retrospective_page(current, Level.daily)
+        if retro_page:
+            tags = retro_page.tags()
+            if tags:
+                formatted_tags = ", ".join([f"#{t}" for t in sorted(tags)])
+                retro_output.append(f"{retro_page.name}.md: {formatted_tags}")
+                
+        current += datetime.timedelta(days=1)
+        
+    output = []
+    if journal_output:
+        output.append("Journal:")
+        output.extend(journal_output)
+    
+    if retro_output:
+        if output:
+            output.append("")
+        output.append("Retrospectives:")
+        output.extend(retro_output)
+        
+    if not output:
+        return f"No tags found in the range {start_date} to {end_date}."
+        
+    return "\n".join(output)

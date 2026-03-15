@@ -19,6 +19,7 @@ from aww.tools import (
     remember_tool,
     save_page_tool,
     search_tool,
+    list_dates_tool,
 )
 
 
@@ -40,6 +41,7 @@ def get_chat_agent(model: Model, vault: Vault) -> Agent[ChatDeps]:
             remember_tool,
             save_page_tool,
             search_tool,
+            list_dates_tool,
         ],
     )
 

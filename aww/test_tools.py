@@ -15,6 +15,7 @@ from aww.tools import (
     remember_tool,
     save_page_tool,
     search_tool,
+    list_dates_tool,
 )
 import pandas as pd
 
@@ -169,7 +170,37 @@ def test_save_page_tool_refuses_overwrite(tmp_path):
     deps = MagicMock(spec=ChatDeps)
     deps.vault = vault
     ctx.deps = deps
-
+    
     result = save_page_tool(ctx, "Existing", "New content")
     assert "already exists" in result
     assert existing_path.read_text() == "Existing content"
+
+
+def test_list_dates_tool(mock_ctx):
+    mock_journal = MagicMock(spec=Page)
+    mock_journal.name = "2026-03-10"
+    mock_journal.tags.return_value = {"hash/tag", "journal-tag"}
+    
+    mock_retro = MagicMock(spec=Page)
+    mock_retro.name = "r2026-03-10"
+    mock_retro.tags.return_value = {"hash/tag", "retro-tag"}
+    
+    # We need to simulate the loop checking for dates
+    def mock_page_side_effect(*args, **kwargs):
+        return mock_journal
+        
+    def mock_retro_page_side_effect(*args, **kwargs):
+        return mock_retro
+        
+    mock_ctx.deps.vault.page.side_effect = mock_page_side_effect
+    mock_ctx.deps.vault.retrospective_page.side_effect = mock_retro_page_side_effect
+    
+    # Restrict date range manually to avoid an infinite loop in test if the logic iterates day by day
+    # Actually, we shouldn't infinite loop because it has a start and end, but mocking it out makes sense
+    result = list_dates_tool(mock_ctx, start="2026-03-10", end="2026-03-10")
+    
+    assert "Journal:" in result
+    assert "2026-03-10.md: #hash/tag, #journal-tag" in result
+    assert "Retrospectives:" in result
+    assert "r2026-03-10.md: #hash/tag, #retro-tag" in result
+
