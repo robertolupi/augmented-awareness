@@ -49,7 +49,7 @@ The Go portion of the application follows the standard Go project layout:
 
 The Python code provides tools for generating retrospectives from journal entries.
 
--   `aww.py`: The main CLI entry point, built with `click`. It allows users to generate retrospectives for different time periods (daily, weekly, etc.) using various language models.
+-   `aww_run.py`: The main Python CLI entry point, built with `click` and backed by `aww.cli:main`. It allows users to generate retrospectives for different time periods (daily, weekly, etc.) using various language models.
 -   `aww/`: The main Python package.
     -   `config.py`: Manages application settings using Pydantic.
     -   `obsidian.py`: Contains classes (`Vault`, `Page`) for interacting with the structure of an Obsidian vault.
@@ -59,7 +59,7 @@ The Python code provides tools for generating retrospectives from journal entrie
 
 #### Dependency Management
 
-Use `uv add` for python dependencies and to run python programs, such as `aww.py` itself or `streamlit`.
+Use `uv add` for python dependencies and `uv run` to execute Python programs, such as `aww_run.py`, the installed `aww` console script, or `streamlit`.
 
 ```bash
 uv add streamlit
