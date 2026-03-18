@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 	"journal/internal/datetime"
 	"log"
@@ -13,10 +14,10 @@ var (
 		Use:   "tasks-cleanup",
 		Short: "Cleanup incomplete tasks (marked as delete) in the journal",
 		Long:  `This command will remove incomplete tasks that are marked for deletion from the journal files.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			pages, err := app.Vault.PageRange(taskCleanupStartDate, taskCleanupEndDate)
 			if err != nil {
-				log.Fatalf("Failed to parse pages in date range: %v", err)
+				return fmt.Errorf("failed to parse pages in date range: %w", err)
 			}
 
 			for _, page := range pages {
@@ -37,11 +38,11 @@ var (
 				}
 				err := page.Save()
 				if err != nil {
-					log.Fatalf("Failed to save page %s after cleanup: %v", page.Name(), err)
-				} else {
-					log.Printf("Cleaned up %d tasks marked for deletion in page %s", len(linesToRemove), page.Name())
+					return fmt.Errorf("failed to save page %s after cleanup: %w", page.Name(), err)
 				}
+				log.Printf("Cleaned up %d tasks marked for deletion in page %s", len(linesToRemove), page.Name())
 			}
+			return nil
 		},
 	}
 )

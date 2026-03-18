@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 	"journal/internal/search"
 	"journal/internal/tui"
@@ -13,10 +14,10 @@ var (
 		Use:   "index",
 		Short: "Index the journal pages",
 		Long:  `Index the journal pages to enable fast searching based on their content.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			index, err := search.NewIndex(dataPath)
 			if err != nil {
-				log.Fatalf("Failed to create index at %s: %v", dataPath, err)
+				return fmt.Errorf("failed to create index at %s: %w", dataPath, err)
 			}
 			defer index.Close()
 
@@ -26,7 +27,7 @@ var (
 				return nil
 			})
 			if err != nil {
-				log.Fatalf("Failed to walk pages in vault: %v", err)
+				return fmt.Errorf("failed to walk pages in vault: %w", err)
 			}
 
 			err = tui.ShowProgress(func(setProgress tui.SetProgressFunc, reportError tui.ReportErrorFunc) error {
@@ -39,7 +40,7 @@ var (
 					}
 					if page == nil {
 						log.Printf("No page found at path %q", pagePath)
-						reportError(err)
+						reportError(fmt.Errorf("no page found at path %q", pagePath))
 						continue
 					}
 					if err := index.IndexPage(page); err != nil {
@@ -53,8 +54,9 @@ var (
 				return nil
 			})
 			if err != nil {
-				log.Fatalf("Failed to index journal pages: %v", err)
+				return fmt.Errorf("failed to index journal pages: %w", err)
 			}
+			return nil
 		},
 	}
 )

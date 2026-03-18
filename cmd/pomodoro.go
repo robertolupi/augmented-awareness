@@ -180,7 +180,7 @@ var (
 			fmt.Println("Listening on port :" + pomodoroPort)
 			err := http.ListenAndServe(":"+pomodoroPort, nil)
 			if err != nil {
-				fmt.Println("ListenAndServe error:", err)
+				return err
 			}
 
 			return nil

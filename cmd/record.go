@@ -1,10 +1,10 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 	"journal/internal/datetime"
 	"journal/internal/obsidian"
-	"log"
 	"strings"
 )
 
@@ -15,20 +15,20 @@ var (
 		Use:   "record",
 		Short: "Record a new journal entry",
 		Long:  `Record a new journal entry in the Obsidian vault.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			page, err := app.Vault.Page(recordDate)
 			if err != nil {
-				log.Fatalf("Failed to get journal page: %v", err)
+				return fmt.Errorf("failed to get journal page: %w", err)
 			}
 
 			section, err := page.FindSection(journalSection)
 			if err != nil {
-				log.Fatalf("Failed to find section %s in journal page: %v", journalSection, err)
+				return fmt.Errorf("failed to find section %s in journal page: %w", journalSection, err)
 			}
 
 			events, err := section.Events()
 			if err != nil {
-				log.Fatalf("Failed to get events from section %s: %v", journalSection, err)
+				return fmt.Errorf("failed to get events from section %s: %w", journalSection, err)
 			}
 
 			if len(events) > 0 {
@@ -36,7 +36,7 @@ var (
 				if event.EndTime == "" {
 					event.EndTime = datetime.TimeNow()
 					if err := section.AmendEvent(event); err != nil {
-						log.Fatalf("Failed to amend event: %v", err)
+						return fmt.Errorf("failed to amend event: %w", err)
 					}
 				}
 			}
@@ -47,12 +47,13 @@ var (
 			}
 
 			if err := section.AddEvent(newEvent); err != nil {
-				log.Fatalf("Failed to add new event: %v", err)
+				return fmt.Errorf("failed to add new event: %w", err)
 			}
 
 			if err := page.Save(); err != nil {
-				log.Fatalf("Failed to save page: %v", err)
+				return fmt.Errorf("failed to save page: %w", err)
 			}
+			return nil
 		},
 	}
 )

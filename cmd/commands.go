@@ -5,7 +5,6 @@ import (
 	"journal/internal/application"
 	"journal/internal/config"
 	"log"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -19,9 +18,11 @@ var (
 	app *application.App
 
 	rootCmd = &cobra.Command{
-		Use:   "journal",
-		Short: "Update my journal in Obsidian",
-		Long:  `A simple command line tool to update my journal in Obsidian.`,
+		Use:           "journal",
+		Short:         "Update my journal in Obsidian",
+		Long:          `A simple command line tool to update my journal in Obsidian.`,
+		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
 )
 
@@ -30,8 +31,6 @@ func Execute() error {
 }
 
 func init() {
-	cobra.OnInitialize(initApp)
-
 	rootCmd.PersistentFlags().StringVar(&vaultPath, "vault", "", "Path to the Obsidian vault")
 	rootCmd.PersistentFlags().StringVar(&journalSection, "section", "", "Section of the journal entry")
 	rootCmd.PersistentFlags().StringVar(&dataPath, "data", "", "Path to the data directory")
@@ -50,6 +49,10 @@ func init() {
 		log.Fatalln(err)
 	}
 
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		return initApp()
+	}
+
 	initRecordCmd()
 	initStopCmd()
 	initBusyCmd()
@@ -64,10 +67,9 @@ func init() {
 	initPomodoroCmd()
 }
 
-func initApp() {
+func initApp() error {
 	if err := config.InitConfig(""); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return fmt.Errorf("load config: %w", err)
 	}
 	vaultPath = viper.GetString(config.VaultPath)
 	journalSection = viper.GetString(config.JournalSection)
@@ -76,6 +78,7 @@ func initApp() {
 	var err error
 	app, err = application.New(vaultPath, journalSection, dataPath)
 	if err != nil {
-		log.Fatalf("Failed to create application: %v", err)
+		return fmt.Errorf("create application: %w", err)
 	}
+	return nil
 }

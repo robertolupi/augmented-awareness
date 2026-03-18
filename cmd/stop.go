@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 	"journal/internal/datetime"
 	"journal/internal/obsidian"
-	"log"
 )
 
 var (
@@ -15,10 +14,11 @@ var (
 		Use:   "stop",
 		Short: "Stop the current journal event",
 		Long:  "Stop the current journal event in the Obsidian vault.",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := stopCurrentEvent(app.Vault, journalSection, stopDate); err != nil {
-				log.Fatalf("Failed to stop event: %v", err)
+				return fmt.Errorf("failed to stop event: %w", err)
 			}
+			return nil
 		},
 	}
 )

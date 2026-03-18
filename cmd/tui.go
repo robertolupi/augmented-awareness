@@ -4,7 +4,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"journal/internal/tui"
-	"log"
 )
 
 var (
@@ -12,11 +11,12 @@ var (
 		Use:   "tui",
 		Short: "Start the TUI",
 		Long:  `Start the TUI`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			p := tea.NewProgram(tui.New(app.Vault, app.JournalSection), tea.WithAltScreen())
 			if _, err := p.Run(); err != nil {
-				log.Fatalf("Error running program: %v", err)
+				return err
 			}
+			return nil
 		},
 	}
 )

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"journal/internal/datetime"
-	"log"
 )
 
 var (
@@ -16,16 +15,17 @@ var (
 		Use:   "tasks",
 		Short: "List tasks in the given date range",
 		Long:  `List tasks in the given date range from the journal.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 
 			tasks, err := app.TasksInDateRange(taskStartDate, taskEndDate, tasksSkipDone)
 			if err != nil {
-				log.Fatalf("Failed to retrieve tasks: %v", err)
+				return fmt.Errorf("failed to retrieve tasks: %w", err)
 			}
 
 			for _, task := range tasks {
 				fmt.Println(task.String())
 			}
+			return nil
 		},
 	}
 )

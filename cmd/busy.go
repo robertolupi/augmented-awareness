@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"journal/internal/datetime"
-	"log"
 	"time"
 )
 
@@ -18,12 +17,13 @@ var (
 		Use:   "busy",
 		Short: "Show how I spent my time",
 		Long:  `Show how I spent my time in the last week.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			report, err := app.BusyReport(busyStartDate, busyEndDate, busyExpandTags, busyBucketSize)
 			if err != nil {
-				log.Fatalf("Failed to generate busy report: %v", err)
+				return fmt.Errorf("failed to generate busy report: %w", err)
 			}
 			fmt.Println(report)
+			return nil
 		},
 	}
 )

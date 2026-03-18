@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"journal/internal/datetime"
-	"log"
 )
 
 var (
@@ -12,25 +11,26 @@ var (
 		Use:   "list",
 		Short: "List today events",
 		Long:  `List today events in the journal.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			page, err := app.Vault.Page(datetime.Today().String())
 			if err != nil {
-				log.Fatalf("Failed to get journal page: %v", err)
+				return fmt.Errorf("failed to get journal page: %w", err)
 			}
 
 			section, err := page.FindSection(journalSection)
 			if err != nil {
-				log.Fatalf("Failed to find journal section: %v", err)
+				return fmt.Errorf("failed to find journal section: %w", err)
 			}
 
 			events, err := section.Events()
 			if err != nil {
-				log.Fatalf("Failed to get events from journal page: %v", err)
+				return fmt.Errorf("failed to get events from journal page: %w", err)
 			}
 
 			for _, event := range events {
 				fmt.Printf("%5s %5s\t%10s\t%s\n", event.StartTime, event.EndTime, event.Duration, event.Text)
 			}
+			return nil
 		},
 	}
 )

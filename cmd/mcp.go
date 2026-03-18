@@ -4,7 +4,6 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 	"journal/internal/mcptools"
-	"log"
 )
 
 var (
@@ -12,7 +11,7 @@ var (
 		Use:   "mcp",
 		Short: "Run as a MCP server",
 		Long:  `Run as a MCP (Model Context Protocol) server, allowing LLMs to read journal entries and tasks.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			// https://mcp-go.dev/getting-started
 
 			mcptools.SetApp(app)
@@ -20,8 +19,9 @@ var (
 			s := mcptools.NewServer()
 
 			if err := server.ServeStdio(s); err != nil {
-				log.Fatalf("Error: %v\n", err)
+				return err
 			}
+			return nil
 		},
 	}
 )
