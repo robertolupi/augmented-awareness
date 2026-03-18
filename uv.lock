@@ -293,14 +293,10 @@ dependencies = [
     { name = "lancedb" },
     { name = "matplotlib" },
     { name = "nltk" },
-    { name = "notebook" },
-    { name = "pandas-stubs" },
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
-    { name = "pylance" },
-    { name = "pytest" },
     { name = "pyyaml" },
     { name = "rich" },
     { name = "scikit-learn" },
@@ -311,6 +307,14 @@ dependencies = [
     { name = "watchdog" },
 ]
 
+[package.optional-dependencies]
+dev = [
+    { name = "notebook" },
+    { name = "pandas-stubs" },
+    { name = "pylance" },
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.2.1" },
@@ -318,14 +322,14 @@ requires-dist = [
     { name = "lancedb", specifier = ">=0.24.2" },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "nltk", specifier = ">=3.9.1" },
-    { name = "notebook", specifier = ">=7.4.5" },
-    { name = "pandas-stubs", specifier = "==2.3.0.250703" },
+    { name = "notebook", marker = "extra == 'dev'", specifier = ">=7.4.5" },
+    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = "==2.3.0.250703" },
     { name = "pyarrow", specifier = ">=21.0.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-ai", specifier = "==0.4.6" },
     { name = "pydantic-settings", specifier = "==2.10.1" },
-    { name = "pylance", specifier = ">=0.32.0" },
-    { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pylance", marker = "extra == 'dev'", specifier = ">=0.32.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "rich", specifier = ">=14.0.0" },
     { name = "scikit-learn", specifier = ">=1.7.1" },
@@ -335,6 +339,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "watchdog", specifier = ">=6.0.0" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "babel"
