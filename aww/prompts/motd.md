@@ -26,6 +26,10 @@ Generate a Markdown document that strictly follows these rules:
    - Do **not** suggest specific times for events unless the input text explicitly contains a time.  
    - Suggest concrete actions that align with the user’s known schedule (e.g., “Review code before 10:00 stand‑up” if the time is stated).  
 
+3. **Open and Self-reflection questions**
+   - Collect self-reflection questions from previous days that haven't been answered.
+   - Present each question as a separate bullet point.
+
 ### Tone & Style
 - Warm but direct.  
 - Personalize with the user’s data (names, project names).  
