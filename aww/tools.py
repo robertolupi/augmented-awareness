@@ -8,6 +8,8 @@ from pydantic_ai import RunContext
 from aww.deps import ChatDeps
 from aww.obsidian import Level
 
+TOP_LEVEL_SECTION_RE = re.compile(r"(?m)^(?:#(?!#)|##(?!#))\s+")
+
 
 def datetime_tool(ctx: RunContext[ChatDeps]) -> str:
     """
@@ -214,6 +216,55 @@ def save_page_tool(ctx: RunContext[ChatDeps], name: str, content: str) -> str:
         return f"Error: page '{clean_name}' already exists."
 
     return f"Page '{clean_name}' saved successfully."
+
+
+def _format_section(heading: str, content: str, *, has_suffix: bool) -> str:
+    normalized_content = content.strip("\n")
+    section = f"{heading}\n"
+    if normalized_content:
+        section += f"{normalized_content}\n"
+    if has_suffix:
+        section += "\n"
+    return section
+
+
+def add_to_daily_journal_tool(ctx: RunContext[ChatDeps], content: str) -> str:
+    """
+    Add content to today's daily journal note by replacing the body of the
+    ## AWW section. If the section does not exist, create it at the end.
+
+    Args:
+        content: Markdown content for the body of the ## AWW section only.
+    """
+    page = ctx.deps.vault.page(datetime.date.today(), Level.daily)
+    if not page.path.exists():
+        return f"Error: today's journal note does not exist: {page.path}"
+
+    raw = page.path.read_text()
+    section_match = re.search(r"(?m)^## AWW[ \t]*$", raw)
+
+    if section_match:
+        heading = section_match.group(0)
+        body_start = section_match.end()
+        if body_start < len(raw) and raw[body_start] == "\n":
+            body_start += 1
+
+        next_section = TOP_LEVEL_SECTION_RE.search(raw, body_start)
+        body_end = next_section.start() if next_section else len(raw)
+
+        updated = (
+            raw[: section_match.start()]
+            + _format_section(heading, content, has_suffix=next_section is not None)
+            + raw[body_end:]
+        )
+        page.path.write_text(updated)
+        return f"Updated ## AWW section in '{page.name}'."
+
+    base = raw.rstrip("\n")
+    prefix = f"{base}\n\n" if base else ""
+    updated = prefix + _format_section("## AWW", content, has_suffix=False)
+    page.path.write_text(updated)
+    return f"Created ## AWW section in '{page.name}'."
 
 
 def search_tool(ctx: RunContext[ChatDeps], query: str) -> str:

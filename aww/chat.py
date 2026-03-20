@@ -11,6 +11,7 @@ from aww.prompts import select_prompt_template
 
 from aww.deps import ChatDeps
 from aww.tools import (
+    add_to_daily_journal_tool,
     datetime_tool,
     read_journal_tool,
     read_pages_tool,
@@ -33,6 +34,7 @@ def get_chat_agent(model: Model, vault: Vault) -> Agent[ChatDeps]:
         model,
         deps_type=ChatDeps,
         tools=[
+            add_to_daily_journal_tool,
             datetime_tool,
             read_journal_tool,
             read_pages_tool,

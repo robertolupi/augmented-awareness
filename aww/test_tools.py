@@ -4,9 +4,10 @@ import pytest
 from pydantic_ai import RunContext
 
 from aww.deps import ChatDeps
-from aww.obsidian import Page, Vault
+from aww.obsidian import Level, Page, Vault
 from aww.rag import Index
 from aww.tools import (
+    add_to_daily_journal_tool,
     datetime_tool,
     read_journal_tool,
     read_pages_tool,
@@ -176,6 +177,177 @@ def test_save_page_tool_refuses_overwrite(tmp_path):
     assert existing_path.read_text() == "Existing content"
 
 
+def test_add_to_daily_journal_tool_replaces_existing_section(tmp_path):
+    journal_path = tmp_path / "2026-03-20.md"
+    journal_path.write_text(
+        "# 2026-03-20\n"
+        "\n"
+        "## Journal and events\n"
+        "Old stuff\n"
+        "\n"
+        "## AWW\n"
+        "Previous content\n"
+        "Another line\n"
+        "\n"
+        "## Tasks\n"
+        "- [ ] One task\n"
+    )
+
+    vault = MagicMock(spec=Vault)
+    vault_page = Page(journal_path, Level.daily)
+    vault.page.return_value = vault_page
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    result = add_to_daily_journal_tool(ctx, "New summary\n- bullet")
+
+    assert "Updated ## AWW section" in result
+    assert journal_path.read_text() == (
+        "# 2026-03-20\n"
+        "\n"
+        "## Journal and events\n"
+        "Old stuff\n"
+        "\n"
+        "## AWW\n"
+        "New summary\n"
+        "- bullet\n"
+        "\n"
+        "## Tasks\n"
+        "- [ ] One task\n"
+    )
+
+
+def test_add_to_daily_journal_tool_creates_missing_section_at_end(tmp_path):
+    journal_path = tmp_path / "2026-03-20.md"
+    journal_path.write_text(
+        "# 2026-03-20\n"
+        "\n"
+        "## Journal and events\n"
+        "Old stuff\n"
+    )
+
+    vault = MagicMock(spec=Vault)
+    vault.page.return_value = Page(journal_path, Level.daily)
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    result = add_to_daily_journal_tool(ctx, "Fresh content")
+
+    assert "Created ## AWW section" in result
+    assert journal_path.read_text() == (
+        "# 2026-03-20\n"
+        "\n"
+        "## Journal and events\n"
+        "Old stuff\n"
+        "\n"
+        "## AWW\n"
+        "Fresh content\n"
+    )
+
+
+def test_add_to_daily_journal_tool_stops_at_next_h2_not_h3(tmp_path):
+    journal_path = tmp_path / "2026-03-20.md"
+    journal_path.write_text(
+        "# 2026-03-20\n"
+        "\n"
+        "## AWW\n"
+        "Old summary\n"
+        "\n"
+        "### Details\n"
+        "Keep this with the AWW section\n"
+        "\n"
+        "## Tasks\n"
+        "- [ ] One task\n"
+    )
+
+    vault = MagicMock(spec=Vault)
+    vault.page.return_value = Page(journal_path, Level.daily)
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    add_to_daily_journal_tool(ctx, "Replacement")
+
+    assert journal_path.read_text() == (
+        "# 2026-03-20\n"
+        "\n"
+        "## AWW\n"
+        "Replacement\n"
+        "\n"
+        "## Tasks\n"
+        "- [ ] One task\n"
+    )
+
+
+def test_add_to_daily_journal_tool_replaces_section_at_end_of_file(tmp_path):
+    journal_path = tmp_path / "2026-03-20.md"
+    journal_path.write_text(
+        "# 2026-03-20\n"
+        "\n"
+        "## Notes\n"
+        "Something else\n"
+        "\n"
+        "## AWW\n"
+        "Old summary\n"
+    )
+
+    vault = MagicMock(spec=Vault)
+    vault.page.return_value = Page(journal_path, Level.daily)
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    add_to_daily_journal_tool(ctx, "Final summary")
+
+    assert journal_path.read_text() == (
+        "# 2026-03-20\n"
+        "\n"
+        "## Notes\n"
+        "Something else\n"
+        "\n"
+        "## AWW\n"
+        "Final summary\n"
+    )
+
+
+def test_add_to_daily_journal_tool_errors_when_daily_note_missing(tmp_path):
+    missing_path = tmp_path / "missing.md"
+
+    vault = MagicMock(spec=Vault)
+    vault.page.return_value = Page(missing_path, Level.daily)
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    result = add_to_daily_journal_tool(ctx, "Does not matter")
+
+    assert "does not exist" in result
+    assert not missing_path.exists()
+
+
+def test_add_to_daily_journal_tool_uses_body_only_input(tmp_path):
+    journal_path = tmp_path / "2026-03-20.md"
+    journal_path.write_text("## AWW\nOld content\n")
+
+    vault = MagicMock(spec=Vault)
+    vault.page.return_value = Page(journal_path, Level.daily)
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    add_to_daily_journal_tool(ctx, "Replacement only")
+
+    assert journal_path.read_text() == "## AWW\nReplacement only\n"
+
+
 def test_list_dates_tool(mock_ctx):
     mock_journal = MagicMock(spec=Page)
     mock_journal.name = "2026-03-10"
@@ -209,4 +381,3 @@ def test_list_dates_tool(mock_ctx):
     assert "  - [x] Task 2" in result
     assert "Retrospectives:" in result
     assert "r2026-03-10.md: #hash/tag, #retro-tag" in result
-
