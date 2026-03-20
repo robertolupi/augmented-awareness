@@ -51,6 +51,27 @@ def _init_db(conn):
         )
     """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+            id TEXT PRIMARY KEY,
+            channel TEXT NOT NULL,
+            external_session_id TEXT,
+            title TEXT NOT NULL,
+            model TEXT,
+            messages_json TEXT NOT NULL DEFAULT '[]',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """
+    )
+    conn.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_sessions_channel_external
+        ON chat_sessions (channel, external_session_id)
+        WHERE external_session_id IS NOT NULL
+    """
+    )
 
 
 def save_page_tags(
