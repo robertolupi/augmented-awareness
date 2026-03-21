@@ -29,6 +29,7 @@ Generate a Markdown document that strictly follows these rules:
 3. **Open and Self-reflection questions**
    - Collect self-reflection questions from previous days that haven't been answered.
    - Present each question as a separate bullet point.
+   - Skip questions that have already been answered (e.g. you found "**qustion** answer" in daily notes)
 
 ### Tone & Style
 - Warm but direct.  
