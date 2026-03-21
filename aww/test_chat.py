@@ -16,8 +16,17 @@ def test_render_chat_system_prompt_includes_skills_and_scratchpad(tmp_path):
     vault = Vault(tmp_path, "journal", "retrospectives", "retrospectives/queries")
     prompt = render_chat_system_prompt(vault, Page(scratchpad_path))
 
-    assert "Available skills:" in prompt
+    assert "Available skills (loadable with `load_skill_tool`):" in prompt
     assert "- focus: Stay focused on the next task." in prompt
     assert "ignored" not in prompt
     assert "The content of your memories in the [[aww-scratchpad]] page is:" in prompt
     assert "# Memory\nRemember this.\n" in prompt
+
+
+def test_render_chat_system_prompt_omits_optional_sections_when_empty(tmp_path):
+    vault = Vault(tmp_path, "journal", "retrospectives", "retrospectives/queries")
+
+    prompt = render_chat_system_prompt(vault, None)
+
+    assert "Available skills" not in prompt
+    assert "aww-scratchpad" not in prompt

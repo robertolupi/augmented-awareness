@@ -30,20 +30,11 @@ def is_executable(path: Path) -> bool:
 
 def render_chat_system_prompt(vault: Vault, scratchpad: Page | None) -> str:
     """Render the chat system prompt, including skills and scratchpad context."""
-    result = select_prompt_template(["chat.md"]).render(now=datetime.datetime.now())
-
-    skills = vault.list_skills()
-    if skills:
-        result += "\n\nAvailable skills (loadable with load_skill_tool):\n"
-        for skill in skills:
-            result += f"- {skill.name}: {skill.description}\n"
-
-    if scratchpad:
-        result += (
-            "The content of your memories in the [[aww-scratchpad]] page is:\n"
-            + scratchpad.content()
-        )
-    return result
+    return select_prompt_template(["chat.md"]).render(
+        now=datetime.datetime.now(),
+        skills=vault.list_skills(),
+        scratchpad_content=scratchpad.content() if scratchpad else None,
+    )
 
 
 def get_chat_agent(model: Model, vault: Vault) -> Agent[ChatDeps]:
