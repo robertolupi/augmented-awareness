@@ -6,6 +6,7 @@ Provides classes and functions for working with Obsidian-style markdown vaults, 
 import enum
 import os
 import re
+from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,15 @@ class Level(enum.Enum):
     weekly = "weekly"
     monthly = "monthly"
     yearly = "yearly"
+
+
+@dataclass(frozen=True)
+class Skill:
+    """Metadata for a vault skill file."""
+
+    name: str
+    path: Path
+    description: str
 
 
 class Vault:
@@ -91,6 +101,60 @@ class Vault:
         return self._make_page(
             d, level, f"{self.queries_dir}/{query_id}", self._RETRO_TEMPLATES
         )
+
+    def skills_dir(self) -> Path:
+        """Return the vault's conventional skills directory."""
+        return self.path / "skills"
+
+    def list_skills(self) -> list[Skill]:
+        """Return skill metadata for markdown files in the root skills directory."""
+        skills_root = self.skills_dir()
+        if not skills_root.exists() or not skills_root.is_dir():
+            return []
+
+        skills = []
+        for skill_path in sorted(skills_root.glob("*.md")):
+            page = Page(skill_path, None)
+            description = page.frontmatter().get("description")
+            if not isinstance(description, str):
+                continue
+            description = description.strip()
+            if not description:
+                continue
+            skills.append(
+                Skill(
+                    name=skill_path.stem,
+                    path=skill_path,
+                    description=description,
+                )
+            )
+        return skills
+
+    def skill_path(self, name: str) -> Path:
+        """Resolve a skill name to a markdown file inside the root skills directory."""
+        normalized = name.strip()
+        if normalized.endswith(".md"):
+            normalized = normalized[:-3]
+
+        if not normalized:
+            raise ValueError("Skill name is empty.")
+
+        candidate = Path(normalized)
+        if candidate.name != normalized or candidate.parent != Path("."):
+            raise ValueError("Skill name must be a single filename inside the skills directory.")
+
+        skill_path = (self.skills_dir() / f"{normalized}.md").resolve()
+        try:
+            skill_path.relative_to(self.skills_dir().resolve())
+        except ValueError as exc:
+            raise ValueError(
+                "Skill path must stay inside the skills directory."
+            ) from exc
+
+        if not skill_path.exists() or not skill_path.is_file():
+            raise ValueError(f"Skill '{normalized}' not found.")
+
+        return skill_path
 
     def _make_page(
         self,

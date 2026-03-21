@@ -9,6 +9,7 @@ from aww.rag import Index
 from aww.tools import (
     add_to_daily_journal_tool,
     datetime_tool,
+    load_skill_tool,
     read_journal_tool,
     read_pages_tool,
     read_retro_tool,
@@ -80,6 +81,66 @@ def test_read_pages_tool(mock_ctx):
     assert "# MyPage" in result
     assert "Page content" in result
     assert "Page 'MissingPage' not found." in result
+
+
+def test_load_skill_tool_reads_skill_by_stem(tmp_path):
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    skill_path = skills_dir / "focus.md"
+    skill_path.write_text("---\ndescription: Stay focused\n---\n# Focus\nUse timers.\n")
+
+    vault = Vault(tmp_path, "journal", "retrospectives", "retrospectives/queries")
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    result = load_skill_tool(ctx, "focus")
+
+    assert result == skill_path.read_text()
+
+
+def test_load_skill_tool_reads_skill_by_filename(tmp_path):
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    skill_path = skills_dir / "focus.md"
+    skill_path.write_text("---\ndescription: Stay focused\n---\n# Focus\nUse timers.\n")
+
+    vault = Vault(tmp_path, "journal", "retrospectives", "retrospectives/queries")
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    result = load_skill_tool(ctx, "focus.md")
+
+    assert result == skill_path.read_text()
+
+
+def test_load_skill_tool_errors_when_skill_missing(tmp_path):
+    (tmp_path / "skills").mkdir()
+    vault = Vault(tmp_path, "journal", "retrospectives", "retrospectives/queries")
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    result = load_skill_tool(ctx, "missing")
+
+    assert "Skill 'missing' not found" in result
+
+
+def test_load_skill_tool_rejects_path_traversal(tmp_path):
+    (tmp_path / "skills").mkdir()
+    vault = Vault(tmp_path, "journal", "retrospectives", "retrospectives/queries")
+    ctx = MagicMock(spec=RunContext)
+    deps = MagicMock(spec=ChatDeps)
+    deps.vault = vault
+    ctx.deps = deps
+
+    result = load_skill_tool(ctx, "../secret")
+
+    assert "single filename inside the skills directory" in result
 
 
 def test_read_retro_tool(mock_ctx):

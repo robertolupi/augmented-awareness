@@ -2,6 +2,7 @@ from datetime import date, time
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 import aww
 from aww import obsidian
@@ -47,6 +48,41 @@ def test_page():
 def test_index_page():
     page = obsidian.Page(test_vault_path / "index.md", None)
     assert not page.frontmatter()
+
+
+def test_list_skills_reads_descriptions(tmp_path):
+    (tmp_path / "skills").mkdir()
+    (tmp_path / "skills" / "focus.md").write_text(
+        "---\ndescription: Stay focused on the next task.\n---\n# Focus\n"
+    )
+    (tmp_path / "skills" / "ignored.md").write_text("---\nother: value\n---\n# Ignored\n")
+
+    vault = obsidian.Vault(tmp_path, "journal", "retrospectives", "retrospectives/queries")
+
+    skills = vault.list_skills()
+
+    assert skills == [
+        obsidian.Skill(
+            name="focus",
+            path=(tmp_path / "skills" / "focus.md"),
+            description="Stay focused on the next task.",
+        )
+    ]
+
+
+def test_skill_path_accepts_stem_or_filename_and_rejects_nested_paths(tmp_path):
+    (tmp_path / "skills").mkdir()
+    (tmp_path / "skills" / "focus.md").write_text(
+        "---\ndescription: Stay focused on the next task.\n---\n# Focus\n"
+    )
+
+    vault = obsidian.Vault(tmp_path, "journal", "retrospectives", "retrospectives/queries")
+
+    assert vault.skill_path("focus") == (tmp_path / "skills" / "focus.md").resolve()
+    assert vault.skill_path("focus.md") == (tmp_path / "skills" / "focus.md").resolve()
+
+    with pytest.raises(ValueError):
+        vault.skill_path("nested/focus")
 
 
 def test_page_events():
