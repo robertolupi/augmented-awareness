@@ -45,6 +45,17 @@ def test_page():
     assert page2.frontmatter() == {"stress": 5}
 
 
+def test_page_full_content_preserves_frontmatter():
+    page = obsidian.Page(
+        test_vault_path / "journal/2025/03/2025-03-30.md", Level.daily
+    )
+
+    full_content = page.full_content()
+
+    assert full_content.startswith("---\nstress: 4\n---\n")
+    assert "# 2025-03-30" in full_content
+
+
 def test_index_page():
     page = obsidian.Page(test_vault_path / "index.md", None)
     assert not page.frontmatter()

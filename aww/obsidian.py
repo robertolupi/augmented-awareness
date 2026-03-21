@@ -231,6 +231,11 @@ class Page:
         data = CODEBLOCKS_RE.sub("", data)
         return data
 
+    def full_content(self) -> str:
+        """Return the raw page content, including frontmatter and code blocks."""
+        with self.path.open() as fd:
+            return fd.read()
+
     def enumerate_content_lines(self):
         with self.path.open() as fd:
             lines = enumerate(fd.readlines())

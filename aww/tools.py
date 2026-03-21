@@ -29,7 +29,7 @@ def datetime_tool(ctx: RunContext[ChatDeps]) -> str:
 
 def read_journal_tool(ctx: RunContext[ChatDeps]) -> str:
     """
-    Read journal for the past week, up to and including today.
+    Read journal for the past week, up to and including today, preserving full page frontmatter.
     """
     vault = ctx.deps.vault
     today = datetime.date.today()
@@ -45,19 +45,19 @@ def read_journal_tool(ctx: RunContext[ChatDeps]) -> str:
         # Daily page
         page = vault.page(d, Level.daily)
         if page:
-            output.append(f"# {page.name}\n{page.content()}\n")
+            output.append(f"# {page.name}\n{page.full_content()}\n")
 
         # Daily retro page
         retro_page = vault.retrospective_page(d, Level.daily)
         if retro_page:
-            output.append(f"# {retro_page.name}\n{retro_page.content()}\n")
+            output.append(f"# {retro_page.name}\n{retro_page.full_content()}\n")
 
     return "\n".join(output)
 
 
 def read_pages_tool(ctx: RunContext[ChatDeps], pages: List[str]) -> str:
     """
-    Read one or more pages from the vault, and return their content in markdown format.
+    Read one or more pages from the vault, and return their full markdown content, including frontmatter.
 
     Args:
         pages: Names of pages to read, e.g. 2023-10-01 or [[2023-10-01]].
@@ -70,7 +70,7 @@ def read_pages_tool(ctx: RunContext[ChatDeps], pages: List[str]) -> str:
         clean_name = name.replace("[[", "").replace("]]", "")
         try:
             page = vault.page_by_name(clean_name)
-            output.append(f"# {page.name}\n{page.content()}\n")
+            output.append(f"# {page.name}\n{page.full_content()}\n")
         except ValueError:
             output.append(f"Page '{clean_name}' not found.\n")
 
@@ -95,7 +95,7 @@ def load_skill_tool(ctx: RunContext[ChatDeps], skill: str) -> str:
 
 def read_retro_tool(ctx: RunContext[ChatDeps]) -> str:
     """
-    Read yearly/monthly/weekly/daily retrospectives for the given date (today).
+    Read yearly/monthly/weekly/daily retrospectives for the given date (today), including frontmatter.
     """
     vault = ctx.deps.vault
     today = datetime.date.today()
@@ -106,7 +106,7 @@ def read_retro_tool(ctx: RunContext[ChatDeps]) -> str:
     for level in levels:
         page = vault.retrospective_page(today, level)
         if page:
-            output.append(f"# {page.name}\n{page.content()}\n")
+            output.append(f"# {page.name}\n{page.full_content()}\n")
 
     if not output:
         return "No retrospectives found for today."
