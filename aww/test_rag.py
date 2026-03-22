@@ -4,6 +4,10 @@ import time
 from pathlib import Path
 
 import pytest
+import pyarrow as pa
+from lancedb.embeddings import TextEmbeddingFunction
+from lancedb.embeddings.registry import register
+from lancedb.rerankers.base import Reranker
 
 from aww.obsidian import Vault
 from aww.rag import Index
@@ -28,6 +32,60 @@ def test_vault() -> Vault:
     return Vault(
         path=vault_path, journal_dir="journal", retrospectives_dir="retrospectives", queries_dir="queries"
     )
+
+
+@register("FakeEmbeddings")
+class FakeEmbeddings(TextEmbeddingFunction):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._ndims = 3
+
+    def ndims(self):
+        return self._ndims
+
+    def generate_embeddings(self, texts):
+        texts = self.sanitize_input(texts)
+        vectors = []
+        for text in texts:
+            lower = text.lower()
+            vectors.append(
+                [
+                    float("yoga" in lower),
+                    float("frontmatter" in lower),
+                    float(len(lower) % 17),
+                ]
+            )
+        return vectors
+
+
+class FakeReranker(Reranker):
+    def rerank_vector(self, query, vector_results):
+        return vector_results.append_column(
+            "_relevance_score",
+            pa.array([1.0] * len(vector_results), type=pa.float32()),
+        )
+
+    def rerank_fts(self, query, fts_results):
+        return fts_results.append_column(
+            "_relevance_score",
+            pa.array([1.0] * len(fts_results), type=pa.float32()),
+        )
+
+    def rerank_hybrid(self, query, vector_results, fts_results):
+        return fts_results.append_column(
+            "_relevance_score",
+            pa.array([1.0] * len(fts_results), type=pa.float32()),
+        )
+
+
+@pytest.fixture(autouse=True)
+def offline_embedding_stubs(monkeypatch):
+    monkeypatch.setattr(
+        Index,
+        "_build_embedding_model",
+        lambda self: FakeEmbeddings.create(),
+    )
+    monkeypatch.setattr("aww.rag.CrossEncoderReranker", FakeReranker)
 
 
 def test_index_creation_and_full_rebuild(temp_db_path: Path, test_vault: Vault):
@@ -132,9 +190,8 @@ def test_incremental_indexing(temp_db_path: Path, test_vault: Vault):
         assert idx.tbl.count_rows() == 4
 
         # Verify the new file is there
-        df = idx.tbl.search("new_test_file").to_pandas()
-        assert not df.empty
-        assert df.iloc[0]["id"] == "new_test_file"
+        df = idx.tbl.to_pandas()
+        assert "new_test_file" in df["id"].values
 
     finally:
         # 4. Clean up the created file

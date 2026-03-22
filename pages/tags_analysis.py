@@ -6,19 +6,24 @@ from collections import defaultdict
 import pandas
 import numpy as np
 from sklearn.manifold import TSNE
-from sentence_transformers import SentenceTransformer
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 from aww import obsidian
 from aww.config import Settings
+from aww.huggingface import load_sentence_transformer
 from aww.obsidian import Vault
 
 
 # It's good practice to cache the model loading
 @st.cache_resource
-def load_st_model(model_name):
-    return SentenceTransformer(model_name)
+def load_st_model(model_name, local_files_only=True, cache_folder=None):
+    return load_sentence_transformer(
+        model_name,
+        local_files_only=local_files_only,
+        token=False,
+        cache_folder=cache_folder,
+    )
 
 
 def build_palette(size: int, cmap_name: str) -> list[str]:
@@ -118,7 +123,15 @@ with st.spinner("Loading retrospectives..."):
 
         if st.button("Cluster Retrospectives"):
             with st.spinner("Embedding and clustering..."):
-                model = load_st_model("all-MiniLM-L6-v2")
+                try:
+                    model = load_st_model(
+                        "all-MiniLM-L6-v2",
+                        local_files_only=settings.rag.local_files_only,
+                        cache_folder=settings.rag.cache_dir,
+                    )
+                except RuntimeError as exc:
+                    st.error(str(exc))
+                    st.stop()
                 embeddings = model.encode(
                     contents, convert_to_tensor=True, normalize_embeddings=True
                 )

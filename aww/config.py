@@ -43,6 +43,8 @@ ModelConfig = Union[OpenAIConfig, GeminiConfig, LocalAIConfig]
 class RagConfig(BaseModel):
     provider: str = "sentence-transformers"
     model_name: str = "all-mpnet-base-v2"
+    local_files_only: bool = True
+    cache_dir: str | None = None
 
 
 class Settings(BaseSettings):
@@ -64,6 +66,11 @@ class Settings(BaseSettings):
     retrospectives_dir: str = "retrospectives"
     queries_dir: str = "retrospectives/queries"
     tags: Dict[str, str] = Field(default_factory=dict)
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.rag.local_files_only:
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
     @classmethod
     def settings_customise_sources(

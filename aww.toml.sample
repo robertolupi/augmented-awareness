@@ -16,6 +16,9 @@ creative = "Creative work and expression."
 [rag]
 provider = "sentence-transformers"
 model_name = "all-mpnet-base-v2"
+local_files_only = true
+# Optional: set to false if you want AWW to download missing models.
+# cache_dir = "/path/to/huggingface/cache"
 
 [models]
 
