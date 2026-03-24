@@ -7,8 +7,47 @@ from pydantic_ai import RunContext
 
 from aww.deps import ChatDeps
 from aww.obsidian import Level
+from aww.safe_eval import UnsafeExpressionError, evaluate_expression, normalize_result
 
 TOP_LEVEL_SECTION_RE = re.compile(r"(?m)^(?:#(?!#)|##(?!#))\s+")
+
+
+def python_eval_tool(ctx: RunContext[ChatDeps], expression: str) -> str:
+    """
+    Evaluate a restricted subset of Python expressions for calculations only.
+
+    Available:
+    - Arithmetic, comparisons, boolean operators, literals, lists/tuples/dicts/sets, and conditional expressions.
+    - Date and time helpers: `date`, `datetime`, `timedelta`, `timezone`, `today()`, `now()`.
+    - Safe helper modules: `math`, `calendar`, `statistics`.
+    - Attribute access on returned values when the attribute name is public, for example `.days` or `.year`.
+    - Example expressions:
+      - `2 + 2`
+      - `math.sqrt(144)`
+      - `date(2026, 3, 24) + timedelta(days=7)`
+      - `(date(2026, 3, 24) - date(2026, 3, 1)).days`
+      - `calendar.monthrange(2026, 2)`
+      - `statistics.mean([3, 5, 8])`
+
+    Not available:
+    - Full Python. This tool supports only a restricted subset of Python expressions.
+    - No imports, statements, assignments, loops, comprehensions, lambdas, function/class definitions, or persistent variables across calls.
+    - No file I/O, shell access, network access, package installation, arbitrary builtins, `eval`, `exec`, or `open`.
+    - Private or dunder attributes, unsafe introspection, or mutation-oriented programming patterns.
+
+    Args:
+        expression: A single restricted Python expression to evaluate.
+    """
+    del ctx
+
+    try:
+        result = normalize_result(evaluate_expression(expression))
+    except UnsafeExpressionError as exc:
+        return f"Error: {exc}"
+    except Exception as exc:
+        return f"Error: {exc}"
+
+    return str(result)
 
 
 def datetime_tool(ctx: RunContext[ChatDeps]) -> str:

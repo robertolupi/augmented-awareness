@@ -10,6 +10,7 @@ from aww.tools import (
     add_to_daily_journal_tool,
     datetime_tool,
     load_skill_tool,
+    python_eval_tool,
     read_journal_tool,
     read_pages_tool,
     read_retro_tool,
@@ -46,6 +47,63 @@ def test_datetime_tool(mock_ctx):
     result = datetime_tool(mock_ctx)
     assert "Now is" in result
     assert "The pages relevant to today are:" in result
+
+
+def test_python_eval_tool_supports_basic_math(mock_ctx):
+    result = python_eval_tool(mock_ctx, "2 + 3 * 4")
+
+    assert result == "14"
+
+
+def test_python_eval_tool_supports_date_arithmetic(mock_ctx):
+    result = python_eval_tool(
+        mock_ctx,
+        "(date(2026, 3, 24) - date(2026, 3, 1)).days",
+    )
+
+    assert result == "23"
+
+
+def test_python_eval_tool_supports_safe_stdlib_helpers(mock_ctx):
+    assert python_eval_tool(mock_ctx, "math.sqrt(144)") == "12.0"
+    assert python_eval_tool(mock_ctx, "calendar.monthrange(2026, 2)") == "(6, 28)"
+    assert python_eval_tool(mock_ctx, "statistics.mean([3, 5, 8])") == "5.333333333333333"
+
+
+def test_python_eval_tool_reports_runtime_errors(mock_ctx):
+    result = python_eval_tool(mock_ctx, "1 / 0")
+
+    assert "division by zero" in result
+
+
+@pytest.mark.parametrize(
+    ("expression", "message"),
+    [
+        ("import os", "Invalid expression"),
+        ("open('x')", "Unknown name: open"),
+        ("exec('1 + 1')", "Unknown name: exec"),
+        ("eval('1 + 1')", "Unknown name: eval"),
+        ("x = 1", "Invalid expression"),
+        ("lambda x: x + 1", "Unsupported Python construct: Lambda"),
+        ("[x for x in [1, 2, 3]]", "Unsupported Python construct: ListComp"),
+        ("date(2026, 3, 24).__class__", "Private and dunder attributes are not allowed"),
+    ],
+)
+def test_python_eval_tool_rejects_unsafe_constructs(mock_ctx, expression, message):
+    result = python_eval_tool(mock_ctx, expression)
+
+    assert message in result
+
+
+def test_python_eval_tool_docstring_documents_contract():
+    doc = python_eval_tool.__doc__
+
+    assert doc is not None
+    assert "Available:" in doc
+    assert "Not available:" in doc
+    assert "restricted subset of Python expressions" in doc
+    assert "no imports" in doc.lower()
+    assert "no file" in doc.lower()
 
 
 def test_read_journal_tool(mock_ctx):
