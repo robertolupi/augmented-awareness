@@ -11,6 +11,7 @@ from aww.deps import ChatDeps
 from aww.tools import (
     add_to_daily_journal_tool,
     datetime_tool,
+    extract_metric_tool,
     load_skill_tool,
     python_eval_tool,
     read_journal_tool,
@@ -45,6 +46,7 @@ def get_chat_agent(model: Model, vault: Vault) -> Agent[ChatDeps]:
         tools=[
             add_to_daily_journal_tool,
             datetime_tool,
+            extract_metric_tool,
             load_skill_tool,
             python_eval_tool,
             read_journal_tool,

@@ -9,6 +9,7 @@ from aww.rag import Index
 from aww.tools import (
     add_to_daily_journal_tool,
     datetime_tool,
+    extract_metric_tool,
     load_skill_tool,
     python_eval_tool,
     read_journal_tool,
@@ -499,8 +500,47 @@ def test_list_dates_tool(mock_ctx):
     result = list_dates_tool(mock_ctx, start="2026-03-10", end="2026-03-10")
     
     assert "Journal:" in result
-    assert "2026-03-10.md: #hash/tag, #journal-tag" in result
+    assert "2026-03-10: #hash/tag, #journal-tag" in result
     assert "  - [ ] Task 1" in result
     assert "  - [x] Task 2" in result
     assert "Retrospectives:" in result
-    assert "r2026-03-10.md: #hash/tag, #retro-tag" in result
+    assert "r2026-03-10: #hash/tag, #retro-tag" in result
+
+
+def test_extract_metric_tool(mock_ctx):
+    page_with_value = MagicMock(spec=Page)
+    page_with_value.name = "2026-03-10"
+    page_with_value.frontmatter.return_value = {"stress": 4}
+
+    page_without_metric = MagicMock(spec=Page)
+    page_without_metric.name = "2026-03-11"
+    page_without_metric.frontmatter.return_value = {}
+
+    page_with_null = MagicMock(spec=Page)
+    page_with_null.name = "2026-03-12"
+    page_with_null.frontmatter.return_value = {"stress": None}
+
+    def mock_page_side_effect(day, level):
+        assert level == Level.daily
+        pages = {
+            datetime.date(2026, 3, 10): page_with_value,
+            datetime.date(2026, 3, 11): page_without_metric,
+            datetime.date(2026, 3, 12): page_with_null,
+        }
+        return pages.get(day)
+
+    mock_ctx.deps.vault.page.side_effect = mock_page_side_effect
+
+    result = extract_metric_tool(mock_ctx, "stress", start="2026-03-10", end="2026-03-12")
+
+    assert result == "2026-03-10: 4"
+
+
+def test_extract_metric_tool_reports_when_no_values_found(mock_ctx):
+    mock_page = MagicMock(spec=Page)
+    mock_page.frontmatter.return_value = {"stress": None}
+    mock_ctx.deps.vault.page.return_value = mock_page
+
+    result = extract_metric_tool(mock_ctx, "stress", start="2026-03-10", end="2026-03-10")
+
+    assert result == "No values found for metric 'stress' in the range 2026-03-10 to 2026-03-10."

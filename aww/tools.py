@@ -399,9 +399,9 @@ def list_dates_tool(
             if tags or not tasks_df.empty:
                 if tags:
                     formatted_tags = ", ".join([f"#{t}" for t in sorted(tags)])
-                    journal_output.append(f"{page.name}.md: {formatted_tags}")
+                    journal_output.append(f"{page.name}: {formatted_tags}")
                 else:
-                    journal_output.append(f"{page.name}.md:")
+                    journal_output.append(f"{page.name}:")
 
                 if not tasks_df.empty:
                     for _, row in tasks_df.iterrows():
@@ -415,7 +415,7 @@ def list_dates_tool(
             tags = retro_page.tags()
             if tags:
                 formatted_tags = ", ".join([f"#{t}" for t in sorted(tags)])
-                retro_output.append(f"{retro_page.name}.md: {formatted_tags}")
+                retro_output.append(f"{retro_page.name}: {formatted_tags}")
 
         current += datetime.timedelta(days=1)
 
@@ -432,5 +432,53 @@ def list_dates_tool(
 
     if not output:
         return f"No tags or tasks found in the range {start_date} to {end_date}."
+
+    return "\n".join(output)
+
+
+def extract_metric_tool(
+    ctx: RunContext[ChatDeps],
+    metric: str,
+    start: str = None,
+    end: str = None,
+) -> str:
+    """
+    List daily journal notes within a date range and extract a frontmatter metric from them.
+
+    Days where the field is missing or null are ignored.
+
+    Args:
+        metric: Frontmatter field name to extract, for example "stress".
+        start: Start date (YYYY-MM-DD). Defaults to the first day of the current month.
+        end: End date (YYYY-MM-DD). Defaults to the last day of the current month.
+    """
+    vault = ctx.deps.vault
+    today = datetime.date.today()
+
+    if start:
+        start_date = datetime.date.fromisoformat(start)
+    else:
+        start_date = today.replace(day=1)
+
+    if end:
+        end_date = datetime.date.fromisoformat(end)
+    else:
+        next_month = start_date.replace(day=28) + datetime.timedelta(days=4)
+        end_date = next_month - datetime.timedelta(days=next_month.day)
+
+    output = []
+
+    current = start_date
+    while current <= end_date:
+        page = vault.page(current, Level.daily)
+        if page:
+            value = page.frontmatter().get(metric)
+            if value is not None:
+                output.append(f"{page.name}: {value}")
+
+        current += datetime.timedelta(days=1)
+
+    if not output:
+        return f"No values found for metric '{metric}' in the range {start_date} to {end_date}."
 
     return "\n".join(output)
