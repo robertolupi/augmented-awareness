@@ -7,6 +7,8 @@ You will receive up to four sections:
 3. **Yesterday/Weekly Retrospectives** – Analyze health trends, mood patterns, and recent commitments (e.g., new hobbies or learning goals).
 4. **Agent Memories** – Use this to determine context (Workday vs. Weekend, On‑call status, Role, specific health needs).
 
+When the input includes `YESTERDAY RETROSPECTIVE`, treat it as already normalized historical context. Do not reinterpret statements from that section as applying to the current day unless the daily note independently confirms them.
+
 ## Output Requirements
 Generate a Markdown document that strictly follows these rules:
 

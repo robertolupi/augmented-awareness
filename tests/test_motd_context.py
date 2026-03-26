@@ -1,8 +1,13 @@
 import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
-from aww.cli.motd import get_motd_context
-from aww.obsidian import Vault, Page, Level
+from click.testing import CliRunner
+from pydantic_ai.messages import ModelRequest, UserPromptPart
+
+from aww.cli import main
+from aww.cli.motd import get_motd_context, rewrite_yesterday_retrospective
+from aww.obsidian import Level, Page, Vault
 
 @pytest.fixture
 def mock_vault():
@@ -26,7 +31,9 @@ def test_get_motd_context_with_metrics(mock_vault):
     mock_vault.retrospective_page.return_value = None
     mock_vault.page_by_name.return_value = None
 
-    context = get_motd_context(mock_vault, daily=True, yesterday=False, weekly=False, memory=False)
+    context = get_motd_context(
+        mock_vault, daily=True, yesterday=False, weekly=False, memory=False
+    )
     
     # Join context to search for strings
     full_context = "\n".join(context)
@@ -48,7 +55,9 @@ def test_get_motd_context_no_metrics(mock_vault):
     mock_vault.retrospective_page.return_value = None
     mock_vault.page_by_name.return_value = None
 
-    context = get_motd_context(mock_vault, daily=True, yesterday=False, weekly=False, memory=False)
+    context = get_motd_context(
+        mock_vault, daily=True, yesterday=False, weekly=False, memory=False
+    )
     
     full_context = "\n".join(context)
     
@@ -78,7 +87,9 @@ def test_get_motd_context_with_weekly_goals(mock_vault):
     mock_vault.page.side_effect = lambda d, l: weekly_note if l == Level.weekly else None
     mock_vault.page_by_name.return_value = None
 
-    context = get_motd_context(mock_vault, daily=False, yesterday=False, weekly=True, memory=False)
+    context = get_motd_context(
+        mock_vault, daily=False, yesterday=False, weekly=True, memory=False
+    )
     
     full_context = "\n".join(context)
     
@@ -86,3 +97,77 @@ def test_get_motd_context_with_weekly_goals(mock_vault):
     assert "Weekly retro content" in full_context
     assert "=== WEEKLY GOALS ===" in full_context
     assert "Goal 1\nGoal 2" in full_context
+
+
+def test_rewrite_yesterday_retrospective_uses_llm_prompt():
+    with pytest.MonkeyPatch.context() as mp:
+        mock_agent = MagicMock()
+        mock_response = MagicMock()
+        mock_response.output = "Yesterday I had a hospital appointment."
+        mock_agent.return_value.run_sync.return_value = mock_response
+        mp.setattr("aww.cli.motd.Agent", mock_agent)
+
+        rewritten = rewrite_yesterday_retrospective(
+            "Today I have a hospital appointment.", MagicMock()
+        )
+
+    assert rewritten == "Yesterday I had a hospital appointment."
+    mock_agent.return_value.run_sync.assert_called_once_with(
+        ["Today I have a hospital appointment."]
+    )
+
+
+def test_get_motd_context_rewrites_yesterday_retrospective(mock_vault):
+    yesterday_retro = MagicMock(spec=Page)
+    yesterday_retro.content.return_value = "Today I have a hospital appointment."
+
+    mock_vault.retrospective_page.side_effect = (
+        lambda d, level: yesterday_retro if level == Level.daily else None
+    )
+    mock_vault.page.return_value = None
+    mock_vault.page_by_name.return_value = None
+
+    llm_model = MagicMock()
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(
+            "aww.cli.motd.rewrite_yesterday_retrospective",
+            lambda content, model: "Yesterday I had a hospital appointment.",
+        )
+        context = get_motd_context(
+            mock_vault,
+            llm_model=llm_model,
+            daily=False,
+            yesterday=True,
+            weekly=False,
+            memory=False,
+        )
+
+    full_context = "\n".join(context)
+
+    assert "=== YESTERDAY RETROSPECTIVE ===" in full_context
+    assert "Yesterday I had a hospital appointment." in full_context
+    assert "Today I have a hospital appointment." not in full_context
+
+
+def test_motd_debug_prints_message_history(mock_vault):
+    runner = CliRunner()
+    mock_model = MagicMock()
+
+    with patch("aww.cli.motd.get_motd_context", return_value=["Context 1"]):
+        with patch("aww.cli.motd.Agent") as mock_agent_cls:
+            mock_response = MagicMock()
+            mock_response.output = "MOTD output"
+            mock_response.all_messages.return_value = [
+                ModelRequest(parts=[UserPromptPart(content="Context 1")])
+            ]
+            mock_agent_cls.return_value.run_sync.return_value = mock_response
+
+            result = runner.invoke(
+                main,
+                ["motd", "--debug", "--plain-text"],
+                obj={"vault": mock_vault, "llm_model": mock_model},
+            )
+
+    assert result.exit_code == 0
+    assert '"content": "Context 1"' in result.output
+    assert "MOTD output" in result.output

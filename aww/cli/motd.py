@@ -1,8 +1,11 @@
 import datetime
+import json
 
 import click
 import rich
 from pydantic_ai import Agent
+from pydantic_ai.messages import ModelMessagesTypeAdapter
+from pydantic_ai.models import Model
 from rich.markdown import Markdown
 
 from aww.cli import main
@@ -11,8 +14,19 @@ from aww.prompts import select_prompt_template
 from aww.retro_gen import METRIC_FORMATTERS
 
 
+def rewrite_yesterday_retrospective(content: str, llm_model: Model) -> str:
+    """
+    Rewrite yesterday's retrospective so relative references remain anchored in the past.
+    """
+    prompt = select_prompt_template(["motd_rewrite_yesterday.md"]).render()
+    agent = Agent(model=llm_model, system_prompt=prompt, output_type=str)
+    response = agent.run_sync([content])
+    return response.output
+
+
 def get_motd_context(
     vault,
+    llm_model: Model | None = None,
     daily: bool = True,
     yesterday: bool = True,
     weekly: bool = True,
@@ -38,7 +52,12 @@ def get_motd_context(
             datetime.date.today() - datetime.timedelta(days=1), Level.daily
         )
         if yesterday_retro:
-            context.append("=== YESTERDAY RETROSPECTIVE ===\n" + yesterday_retro.content())
+            yesterday_content = yesterday_retro.content()
+            if llm_model is not None:
+                yesterday_content = rewrite_yesterday_retrospective(
+                    yesterday_content, llm_model
+                )
+            context.append("=== YESTERDAY RETROSPECTIVE ===\n" + yesterday_content)
     if weekly:
         weekly_retro = vault.retrospective_page(datetime.date.today(), Level.weekly)
         if weekly_retro:
@@ -72,8 +91,16 @@ def get_motd_context(
 @click.option(
     "-v", "--verbose", is_flag=True, default=False, help="Show verbose output (prints user prompt)."
 )
+@click.option(
+    "--debug",
+    is_flag=True,
+    default=False,
+    help="Print the full LLM message history used to generate the MOTD.",
+)
 @click.pass_context
-def motd(ctx, output_file, plain_text, daily, yesterday, weekly, memory, verbose):
+def motd(
+    ctx, output_file, plain_text, daily, yesterday, weekly, memory, verbose, debug
+):
     """Show a motivational message of the day."""
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
@@ -97,10 +124,17 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly, memory, verbose
 
     agent = Agent(model=llm_model, system_prompt=prompt)
 
-    user_prompt = get_motd_context(vault, daily, yesterday, weekly, memory)
+    user_prompt = get_motd_context(
+        vault,
+        llm_model=llm_model,
+        daily=daily,
+        yesterday=yesterday,
+        weekly=weekly,
+        memory=memory,
+    )
 
     user_prompt.append(
-        f"Today, it is {datetime.datetime.now().strftime("%A %B %d %Y at %H:%M")}"
+        f"Today, it is {datetime.datetime.now().strftime('%A %B %d %Y at %H:%M')}"
     )
 
     user_prompt.append("Write an impactful Message Of The Day (MOTD)")
@@ -110,6 +144,14 @@ def motd(ctx, output_file, plain_text, daily, yesterday, weekly, memory, verbose
             rich.print(part)
 
     response = agent.run_sync(user_prompt)
+    if debug:
+        rich.print_json(
+            data=json.loads(
+                ModelMessagesTypeAdapter.dump_json(response.all_messages()).decode(
+                    "utf-8"
+                )
+            )
+        )
     if plain_text:
         print(response.output)
     else:
