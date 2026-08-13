@@ -7,8 +7,8 @@ from typing import Any, Dict, Literal, Union
 import click
 from pydantic import BaseModel, Field
 from pydantic_ai.models import Model
-from pydantic_ai.models.gemini import GeminiModel
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.google import GoogleModel
+from pydantic_ai.models.openai import OpenAIResponsesModel, OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_settings import (
     BaseSettings,
@@ -101,21 +101,21 @@ def create_model(model_name: str) -> Model:
             raise click.ClickException(
                 "Please set environment variable OPENAI_API_KEY or api_key in config."
             )
-        return OpenAIModel(
+        return OpenAIResponsesModel(
             model_name=model_config.model_name,
             settings=model_config.model_settings,
         )
     elif isinstance(model_config, GeminiConfig):
-        if not os.environ.get("GEMINI_API_KEY"):
+        if not os.environ.get("GEMINI_API_KEY") and not os.environ.get("GOOGLE_API_KEY"):
             raise click.ClickException(
-                "Please set environment variable GEMINI_API_KEY or api_key in config."
+                "Please set environment variable GEMINI_API_KEY or GOOGLE_API_KEY or api_key in config."
             )
-        return GeminiModel(
+        return GoogleModel(
             model_name=model_config.model_name,
             settings=model_config.model_settings,
         )
     elif isinstance(model_config, LocalAIConfig):
-        return OpenAIModel(
+        return OpenAIChatModel(
             model_name=model_config.model_name,
             provider=OpenAIProvider(base_url=model_config.base_url),
             settings=model_config.model_settings,

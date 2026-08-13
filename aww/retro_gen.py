@@ -185,17 +185,19 @@ class RecursiveGenerator:
         async with self.semaphore:
             result = await agent.run(user_prompt=source_content)
 
-        usage = result.usage()
+        usage = result.usage() if callable(getattr(result, "usage", None)) else result.usage
+        request_tokens = getattr(usage, "request_tokens", getattr(usage, "input_tokens", 0))
+        response_tokens = getattr(usage, "response_tokens", getattr(usage, "output_tokens", 0))
         frontmatter = dict(
             sys_prompt_hash=md5(sys_prompt),
             model_name=model_name,
             ctime=datetime.now().isoformat(),
             user_prompt_hash=md5("\n".join(source_content)),
-            request_tokens=usage.request_tokens,
-            response_tokens=usage.response_tokens,
-            total_tokens=usage.total_tokens,
-            details=usage.details,
-            requests=usage.requests,
+            request_tokens=request_tokens,
+            response_tokens=response_tokens,
+            total_tokens=getattr(usage, "total_tokens", 0),
+            details=getattr(usage, "details", {}),
+            requests=getattr(usage, "requests", 1),
         )
 
         output = await prepare_output(node, result, target_page)
