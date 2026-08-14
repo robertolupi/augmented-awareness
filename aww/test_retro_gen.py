@@ -114,3 +114,27 @@ def test_retro_prompt_includes_canonical_tags(tmp_vault, monkeypatch):
     assert "#work" in prompt
     assert "Career/work tasks and outcomes" in prompt
     assert "#mental_health" in prompt
+
+
+def test_recursive_generator_skips_missing_daily(tmp_vault, capsys):
+    missing_day = datetime.date(2025, 1, 15)
+    sel = retro.Selection(tmp_vault, missing_day, Level.daily)
+    model = TestModel()
+    g = RecursiveGenerator(model, sel)
+
+    result = asyncio.run(
+        g.run(
+            context_levels=list(Level),
+            cache_policies=[
+                retro.NoRootCachePolicy(),
+                retro.NoLevelsCachePolicy(list(Level)),
+            ],
+        )
+    )
+
+    assert result is None
+    captured = capsys.readouterr()
+    assert f"Missing daily journal file for {missing_day}" in captured.out
+    retro_page = tmp_vault.retrospective_page(missing_day, Level.daily)
+    assert not retro_page.path.exists()
+

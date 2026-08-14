@@ -153,6 +153,11 @@ class RecursiveGenerator:
         Recursively generate content for the given node and its sources.
         Returns a RecursiveResult or None if no content is available.
         """
+        if node.level == Level.daily and (not node.page or not node.page.path.exists()):
+            d = sorted(node.dates)[0] if node.dates else (node.page.name if node.page else "")
+            print(f"Missing daily journal file for {d}")
+            return None
+
         target_page = self.get_target_page(node)
 
         if node.use_cache and target_page and target_page.path.exists():

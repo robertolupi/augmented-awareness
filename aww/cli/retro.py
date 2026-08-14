@@ -84,6 +84,10 @@ def retrospectives(
 
     sel = retro.Selection(vault, date, level)
 
+    if level == Level.daily and (not sel.root.page or not sel.root.page.path.exists()):
+        print(f"Missing daily journal file for {sel.dates[0]}")
+        return
+
     # Set defaults based on level
     final_no_cache = list(no_cache)
     final_context = list(context)
