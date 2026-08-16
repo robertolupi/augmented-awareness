@@ -10,6 +10,7 @@ from pydantic_ai.models import Model
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.models.openai import OpenAIResponsesModel, OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -30,6 +31,12 @@ class GeminiConfig(BaseModel):
     model_settings: Dict[str, Any] = Field(default_factory=dict)
 
 
+class OpenRouterConfig(BaseModel):
+    provider: Literal["openrouter"] = "openrouter"
+    model_name: str = "openai/gpt-4.1"
+    model_settings: Dict[str, Any] = Field(default_factory=dict)
+
+
 class LocalAIConfig(BaseModel):
     provider: Literal["local"] = "local"
     model_name: str
@@ -37,7 +44,7 @@ class LocalAIConfig(BaseModel):
     model_settings: Dict[str, Any] = Field(default_factory=dict)
 
 
-ModelConfig = Union[OpenAIConfig, GeminiConfig, LocalAIConfig]
+ModelConfig = Union[OpenAIConfig, GeminiConfig, OpenRouterConfig, LocalAIConfig]
 
 
 class RagConfig(BaseModel):
@@ -48,12 +55,15 @@ class RagConfig(BaseModel):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="AWW_", case_sensitive=False)
+    model_config = SettingsConfigDict(
+        env_prefix="AWW_", case_sensitive=False, env_nested_delimiter="__"
+    )
 
     models: Dict[str, ModelConfig] = Field(
         default_factory=lambda: {
             "openai": OpenAIConfig(),
             "gemini": GeminiConfig(),
+            "openrouter": OpenRouterConfig(),
             "local": LocalAIConfig(model_name="local-model"),
         }
     )
@@ -112,6 +122,16 @@ def create_model(model_name: str) -> Model:
             )
         return GoogleModel(
             model_name=model_config.model_name,
+            settings=model_config.model_settings,
+        )
+    elif isinstance(model_config, OpenRouterConfig):
+        if not os.environ.get("OPENROUTER_API_KEY"):
+            raise click.ClickException(
+                "Please set environment variable OPENROUTER_API_KEY or api_key in config."
+            )
+        return OpenAIChatModel(
+            model_name=model_config.model_name,
+            provider=OpenRouterProvider(),
             settings=model_config.model_settings,
         )
     elif isinstance(model_config, LocalAIConfig):

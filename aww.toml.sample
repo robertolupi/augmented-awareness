@@ -39,3 +39,7 @@ model_name = "gpt-5-2025-08-07"
 [models.gemini]
 provider = "gemini"
 model_name = "gemini-2.5-flash"
+
+[models.openrouter]
+provider = "openrouter"
+model_name = "openai/gpt-4.1"
