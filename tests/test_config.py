@@ -25,6 +25,7 @@ def test_create_model_openrouter_missing_api_key(monkeypatch):
 
 
 def test_model_name_env_override(monkeypatch):
+    monkeypatch.setenv("AWW_MODELS__OPENROUTER__PROVIDER", "openrouter")
     monkeypatch.setenv("AWW_MODELS__OPENROUTER__MODEL_NAME", "deepseek/deepseek-v3")
     settings = Settings()
     openrouter = settings.models["openrouter"]
@@ -33,8 +34,7 @@ def test_model_name_env_override(monkeypatch):
 
 
 def test_ignored_journal_headers_default(monkeypatch, tmp_path):
-    # Run away from the repo so the local aww.toml does not leak in
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("AWW_CONFIG_FILE", str(tmp_path / "missing.toml"))
     settings = Settings()
     assert settings.ignored_journal_headers == []
 

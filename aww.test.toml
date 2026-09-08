@@ -1,0 +1,3 @@
+# Config file used by the test suite (see conftest.py).
+# Keep it minimal: tests should rely on defaults unless they override them explicitly.
+model = "local"

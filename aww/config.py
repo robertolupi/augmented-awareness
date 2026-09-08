@@ -98,7 +98,9 @@ class Settings(BaseSettings):
         return (
             env_settings,
             dotenv_settings,
-            TomlConfigSettingsSource(settings_cls, Path("aww.toml")),
+            TomlConfigSettingsSource(
+                settings_cls, Path(os.environ.get("AWW_CONFIG_FILE", "aww.toml"))
+            ),
             init_settings,
         )
 
