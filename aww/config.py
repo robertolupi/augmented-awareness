@@ -80,6 +80,10 @@ class Settings(BaseSettings):
         default_factory=list,
         description="Headers of daily journal sections to exclude when generating retrospectives or MOTD.",
     )
+    follow_links: bool = Field(
+        default=False,
+        description="Allow retrospective/MOTD agents to follow [[wiki links]] and read linked vault pages.",
+    )
 
     def model_post_init(self, __context: Any) -> None:
         if self.rag.local_files_only:

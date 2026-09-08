@@ -4,6 +4,10 @@ model = "local"
 # (case-insensitive; a removed section includes its subsections).
 # ignored_journal_headers = ["Gratitude", "Mood Tracker"]
 
+# Allow retro/MOTD agents to follow [[wiki links]] and read linked pages
+# (requires a model with good tool-use support).
+# follow_links = true
+
 [tags]
 # Example canonical tags (edit to your needs):
 work = "Work tasks, projects, and outcomes."

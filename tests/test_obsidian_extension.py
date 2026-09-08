@@ -1,7 +1,7 @@
 import datetime
 from pathlib import Path
 import pytest
-from aww.obsidian import Vault, Level, Page
+from aww.obsidian import Vault, Level, Page, extract_wiki_links
 
 @pytest.fixture
 def temp_vault_dir(tmp_path):
@@ -118,3 +118,14 @@ Wound down.
     full = p.content()
     assert "Gratitude" in full
     assert "Mood Tracker" in full
+
+
+def test_extract_wiki_links():
+    text = (
+        "I created a [[Personal Values Charter]] with ChatGPT. "
+        "See also [[2026-09-08]], [[r2026-09-08]], [[2026-W36]], [[r2026-09]], "
+        "[[Y2026]], [[r2026]], [[Projects/Move House|move house]], "
+        "and [[Personal Values Charter]] again."
+    )
+    assert extract_wiki_links(text) == ["Personal Values Charter", "Projects/Move House"]
+    assert extract_wiki_links("no links here") == []

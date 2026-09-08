@@ -19,6 +19,22 @@ from aww.config import Settings
 FRONTMATTER_RE = re.compile("^---\n(.*?)\n---\n", re.DOTALL | re.MULTILINE)
 CODEBLOCKS_RE = re.compile("\n```([a-z]+)\n(.*?)\n```\n", re.DOTALL | re.MULTILINE)
 HEADER_RE = re.compile(r"^(#+)\s+(.*?)\s*$")
+WIKI_LINK_RE = re.compile(r"\[\[([^\[\]|]+?)(?:\|[^\[\]]*)?\]\]")
+DATED_PAGE_RE = re.compile(r"^r?(?:Y?\d{4}|\d{4}-\d{2}-\d{2}|\d{4}-\d{2}|\d{4}-W\d{2})$")
+
+
+def extract_wiki_links(text: str) -> list[str]:
+    """
+    Return the unique targets of [[wiki links]] in the text, in order of
+    appearance, excluding dated journal/retrospective pages (e.g. 2026-09-08,
+    2026-W36, 2026-09, Y2026, and their r-prefixed retrospectives).
+    """
+    links = []
+    for m in WIKI_LINK_RE.finditer(text):
+        name = m.group(1).strip()
+        if name and not DATED_PAGE_RE.match(name) and name not in links:
+            links.append(name)
+    return links
 
 
 def strip_sections(text: str, headers: Iterable[str]) -> str:

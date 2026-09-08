@@ -171,3 +171,83 @@ def test_recursive_generator_skips_missing_daily(tmp_vault, capsys):
     retro_page = tmp_vault.retrospective_page(missing_day, Level.daily)
     assert not retro_page.path.exists()
 
+
+
+def test_follow_links_disabled_by_default(tmp_vault):
+    sel = retro.Selection(tmp_vault, datetime.date(2025, 4, 1), Level.daily)
+    g = RecursiveGenerator(TestModel(), sel)
+    assert "read_pages_tool" not in g.agents[Level.daily]._function_toolset.tools
+    assert "wiki links" not in g.prompts[Level.daily]
+    assert g.deps is None
+
+
+def test_follow_links_registers_read_pages_tool(tmp_vault, monkeypatch):
+    monkeypatch.setenv("AWW_FOLLOW_LINKS", "true")
+    sel = retro.Selection(tmp_vault, datetime.date(2025, 4, 1), Level.daily)
+    g = RecursiveGenerator(TestModel(), sel)
+    assert "read_pages_tool" in g.agents[Level.daily]._function_toolset.tools
+    assert "wiki links" in g.prompts[Level.daily]
+    assert g.deps.vault is tmp_vault
+
+
+def test_recursive_generator_follows_wiki_links(tmp_vault, monkeypatch):
+    from pydantic_ai.messages import (
+        ModelResponse,
+        TextPart,
+        ToolCallPart,
+        ToolReturnPart,
+        UserPromptPart,
+    )
+    from pydantic_ai.models.function import FunctionModel
+
+    monkeypatch.setenv("AWW_FOLLOW_LINKS", "true")
+    day = datetime.date(2025, 1, 1)
+
+    journal_page = tmp_vault.page(day, Level.daily)
+    journal_page.path.parent.mkdir(parents=True, exist_ok=True)
+    journal_page.path.write_text(
+        "# Journal\n\nI created a [[Personal Values Charter]] with ChatGPT.\n"
+    )
+    charter = tmp_vault.path / "Personal Values Charter.md"
+    charter.write_text("# Personal Values Charter\n\nI value integrity and curiosity.\n")
+
+    tool_returns = []
+    user_prompts = []
+
+    def fake_model(messages, info):
+        for m in messages:
+            for p in getattr(m, "parts", []):
+                if isinstance(p, ToolReturnPart) and p.tool_name == "read_pages_tool":
+                    tool_returns.append(p.content)
+                    return ModelResponse(parts=[TextPart("Summary after reading.")])
+                if isinstance(p, UserPromptPart):
+                    user_prompts.append(str(p.content))
+        return ModelResponse(
+            parts=[
+                ToolCallPart(
+                    tool_name="read_pages_tool",
+                    args={"pages": ["Personal Values Charter"]},
+                )
+            ]
+        )
+
+    sel = retro.Selection(tmp_vault, day, Level.daily)
+    g = RecursiveGenerator(FunctionModel(fake_model), sel)
+    result = asyncio.run(
+        g.run(
+            context_levels=list(Level),
+            cache_policies=[
+                retro.NoRootCachePolicy(),
+                retro.NoLevelsCachePolicy(list(Level)),
+            ],
+        )
+    )
+
+    assert result is not None
+    assert tool_returns, "agent never called read_pages_tool"
+    assert "I value integrity and curiosity." in tool_returns[0]
+    assert any(
+        "Linked pages referenced in the input: [[Personal Values Charter]]" in p
+        for p in user_prompts
+    )
+    assert tmp_vault.retrospective_page(day, Level.daily).path.exists()

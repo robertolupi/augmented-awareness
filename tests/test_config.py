@@ -43,3 +43,15 @@ def test_ignored_journal_headers_env_override(monkeypatch):
     monkeypatch.setenv("AWW_IGNORED_JOURNAL_HEADERS", '["Gratitude", "Mood Tracker"]')
     settings = Settings()
     assert settings.ignored_journal_headers == ["Gratitude", "Mood Tracker"]
+
+
+def test_follow_links_default(monkeypatch, tmp_path):
+    monkeypatch.setenv("AWW_CONFIG_FILE", str(tmp_path / "missing.toml"))
+    settings = Settings()
+    assert settings.follow_links is False
+
+
+def test_follow_links_env_override(monkeypatch):
+    monkeypatch.setenv("AWW_FOLLOW_LINKS", "true")
+    settings = Settings()
+    assert settings.follow_links is True

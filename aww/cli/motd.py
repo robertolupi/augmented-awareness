@@ -10,9 +10,27 @@ from rich.markdown import Markdown
 
 from aww.cli import main
 from aww.config import Settings
-from aww.obsidian import Level
+from aww.deps import ChatDeps
+from aww.obsidian import Level, extract_wiki_links
 from aww.prompts import select_prompt_template
 from aww.retro_gen import METRIC_FORMATTERS
+from aww.tools import FOLLOW_LINKS_PROMPT, read_pages_tool
+
+
+def get_motd_agent(
+    llm_model: Model,
+    prompt: str,
+    follow_links: bool = False,
+) -> Agent:
+    """Build the MOTD agent, optionally with tools to follow [[wiki links]]."""
+    if follow_links:
+        return Agent(
+            model=llm_model,
+            system_prompt=prompt + FOLLOW_LINKS_PROMPT,
+            deps_type=ChatDeps,
+            tools=[read_pages_tool],
+        )
+    return Agent(model=llm_model, system_prompt=prompt)
 
 
 def rewrite_yesterday_retrospective(content: str, llm_model: Model) -> str:
@@ -127,7 +145,7 @@ def motd(
 
     prompt = select_prompt_template([f"motd.{part_of_day}.md", "motd.md"]).render()
 
-    agent = Agent(model=llm_model, system_prompt=prompt)
+    agent = get_motd_agent(llm_model, prompt, follow_links=settings.follow_links)
 
     user_prompt = get_motd_context(
         vault,
@@ -143,13 +161,24 @@ def motd(
         f"Today, it is {datetime.datetime.now().strftime('%A %B %d %Y at %H:%M')}"
     )
 
+    if settings.follow_links:
+        if links := extract_wiki_links("\n".join(user_prompt)):
+            linked = ", ".join(f"[[{name}]]" for name in links)
+            user_prompt.append(
+                f"Linked pages referenced in the input: {linked}. "
+                "Use the read_pages tool to read the relevant ones before writing your output."
+            )
+
     user_prompt.append("Write an impactful Message Of The Day (MOTD)")
 
     if verbose:
         for part in user_prompt:
             rich.print(part)
 
-    response = agent.run_sync(user_prompt)
+    if settings.follow_links:
+        response = agent.run_sync(user_prompt, deps=ChatDeps(vault=vault))
+    else:
+        response = agent.run_sync(user_prompt)
     if debug:
         rich.print_json(
             data=json.loads(

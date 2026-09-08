@@ -11,6 +11,15 @@ from aww.safe_eval import UnsafeExpressionError, evaluate_expression, normalize_
 
 TOP_LEVEL_SECTION_RE = re.compile(r"(?m)^(?:#(?!#)|##(?!#))\s+")
 
+FOLLOW_LINKS_PROMPT = """
+IMPORTANT: Pages reference other pages via [[wiki links]]. Before writing your
+output, use the read_pages tool to read every linked page that may be relevant
+to understanding the context (e.g. a project, person, or document mentioned in
+the input). Do not follow links to dated journal or retrospective pages (e.g.
+[[2026-09-08]], [[2026-W36]], [[r2026-09]]); their content is already provided
+to you.
+"""
+
 
 def python_eval_tool(ctx: RunContext[ChatDeps], expression: str) -> str:
     """

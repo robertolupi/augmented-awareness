@@ -10,9 +10,11 @@ from pydantic_ai import Agent
 from pydantic_ai.models import Model
 
 from aww.config import Settings
-from aww.obsidian import Level, Page
+from aww.deps import ChatDeps
+from aww.obsidian import Level, Page, extract_wiki_links
 from aww.prompts import get_prompt_template
 from aww.retro import CachePolicy, Node, Selection
+from aww.tools import FOLLOW_LINKS_PROMPT, read_pages_tool
 
 
 def md5(s: str) -> str:
@@ -103,6 +105,8 @@ class RecursiveGenerator:
 
         settings = Settings()
         self.ignored_journal_headers = settings.ignored_journal_headers
+        self.follow_links = settings.follow_links
+        self.deps = ChatDeps(vault=sel.vault) if self.follow_links else None
         normalized_tags = {}
         for tag, desc in (settings.tags or {}).items():
             normalized_tag = tag.strip().lower().replace(" ", "_")
@@ -128,9 +132,23 @@ class RecursiveGenerator:
             )
             for l in Level
         }
-        self.agents = {
-            l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level
-        }
+        if self.follow_links:
+            self.prompts = {
+                l: prompt + FOLLOW_LINKS_PROMPT for l, prompt in self.prompts.items()
+            }
+            self.agents = {
+                l: Agent(
+                    model=model,
+                    system_prompt=self.prompts[l],
+                    deps_type=ChatDeps,
+                    tools=[read_pages_tool],
+                )
+                for l in Level
+            }
+        else:
+            self.agents = {
+                l: Agent(model=model, system_prompt=self.prompts[l]) for l in Level
+            }
         self.sel = sel
         self.semaphore = asyncio.Semaphore(concurrency_limit)
 
@@ -187,12 +205,23 @@ class RecursiveGenerator:
         if not source_content:
             return None
 
+        if self.follow_links:
+            if links := extract_wiki_links("\n".join(source_content)):
+                linked = ", ".join(f"[[{name}]]" for name in links)
+                source_content.append(
+                    f"Linked pages referenced in the input: {linked}. "
+                    "Use the read_pages tool to read the relevant ones before writing your output."
+                )
+
         agent = self.agents[node.level]
         model_name = agent.model.model_name
         sys_prompt = self.prompts[node.level]
 
         async with self.semaphore:
-            result = await agent.run(user_prompt=source_content)
+            if self.deps is not None:
+                result = await agent.run(user_prompt=source_content, deps=self.deps)
+            else:
+                result = await agent.run(user_prompt=source_content)
 
         usage = result.usage() if callable(getattr(result, "usage", None)) else result.usage
         request_tokens = getattr(usage, "request_tokens", getattr(usage, "input_tokens", 0))

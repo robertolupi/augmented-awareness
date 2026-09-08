@@ -6,8 +6,9 @@ from click.testing import CliRunner
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 
 from aww.cli import main
-from aww.cli.motd import get_motd_context, rewrite_yesterday_retrospective
+from aww.cli.motd import get_motd_agent, get_motd_context, rewrite_yesterday_retrospective
 from aww.obsidian import Level, Page, Vault
+from pydantic_ai.models.test import TestModel
 
 @pytest.fixture
 def mock_vault():
@@ -204,3 +205,15 @@ def test_motd_debug_prints_message_history(mock_vault):
     assert result.exit_code == 0
     assert '"content": "Context 1"' in result.output
     assert "MOTD output" in result.output
+
+
+def test_get_motd_agent_without_follow_links():
+    agent = get_motd_agent(TestModel(), "prompt", follow_links=False)
+    assert "read_pages_tool" not in agent._function_toolset.tools
+
+
+def test_get_motd_agent_with_follow_links():
+    agent = get_motd_agent(TestModel(), "prompt", follow_links=True)
+    assert "read_pages_tool" in agent._function_toolset.tools
+    system_prompts = agent._system_prompts
+    assert any("wiki links" in p for p in system_prompts)
