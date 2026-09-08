@@ -1,5 +1,9 @@
 model = "local"
 
+# Headers of daily journal sections to exclude when generating retrospectives or MOTD
+# (case-insensitive; a removed section includes its subsections).
+# ignored_journal_headers = ["Gratitude", "Mood Tracker"]
+
 [tags]
 # Example canonical tags (edit to your needs):
 work = "Work tasks, projects, and outcomes."

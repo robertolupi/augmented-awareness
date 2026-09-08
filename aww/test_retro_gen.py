@@ -116,6 +116,39 @@ def test_retro_prompt_includes_canonical_tags(tmp_vault, monkeypatch):
     assert "#mental_health" in prompt
 
 
+def test_page_content_ignores_journal_headers(tmp_vault):
+    day = datetime.date(2025, 1, 1)
+    journal_page = tmp_vault.page(day, Level.daily)
+    journal_page.path.parent.mkdir(parents=True, exist_ok=True)
+    journal_page.path.write_text(
+        "# Journal\n\n## Gratitude\n- Coffee\n\n## Log\nDid things.\n"
+    )
+
+    daily_node = retro.Node(
+        dates={day},
+        level=Level.daily,
+        retro_page=tmp_vault.retrospective_page(day, Level.daily),
+        page=journal_page,
+        sources=set(),
+    )
+
+    content = asyncio.run(retro_gen.page_content(daily_node, ["Gratitude"]))
+    assert "Did things." in content
+    assert "Gratitude" not in content
+    assert "Coffee" not in content
+
+    # Non-daily pages are not filtered
+    weekly_node = retro.Node(
+        dates={day},
+        level=Level.weekly,
+        retro_page=tmp_vault.retrospective_page(day, Level.weekly),
+        page=journal_page,
+        sources=set(),
+    )
+    content = asyncio.run(retro_gen.page_content(weekly_node, ["Gratitude"]))
+    assert "Gratitude" in content
+
+
 def test_recursive_generator_skips_missing_daily(tmp_vault, capsys):
     missing_day = datetime.date(2025, 1, 15)
     sel = retro.Selection(tmp_vault, missing_day, Level.daily)

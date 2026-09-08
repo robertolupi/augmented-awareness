@@ -77,3 +77,44 @@ Content 4
     section3 = p.section("Header 3")
     assert "Content 3" in section3
     assert "## Header 4" not in section3
+
+
+def test_page_content_ignored_headers(tmp_path):
+    test_file = tmp_path / "test_note.md"
+    test_file.write_text("""# Daily Note
+
+## Gratitude
+- Family
+- Coffee
+
+### Details
+More gratitude details.
+
+## Work
+Did things.
+
+## Mood Tracker
+:)
+
+## Evening
+Wound down.
+""")
+
+    p = Page(test_file)
+
+    content = p.content(ignored_headers=["Gratitude", "mood tracker"])
+
+    assert "# Daily Note" in content
+    assert "## Work" in content
+    assert "Did things." in content
+    assert "## Evening" in content
+    assert "Wound down." in content
+    # Ignored sections, including subsections, are stripped
+    assert "Gratitude" not in content
+    assert "Details" not in content
+    assert "Mood Tracker" not in content
+
+    # No filtering by default
+    full = p.content()
+    assert "Gratitude" in full
+    assert "Mood Tracker" in full

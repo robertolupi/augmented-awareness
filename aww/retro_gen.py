@@ -55,9 +55,10 @@ METRIC_FORMATTERS = {
 }
 
 
-async def page_content(node) -> str:
+async def page_content(node, ignored_journal_headers: list[str] | None = None) -> str:
     """Return the content of a node's page, including formatted frontmatter metrics if present."""
-    content = [f"Page: [[{node.page.name}]]", node.page.content()]
+    ignored = ignored_journal_headers if node.level == Level.daily else None
+    content = [f"Page: [[{node.page.name}]]", node.page.content(ignored_headers=ignored)]
     if fm := node.page.frontmatter():
         for key, fmt in METRIC_FORMATTERS.items():
             if (value := fm.get(key)) is not None:
@@ -101,6 +102,7 @@ class RecursiveGenerator:
         self.get_target_page = get_target_page or (lambda node: node.retro_page)
 
         settings = Settings()
+        self.ignored_journal_headers = settings.ignored_journal_headers
         normalized_tags = {}
         for tag, desc in (settings.tags or {}).items():
             normalized_tag = tag.strip().lower().replace(" ", "_")
@@ -179,7 +181,9 @@ class RecursiveGenerator:
 
         source_content = [result.output for result in source_results if result]
         if node.page:
-            source_content.insert(0, await page_content(node))
+            source_content.insert(
+                0, await page_content(node, self.ignored_journal_headers)
+            )
         if not source_content:
             return None
 

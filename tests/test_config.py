@@ -30,3 +30,16 @@ def test_model_name_env_override(monkeypatch):
     openrouter = settings.models["openrouter"]
     assert isinstance(openrouter, OpenRouterConfig)
     assert openrouter.model_name == "deepseek/deepseek-v3"
+
+
+def test_ignored_journal_headers_default(monkeypatch, tmp_path):
+    # Run away from the repo so the local aww.toml does not leak in
+    monkeypatch.chdir(tmp_path)
+    settings = Settings()
+    assert settings.ignored_journal_headers == []
+
+
+def test_ignored_journal_headers_env_override(monkeypatch):
+    monkeypatch.setenv("AWW_IGNORED_JOURNAL_HEADERS", '["Gratitude", "Mood Tracker"]')
+    settings = Settings()
+    assert settings.ignored_journal_headers == ["Gratitude", "Mood Tracker"]

@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     retrospectives_dir: str = "retrospectives"
     queries_dir: str = "retrospectives/queries"
     tags: Dict[str, str] = Field(default_factory=dict)
+    ignored_journal_headers: list[str] = Field(
+        default_factory=list,
+        description="Headers of daily journal sections to exclude when generating retrospectives or MOTD.",
+    )
 
     def model_post_init(self, __context: Any) -> None:
         if self.rag.local_files_only:

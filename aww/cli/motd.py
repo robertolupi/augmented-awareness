@@ -9,6 +9,7 @@ from pydantic_ai.models import Model
 from rich.markdown import Markdown
 
 from aww.cli import main
+from aww.config import Settings
 from aww.obsidian import Level
 from aww.prompts import select_prompt_template
 from aww.retro_gen import METRIC_FORMATTERS
@@ -31,6 +32,7 @@ def get_motd_context(
     yesterday: bool = True,
     weekly: bool = True,
     memory: bool = True,
+    ignored_headers: list[str] | None = None,
 ) -> list[str]:
     """
     Gather context for the MOTD prompt.
@@ -39,7 +41,9 @@ def get_motd_context(
     if daily:
         daily_notes = vault.page(datetime.date.today(), Level.daily)
         if daily_notes:
-            context.append("=== DAILY NOTES ===\n" + daily_notes.content())
+            context.append(
+                "=== DAILY NOTES ===\n" + daily_notes.content(ignored_headers=ignored_headers)
+            )
             if fm := daily_notes.frontmatter():
                 metrics = []
                 for key, fmt in METRIC_FORMATTERS.items():
@@ -104,6 +108,7 @@ def motd(
     """Show a motivational message of the day."""
     vault = ctx.obj["vault"]
     llm_model = ctx.obj["llm_model"]
+    settings = ctx.obj.get("settings") or Settings()
 
     hour = datetime.datetime.now().hour
     part_of_day = "full"
@@ -131,6 +136,7 @@ def motd(
         yesterday=yesterday,
         weekly=weekly,
         memory=memory,
+        ignored_headers=settings.ignored_journal_headers,
     )
 
     user_prompt.append(

@@ -9,7 +9,7 @@ import re
 from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import pandas as pd
 import yaml
@@ -18,6 +18,32 @@ from aww.config import Settings
 
 FRONTMATTER_RE = re.compile("^---\n(.*?)\n---\n", re.DOTALL | re.MULTILINE)
 CODEBLOCKS_RE = re.compile("\n```([a-z]+)\n(.*?)\n```\n", re.DOTALL | re.MULTILINE)
+HEADER_RE = re.compile(r"^(#+)\s+(.*?)\s*$")
+
+
+def strip_sections(text: str, headers: Iterable[str]) -> str:
+    """
+    Remove all sections whose header title matches any of the given headers
+    (case-insensitive). A removed section includes its subsections, up to the
+    next header of the same or higher level.
+    """
+    ignored = {h.strip().lower() for h in headers if h.strip()}
+    if not ignored:
+        return text
+    out = []
+    skip_level = None
+    for line in text.splitlines(keepends=True):
+        if m := HEADER_RE.match(line.rstrip("\r\n")):
+            level = len(m.group(1))
+            if skip_level is not None and level > skip_level:
+                continue  # still inside an ignored section
+            skip_level = level if m.group(2).strip().lower() in ignored else None
+            if skip_level is not None:
+                continue
+        elif skip_level is not None:
+            continue
+        out.append(line)
+    return "".join(out)
 
 
 class Level(enum.Enum):
@@ -223,12 +249,17 @@ class Page:
         """Return the file's modification time in nanoseconds."""
         return self.path.stat().st_mtime_ns
 
-    def content(self) -> str:
-        """Return the page content, with frontmatter and code blocks removed."""
+    def content(self, ignored_headers: Iterable[str] | None = None) -> str:
+        """
+        Return the page content, with frontmatter and code blocks removed.
+        Sections whose header matches any of `ignored_headers` are stripped out.
+        """
         with self.path.open() as fd:
             data = fd.read()
         data = FRONTMATTER_RE.sub("", data)
         data = CODEBLOCKS_RE.sub("", data)
+        if ignored_headers:
+            data = strip_sections(data, ignored_headers)
         return data
 
     def full_content(self) -> str:

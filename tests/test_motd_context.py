@@ -99,6 +99,39 @@ def test_get_motd_context_with_weekly_goals(mock_vault):
     assert "Goal 1\nGoal 2" in full_context
 
 
+def test_get_motd_context_ignores_configured_headers(mock_vault, tmp_path):
+    daily_file = tmp_path / "daily.md"
+    daily_file.write_text("""# Daily
+
+## Gratitude
+- Coffee
+
+## Log
+Did things.
+""")
+    daily_note = Page(daily_file)
+
+    mock_vault.page.return_value = daily_note
+    mock_vault.retrospective_page.return_value = None
+    mock_vault.page_by_name.return_value = None
+
+    context = get_motd_context(
+        mock_vault,
+        daily=True,
+        yesterday=False,
+        weekly=False,
+        memory=False,
+        ignored_headers=["Gratitude"],
+    )
+
+    full_context = "\n".join(context)
+
+    assert "=== DAILY NOTES ===" in full_context
+    assert "Did things." in full_context
+    assert "Gratitude" not in full_context
+    assert "Coffee" not in full_context
+
+
 def test_rewrite_yesterday_retrospective_uses_llm_prompt():
     with pytest.MonkeyPatch.context() as mp:
         mock_agent = MagicMock()
