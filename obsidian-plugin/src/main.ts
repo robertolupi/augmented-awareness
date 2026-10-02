@@ -97,7 +97,7 @@ export default class AwwRetroPlugin extends Plugin {
 				targetDate = parsed.date;
 			}
 		}
-		await this.runGeneration(targetDate, level);
+		await this.runGeneration(targetDate, level, false);
 	}
 
 	private async generateRetrospectiveForActiveNote(): Promise<void> {
@@ -119,12 +119,13 @@ export default class AwwRetroPlugin extends Plugin {
 			return;
 		}
 
-		await this.runGeneration(parsed.date, parsed.level);
+		await this.runGeneration(parsed.date, parsed.level, true);
 	}
 
 	private async runGeneration(
 		date: moment.Moment,
-		level: Level
+		level: Level,
+		alwaysRegenerateRoot = false
 	): Promise<void> {
 		if (this.activeAbortController) {
 			new Notice(
@@ -178,12 +179,19 @@ export default class AwwRetroPlugin extends Plugin {
 				concurrencyLimit: 5,
 				modelName: this.settings.model,
 				signal: abortController.signal,
+				alwaysRegenerateRoot,
 				onProgress: (completed, total, message) => {
 					progress.update(completed, total, message);
 				},
 			});
 
-			progress.complete(`Retrospective created: ${result.targetPath}`);
+			if (result.upToDate) {
+				progress.complete(
+					`Retrospective is already up to date: ${result.targetPath}`
+				);
+			} else {
+				progress.complete(`Retrospective created: ${result.targetPath}`);
+			}
 
 			const createdFile = this.app.vault.getAbstractFileByPath(
 				normalizePath(result.targetPath)
@@ -191,6 +199,7 @@ export default class AwwRetroPlugin extends Plugin {
 			if (createdFile instanceof TFile) {
 				await this.app.workspace.getLeaf().openFile(createdFile);
 			}
+
 		} catch (err) {
 			if (
 				abortController.signal.aborted ||

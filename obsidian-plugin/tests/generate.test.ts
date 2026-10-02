@@ -31,7 +31,18 @@ class MemoryVaultStore implements VaultStore {
 	}
 
 	async ensureFolder(_dirPath: string): Promise<void> {}
+
+	mtimes = new Map<string, number>();
+
+	setMtime(path: string, time: number): void {
+		this.mtimes.set(path, time);
+	}
+
+	async mtime(path: string): Promise<number> {
+		return this.mtimes.get(path) ?? (this.files.has(path) ? 1000 : 0);
+	}
 }
+
 
 class MockModelAdapter implements ModelAdapter {
 	calls: { system: string; user: string }[] = [];
@@ -212,7 +223,9 @@ describe("generateRetrospectives", () => {
 			plan,
 			model,
 			vault,
+			alwaysRegenerateRoot: true,
 		});
+
 
 		// Original path has new content
 		expect(
@@ -224,4 +237,123 @@ describe("generateRetrospectives", () => {
 			await vault.read("retrospectives/2025/01/r2025-01-08.1.md")
 		).toBe("Old retrospective content");
 	});
+
+	it("regenerates dependency when its daily journal file is newer than the retrospective", async () => {
+		const vault = new MemoryVaultStore();
+		const model = new MockModelAdapter();
+
+		// Put all 7 daily retros in vault with mtime 1000
+		const weekDays = [
+			"2025-01-06",
+			"2025-01-07",
+			"2025-01-08",
+			"2025-01-09",
+			"2025-01-10",
+			"2025-01-11",
+			"2025-01-12",
+		];
+		for (const d of weekDays) {
+			const retroP = `retrospectives/2025/01/r${d}.md`;
+			await vault.write(retroP, `# r${d}\nOld retro`);
+			vault.setMtime(retroP, 1000);
+		}
+
+		// Existing weekly retro with mtime 1000
+		const weeklyP = "retrospectives/2025/weeks/r2025-W02.md";
+		await vault.write(weeklyP, "# r2025-W02\nOld weekly retro");
+		vault.setMtime(weeklyP, 1000);
+
+		// Now update 2025-01-08 journal note with newer mtime 2000
+		const changedJournal = "journal/2025/01/2025-01-08.md";
+		await vault.write(changedJournal, "# 2025-01-08\nUpdated thoughts!");
+		vault.setMtime(changedJournal, 2000);
+
+		const m = moment("2025-01-08", "YYYY-MM-DD", true);
+		const plan = buildPlan(m, "weekly");
+
+		const result = await generateRetrospectives({
+			plan,
+			model,
+			vault,
+			alwaysRegenerateRoot: false,
+		});
+
+		// 1 daily retro (2025-01-08) + 1 weekly retro = 2 calls
+		expect(model.calls).toHaveLength(2);
+		expect(result.created).toContain("retrospectives/2025/01/r2025-01-08.md");
+		expect(result.created).toContain("retrospectives/2025/weeks/r2025-W02.md");
+		expect(result.reused).toHaveLength(6); // other 6 days reused
+		expect(result.upToDate).toBe(false);
+	});
+
+	it("reuses all retrospectives when everything is up to date and alwaysRegenerateRoot is false", async () => {
+		const vault = new MemoryVaultStore();
+		const model = new MockModelAdapter();
+
+		const weekDays = [
+			"2025-01-06",
+			"2025-01-07",
+			"2025-01-08",
+			"2025-01-09",
+			"2025-01-10",
+			"2025-01-11",
+			"2025-01-12",
+		];
+		for (const d of weekDays) {
+			const retroP = `retrospectives/2025/01/r${d}.md`;
+			const journalP = `journal/2025/01/${d}.md`;
+			await vault.write(retroP, `# r${d}`);
+			await vault.write(journalP, `# ${d}`);
+			vault.setMtime(retroP, 2000); // retro is newer
+			vault.setMtime(journalP, 1000); // journal is older
+		}
+
+		const weeklyP = "retrospectives/2025/weeks/r2025-W02.md";
+		await vault.write(weeklyP, "# r2025-W02");
+		vault.setMtime(weeklyP, 3000);
+
+		const m = moment("2025-01-08", "YYYY-MM-DD", true);
+		const plan = buildPlan(m, "weekly");
+
+		const result = await generateRetrospectives({
+			plan,
+			model,
+			vault,
+			alwaysRegenerateRoot: false,
+		});
+
+		// Zero model calls!
+		expect(model.calls).toHaveLength(0);
+		expect(result.created).toHaveLength(0);
+		expect(result.upToDate).toBe(true);
+		expect(result.reused).toHaveLength(8); // 7 daily + 1 weekly
+	});
+
+	it("forces root generation when alwaysRegenerateRoot is true even if up to date", async () => {
+		const vault = new MemoryVaultStore();
+		const model = new MockModelAdapter();
+
+		const dailyRetro = "retrospectives/2025/01/r2025-01-08.md";
+		const dailyJournal = "journal/2025/01/2025-01-08.md";
+		await vault.write(dailyRetro, "# r2025-01-08");
+		await vault.write(dailyJournal, "# 2025-01-08");
+		vault.setMtime(dailyRetro, 2000);
+		vault.setMtime(dailyJournal, 1000);
+
+		const m = moment("2025-01-08", "YYYY-MM-DD", true);
+		const plan = buildPlan(m, "daily");
+
+		const result = await generateRetrospectives({
+			plan,
+			model,
+			vault,
+			alwaysRegenerateRoot: true,
+		});
+
+		// 1 model call because alwaysRegenerateRoot is true
+		expect(model.calls).toHaveLength(1);
+		expect(result.created).toEqual([dailyRetro]);
+		expect(result.upToDate).toBe(false);
+	});
 });
+

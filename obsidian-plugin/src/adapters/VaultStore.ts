@@ -6,7 +6,9 @@ export interface VaultStore {
 	write(path: string, content: string): Promise<void>;
 	rename(fromPath: string, toPath: string): Promise<void>;
 	ensureFolder(dirPath: string): Promise<void>;
+	mtime(path: string): Promise<number>;
 }
+
 
 export class ObsidianVaultStore implements VaultStore {
 	constructor(private readonly app: App) {}
@@ -55,4 +57,15 @@ export class ObsidianVaultStore implements VaultStore {
 			await this.app.vault.create(normalized, content);
 		}
 	}
+
+	async mtime(path: string): Promise<number> {
+		const file = this.app.vault.getAbstractFileByPath(
+			normalizePath(path)
+		);
+		if (file instanceof TFile) {
+			return file.stat.mtime;
+		}
+		return 0;
+	}
 }
+

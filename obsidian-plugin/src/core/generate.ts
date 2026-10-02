@@ -2,7 +2,7 @@ import { ModelAdapter } from "../adapters/Model";
 import { VaultStore } from "../adapters/VaultStore";
 import { prepareInput } from "./input";
 import { prepareOutput } from "./output";
-import { findNextBackupPath, progressiveBackupPath } from "./paths";
+import { progressiveBackupPath } from "./paths";
 import { Plan, PlanNode } from "./plan";
 import { renderRetroPrompt } from "./prompts";
 
@@ -16,6 +16,7 @@ export interface GenerateOptions {
 	concurrencyLimit?: number;
 	modelName?: string;
 	signal?: AbortSignal;
+	alwaysRegenerateRoot?: boolean;
 	onProgress?: (completed: number, total: number, message: string) => void;
 }
 
@@ -26,6 +27,7 @@ export interface GenerateResult {
 	skipped: string[];
 	cancelled: boolean;
 	targetPath: string;
+	upToDate: boolean;
 }
 
 /**
@@ -109,6 +111,7 @@ export async function generateRetrospectives(
 		concurrencyLimit = 5,
 		modelName,
 		signal,
+		alwaysRegenerateRoot = false,
 		onProgress,
 	} = options;
 
@@ -121,36 +124,74 @@ export async function generateRetrospectives(
 	const reused: string[] = [];
 	const skipped: string[] = [];
 
+	// Determine which nodes need generation using modification-time invalidation.
+	// Plan.nodes is topologically sorted (dependencies before parents).
+	const nodesNeedingGeneration = new Set<string>();
+
+	for (const node of plan.nodes) {
+		const targetExists = await vault.exists(node.targetPath);
+		const journalExists = await vault.exists(node.journalPath);
+
+		if (node.level === "daily" && !journalExists && !targetExists) {
+			// Daily journal missing and no retro exists -> skip
+			skipped.push(node.targetPath);
+			continue;
+		}
+
+		if (!targetExists) {
+			// Retrospective doesn't exist yet -> must generate
+			nodesNeedingGeneration.add(node.key);
+			continue;
+		}
+
+		// Retrospective already exists on disk
+		if (node.isRoot && alwaysRegenerateRoot) {
+			// Forced root regeneration
+			nodesNeedingGeneration.add(node.key);
+			continue;
+		}
+
+		const targetMtime = await vault.mtime(node.targetPath);
+		const journalMtime = journalExists
+			? await vault.mtime(node.journalPath)
+			: 0;
+
+		// Check if same-level journal file is newer than retrospective
+		if (journalMtime > targetMtime) {
+			nodesNeedingGeneration.add(node.key);
+			continue;
+		}
+
+		// Check if any source dependency needs generation or is newer than target
+		let sourceChanged = false;
+		for (const src of node.sources) {
+			if (nodesNeedingGeneration.has(src.key)) {
+				sourceChanged = true;
+				break;
+			}
+			const srcMtime = await vault.mtime(src.targetPath);
+			if (srcMtime > targetMtime) {
+				sourceChanged = true;
+				break;
+			}
+		}
+
+		if (sourceChanged) {
+			nodesNeedingGeneration.add(node.key);
+		} else {
+			reused.push(node.targetPath);
+			const cached = await vault.read(node.targetPath);
+			results.set(node.key, cached);
+		}
+	}
+
 	// Group nodes by level: daily -> weekly -> monthly -> yearly
 	const levels = ["daily", "weekly", "monthly", "yearly"] as const;
 	const levelGroups = levels
 		.map((lvl) => plan.nodes.filter((n) => n.level === lvl))
 		.filter((group) => group.length > 0);
 
-	// Count nodes needing generation for accurate progress
-	const nodesNeedingGeneration: PlanNode[] = [];
-
-	for (const group of levelGroups) {
-		for (const node of group) {
-			const targetExists = await vault.exists(node.targetPath);
-			if (targetExists && !node.isRoot) {
-				// Child node already generated and cached on disk
-				reused.push(node.targetPath);
-				const cached = await vault.read(node.targetPath);
-				results.set(node.key, cached);
-			} else if (
-				node.level === "daily" &&
-				!(await vault.exists(node.journalPath))
-			) {
-				// Daily journal file is missing, skip
-				skipped.push(node.targetPath);
-			} else {
-				nodesNeedingGeneration.push(node);
-			}
-		}
-	}
-
-	const totalToGenerate = nodesNeedingGeneration.length;
+	const totalToGenerate = nodesNeedingGeneration.size;
 	let completedCount = 0;
 
 	if (totalToGenerate > 0) {
@@ -164,7 +205,7 @@ export async function generateRetrospectives(
 
 		// Only process nodes in this group that need generation
 		const activeInGroup = group.filter((n) =>
-			nodesNeedingGeneration.includes(n)
+			nodesNeedingGeneration.has(n.key)
 		);
 
 		await mapConcurrent(
@@ -194,7 +235,6 @@ export async function generateRetrospectives(
 					sourceContents.push(cleaned);
 					sourceItems.push(`[[${node.journalName}]]`);
 				}
-
 
 				// Collect completed child retrospective contents
 				for (const src of node.sources) {
@@ -263,5 +303,6 @@ export async function generateRetrospectives(
 		skipped,
 		cancelled: false,
 		targetPath: plan.root.targetPath,
+		upToDate: created.length === 0,
 	};
 }
