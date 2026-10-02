@@ -111,5 +111,41 @@ describe("analyzePlan", () => {
 		// 5 days skipped (no journal)
 		expect(analysis.skippedCount).toBe(5);
 	});
+
+	it("skips weekly nodes that have no daily journal notes and no weekly journal", async () => {
+		const files = new Set<string>();
+		const mtimes = new Map<string, number>();
+
+		// January 2025: only Jan 8 exists
+		files.add("journal/2025/01/2025-01-08.md");
+		mtimes.set("journal/2025/01/2025-01-08.md", 1000);
+
+		const fakeVault = {
+			exists: async (p: string) => files.has(p),
+			mtime: async (p: string) => mtimes.get(p) ?? 0,
+		};
+
+		const m = moment("2025-01-15", "YYYY-MM-DD", true);
+		const plan = buildPlan(m, "monthly");
+
+		const analysis = await analyzePlan(plan, fakeVault, false);
+
+		// W01 (no notes), W03 (no notes), W05 (no notes) must be skipped
+		const w01 = analysis.nodeDetails.find((n) => n.targetName === "r2025-W01");
+		const w03 = analysis.nodeDetails.find((n) => n.targetName === "r2025-W03");
+		const w05 = analysis.nodeDetails.find((n) => n.targetName === "r2025-W05");
+
+		expect(w01?.status).toBe("skip");
+		expect(w03?.status).toBe("skip");
+		expect(w05?.status).toBe("skip");
+
+		// W02 contains Jan 8, so W02 generates
+		const w02 = analysis.nodeDetails.find((n) => n.targetName === "r2025-W02");
+		expect(w02?.status).toBe("generate");
+
+		// Month 2025-01 contains W02, so Month generates
+		const root = analysis.nodeDetails.find((n) => n.targetName === "r2025-01");
+		expect(root?.status).toBe("generate");
+	});
 });
 

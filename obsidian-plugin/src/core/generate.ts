@@ -127,6 +127,7 @@ export async function generateRetrospectives(
 	// Determine which nodes need generation using modification-time invalidation.
 	// Plan.nodes is topologically sorted (dependencies before parents).
 	const nodesNeedingGeneration = new Set<string>();
+	const availableNodes = new Set<string>();
 
 	for (const node of plan.nodes) {
 		const targetExists = await vault.exists(node.targetPath);
@@ -139,10 +140,21 @@ export async function generateRetrospectives(
 		}
 
 		if (!targetExists) {
-			// Retrospective doesn't exist yet -> must generate
+			if (node.level !== "daily" && !journalExists) {
+				const hasSources = node.sources.some((src) =>
+					availableNodes.has(src.key)
+				);
+				if (!hasSources) {
+					skipped.push(node.targetPath);
+					continue;
+				}
+			}
 			nodesNeedingGeneration.add(node.key);
+			availableNodes.add(node.key);
 			continue;
 		}
+
+		availableNodes.add(node.key);
 
 		// Retrospective already exists on disk
 		if (node.isRoot && alwaysRegenerateRoot) {

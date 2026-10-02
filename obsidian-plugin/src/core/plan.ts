@@ -180,6 +180,8 @@ export async function analyzePlan(
 	let reusedCount = 0;
 	let skippedCount = 0;
 
+	const availableNodes = new Set<string>();
+
 	for (const node of plan.nodes) {
 		const targetExists = await vault.exists(node.targetPath);
 		const journalExists = await vault.exists(node.journalPath);
@@ -197,7 +199,24 @@ export async function analyzePlan(
 		}
 
 		if (!targetExists) {
+			if (node.level !== "daily" && !journalExists) {
+				const hasSources = node.sources.some((src) =>
+					availableNodes.has(src.key)
+				);
+				if (!hasSources) {
+					skippedCount++;
+					nodeDetails.push({
+						key: node.key,
+						targetName: node.targetName,
+						level: node.level,
+						status: "skip",
+						reason: "No journal note or child retrospectives available",
+					});
+					continue;
+				}
+			}
 			needsGen.add(node.key);
+			availableNodes.add(node.key);
 			toGenerateCount++;
 			nodeDetails.push({
 				key: node.key,
@@ -208,6 +227,8 @@ export async function analyzePlan(
 			});
 			continue;
 		}
+
+		availableNodes.add(node.key);
 
 		if (node.isRoot && alwaysRegenerateRoot) {
 			needsGen.add(node.key);
