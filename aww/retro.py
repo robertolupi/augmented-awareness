@@ -183,6 +183,6 @@ def whole_month(the_date: datetime.date) -> list[datetime.date]:
 
 
 def whole_week(the_date: datetime.date) -> list[datetime.date]:
-    """Returns the weekly dates (Mon to Friday) for the week that contains the given date."""
+    """Returns the weekly dates (Monday to Sunday) for the week that contains the given date."""
     monday = the_date - datetime.timedelta(days=the_date.weekday())
     return [monday + datetime.timedelta(days=i) for i in range(7)]

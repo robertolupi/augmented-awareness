@@ -1,18 +1,18 @@
 # Agents Code-Assist Guide
 
-This document provides guidance for using agents to assist with development in this project. This is a multi-language project, which will include Go and Python.
+This document provides guidance for using agents to assist with development in this project. This is a multi-language project, which includes Go and Python.
 
 ## Obsidian Vault structure
 
 Markdown files hold notes inside the Obsidian vault.
 
-Augmented Awareness expect a vault organized in the following directories (journal, and retrospectives are mandatory; others are optional):
+Augmented Awareness expects a vault organized in the following directories (journal, and retrospectives are mandatory; others are optional):
 
 - `0-inbox`: new notes, that I am still writing and working on.
 - `1-projects`: project notes (GTD projects).
 - `2-areas`: areas of responsibility (health, family, house, work, etc.).
 - `3-resources`: miscellaneous notes that are useful to consult for reference, or as data storage for information (e.g. pages for my collection of photography gear, etc.).
-- `4-archive:` archived notes that I do not need to actively consult.
+- `4-archive`: archived notes that I do not need to actively consult.
 - `journal`: Journal files
   - `journal/yyyy` (e.g. `journal/2025`): a directory for each year.
   - `journal/yyyy/Yyyyy.md` (e.g. `journal/2025/Y2025.md`): yearly note, containing long-term goals and plans (e.g. GTD "Horizons of Focus" style).
@@ -32,30 +32,37 @@ The project is organized by language.
 
 ### Go
 
-The Go portion of the application follows the standard Go project layout:
+The Go module is named `journal` and builds a single CLI binary:
 
--   `cmd/`: Contains the main application entry points. Each subdirectory is a separate command.
+-   `journal.go`: The main entry point (`package main`, calls `cmd.Execute()`).
+-   `cmd/`: The Cobra commands of the `journal` CLI (`record`, `stop`, `busy`, `list`, `amend`, `index`, `search`, `tasks`, `tasks-cleanup`, `pomodoro`, `tui`, `mcp`).
 -   `internal/`: Contains the core application logic. This code is not intended to be imported by other projects.
-    -   `internal/application`: Core application services.
-    -   `internal/config`: Configuration management.
+    -   `internal/application`: Core application services (busy, search, tasks).
+    -   `internal/config`: Configuration management (viper).
     -   `internal/datetime`: Time and date utilities.
-    -   `internal/obsidian`: Code for interacting with Obsidian vaults.
-    -   `internal/search`: Search and indexing functionality.
-    -   `internal/tui`: Terminal user interface components.
+    -   `internal/mcptools`: MCP server exposing vault tools (read journal/pages/retros/tasks, remember, search, busy, config, datetime).
+    -   `internal/obsidian`: Code for interacting with Obsidian vaults (vault/page/task/event parsing).
+    -   `internal/search`: Search and indexing functionality (bleve).
+    -   `internal/stats`: Busy-time metrics and histograms.
+    -   `internal/tui`: Terminal user interface components (bubbletea).
 -   `pkg/`: (Not yet present) Would contain library code that's okay to be used by external applications.
 -   `go.mod`, `go.sum`: Go module definitions and dependencies.
 
 ### Python
 
-The Python code provides tools for generating retrospectives from journal entries.
+The Python code provides tools for generating retrospectives from journal entries, plus chat, ask, MOTD, and search workflows.
 
 -   `aww_run.py`: The main Python CLI entry point, built with `click` and backed by `aww.cli:main`. It allows users to generate retrospectives for different time periods (daily, weekly, etc.) using various language models.
 -   `aww/`: The main Python package.
-    -   `config.py`: Manages application settings using Pydantic.
+    -   `config.py`: Manages application settings using Pydantic (env vars with `AWW_` prefix, `.env`, and `aww.toml`).
     -   `obsidian.py`: Contains classes (`Vault`, `Page`) for interacting with the structure of an Obsidian vault.
-    -   `retro.py`: Implements the core logic for generating retrospectives. It builds a dependency tree of notes and uses an AI agent to summarize them.
-    -   `retro/`: This directory contains the Markdown-based system prompts that guide the AI model for generating daily, weekly, monthly, and yearly retrospectives.
--   `test_*.py`: Unit tests for the Python modules.
+    -   `retro.py`: Period expansion (day, Monday–Sunday ISO week, month, year) and the retrospective dependency graph.
+    -   `retro_gen.py`: Recursive retrospective generation using a pydantic-ai agent, with cache policies and output metadata.
+    -   `chat.py`, `tools.py`, `session_manager.py`, `rag.py`: Tool-calling chat, SQLite session storage, and LanceDB/sentence-transformers search.
+    -   `cli/`: The Click subcommands (`retro`, `ask`, `chat`, `compare`, `motd`, `index`, `search`, `tags`, `taskscleanup`, `rewrite_prompt`, `show_config`).
+    -   `prompts/`: The Markdown-based system prompts (Jinja) that guide the AI model for daily, weekly, monthly, and yearly retrospectives, plus `ask_*`, `chat`, `motd`, and `compare` prompts.
+-   `home.py`, `pages/`: Streamlit UI (chat, side-by-side retrospective comparison, tag analysis).
+-   `tests/`: Unit tests for the Python modules; some tests also live alongside the code as `aww/test_*.py`.
 
 #### Dependency Management
 
@@ -68,7 +75,7 @@ uv add streamlit
 
 ## Testing
 
-Ignore `demo_vault` it is not relevant for development: it doesn't contain code or test data, but a demo based on a book (its length will overwhelm agents).
+Do not read `demo_vault` wholesale: it contains no code or unit-test data, only a demo vault based on a book, and its length will overwhelm agents. It is, however, the read-only seed for the disposable vaults used in Obsidian plugin development — see `doc/obsidian-plugin-design.md` (work on copies of it, never against the main vault).
 
 ### Go Testing
 
