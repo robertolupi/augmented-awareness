@@ -25,6 +25,20 @@ export function dailyRetroPath(
 	return `${retroDir}/${year}/${month}/r${dateISO}.md`;
 }
 
+export function dailyJournalPath(
+	dateISO: string,
+	journalDir = "journal"
+): string {
+	const match = DATE_RE.exec(dateISO);
+	if (!match) {
+		throw new Error(
+			`Invalid ISO date "${dateISO}"; expected yyyy-mm-dd`
+		);
+	}
+	const [, year, month] = match;
+	return `${journalDir}/${year}/${month}/${dateISO}.md`;
+}
+
 export function parseDailyJournalPath(
 	path: string,
 	journalDir = "journal"

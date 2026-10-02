@@ -51,6 +51,8 @@ cat > "$TARGET/.gitignore" <<'EOF'
 .obsidian/plugins/aww-retro/main.js
 # Plugin settings may contain provider credentials (e.g. ai-providers).
 .obsidian/plugins/*/data.json
+!.obsidian/plugins/ai-providers/data.json
+!.obsidian/plugins/aww-retro/data.json
 EOF
 
 git -C "$TARGET" init -q

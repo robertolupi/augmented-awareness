@@ -1,14 +1,22 @@
 import { Notice, Plugin, normalizePath } from "obsidian";
 import { dailyRetroPath, parseDailyJournalPath } from "./core/paths";
+import { prepareInput } from "./core/input";
+import { prepareOutput } from "./core/output";
+import {
+	buildTagsBlock,
+	canonicalTagNames,
+	renderTemplate,
+} from "./core/prompts";
 import { AIProvidersModelAdapter, ModelError } from "./adapters/Model";
 import {
 	AwwRetroSettingTab,
 	AwwRetroSettings,
 	DEFAULT_SETTINGS,
+	parseCanonicalTags,
+	parseIgnoredHeadings,
+	parseMetricTemplates,
 } from "./settings";
-
-const DAILY_SYSTEM_PROMPT =
-	"You are a retrospective generator. Summarize the following journal note as a daily retrospective in Markdown.";
+import dailyPrompt from "./prompts/daily.md";
 
 export default class AwwRetroPlugin extends Plugin {
 	settings: AwwRetroSettings = { ...DEFAULT_SETTINGS };
@@ -81,11 +89,21 @@ export default class AwwRetroPlugin extends Plugin {
 		);
 
 		new Notice(`Generating retrospective for ${dateISO}...`);
-		const content = await this.app.vault.read(file);
+		const rawContent = await this.app.vault.read(file);
+
+		const tags = parseCanonicalTags(this.settings.canonicalTags);
+		const systemPrompt = renderTemplate(dailyPrompt, {
+			canonical_tags: canonicalTagNames(tags),
+			canonical_tags_block: buildTagsBlock(tags),
+		});
+		const userMessage = prepareInput(file.basename, rawContent, {
+			ignoredHeaders: parseIgnoredHeadings(this.settings.ignoredHeadings),
+			metrics: parseMetricTemplates(this.settings.metricTemplates),
+		});
 
 		let generated: string;
 		try {
-			generated = await adapter.generate(DAILY_SYSTEM_PROMPT, content);
+			generated = await adapter.generate(systemPrompt, userMessage);
 		} catch (err) {
 			const message =
 				err instanceof ModelError || err instanceof Error
@@ -105,7 +123,7 @@ export default class AwwRetroPlugin extends Plugin {
 			}
 			const created = await this.app.vault.create(
 				normalizePath(targetPath),
-				generated
+				prepareOutput(generated, `r${dateISO}`)
 			);
 			await this.app.workspace.getLeaf().openFile(created);
 			new Notice(`Retrospective created: ${targetPath}`);

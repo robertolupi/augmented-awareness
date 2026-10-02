@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { dailyRetroPath, parseDailyJournalPath } from "../src/core/paths";
+import {
+	dailyJournalPath,
+	dailyRetroPath,
+	parseDailyJournalPath,
+} from "../src/core/paths";
 
 describe("dailyRetroPath", () => {
 	it("maps a daily date to the retrospective path", () => {
@@ -32,6 +36,46 @@ describe("dailyRetroPath", () => {
 	it("rejects malformed dates", () => {
 		expect(() => dailyRetroPath("2025-1-2")).toThrow();
 		expect(() => dailyRetroPath("not-a-date")).toThrow();
+	});
+});
+
+describe("dailyJournalPath", () => {
+	it("maps a daily date to the journal path", () => {
+		expect(dailyJournalPath("2025-01-08")).toBe(
+			"journal/2025/01/2025-01-08.md"
+		);
+	});
+
+	it("supports leap day", () => {
+		expect(dailyJournalPath("2024-02-29")).toBe(
+			"journal/2024/02/2024-02-29.md"
+		);
+	});
+
+	it("handles year boundary", () => {
+		expect(dailyJournalPath("2025-12-31")).toBe(
+			"journal/2025/12/2025-12-31.md"
+		);
+		expect(dailyJournalPath("2026-01-01")).toBe(
+			"journal/2026/01/2026-01-01.md"
+		);
+	});
+
+	it("honours custom journal directory", () => {
+		expect(dailyJournalPath("2025-06-15", "diario")).toBe(
+			"diario/2025/06/2025-06-15.md"
+		);
+	});
+
+	it("round-trips through parseDailyJournalPath", () => {
+		const date = "2025-01-08";
+		const path = dailyJournalPath(date);
+		expect(parseDailyJournalPath(path)).toBe(date);
+	});
+
+	it("rejects malformed dates", () => {
+		expect(() => dailyJournalPath("2025-1-2")).toThrow();
+		expect(() => dailyJournalPath("not-a-date")).toThrow();
 	});
 });
 
