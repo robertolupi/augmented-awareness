@@ -1,0 +1,9 @@
+{
+	"id": "aww-retro",
+	"name": "AWW Retrospectives",
+	"version": "0.1.0",
+	"minAppVersion": "1.12.7",
+	"description": "Generate daily, weekly, monthly, and yearly retrospectives from journal notes",
+	"author": "Roberto Lupi",
+	"isDesktopOnly": true
+}

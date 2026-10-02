@@ -1,0 +1,21 @@
+{
+	"name": "aww-retro",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Generate daily, weekly, monthly, and yearly retrospectives from journal notes",
+	"main": "main.js",
+	"scripts": {
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"dev": "node esbuild.config.mjs",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.0",
+		"builtin-modules": "3.3.0",
+		"esbuild": "0.17.3",
+		"obsidian": "latest",
+		"tslib": "2.4.0",
+		"typescript": "^5.4.0",
+		"vitest": "^1.6.0"
+	}
+}
