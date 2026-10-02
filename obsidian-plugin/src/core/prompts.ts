@@ -1,3 +1,9 @@
+import dailyTemplate from "../prompts/daily.md";
+import weeklyTemplate from "../prompts/weekly.md";
+import monthlyTemplate from "../prompts/monthly.md";
+import yearlyTemplate from "../prompts/yearly.md";
+import { Level } from "./calendar";
+
 /**
  * Minimal prompt renderer covering exactly what the retrospective prompts
  * use: `{% if <var> %} ... {% else %} ... {% endif %}` and `{{ <var> }}`
@@ -70,4 +76,24 @@ export function buildTagsBlock(tags: Record<string, string>): string {
 			return desc ? `- #${tag}: ${desc}` : `- #${tag}`;
 		})
 		.join("\n");
+}
+
+export const PROMPT_TEMPLATES: Record<Level, string> = {
+	daily: dailyTemplate,
+	weekly: weeklyTemplate,
+	monthly: monthlyTemplate,
+	yearly: yearlyTemplate,
+};
+
+export function renderRetroPrompt(
+	level: Level,
+	tags: Record<string, string>
+): string {
+	const template = PROMPT_TEMPLATES[level];
+	const canonical_tags = canonicalTagNames(tags);
+	const canonical_tags_block = buildTagsBlock(tags);
+	return renderTemplate(template, {
+		canonical_tags,
+		canonical_tags_block,
+	});
 }

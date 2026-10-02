@@ -1,9 +1,14 @@
 // Minimal runtime stub for the types-only "obsidian" package, so vitest can
 // import modules that reference Obsidian API classes. Only the pieces used at
 // module level need to exist as constructors.
+import moment from "moment";
+export { moment };
+
 export class Notice {
-	constructor(_message?: string) {}
+	constructor(_message?: unknown, _duration?: number) {}
+	hide(): void {}
 }
+
 export class Plugin {}
 export class PluginSettingTab {}
 export class Setting {

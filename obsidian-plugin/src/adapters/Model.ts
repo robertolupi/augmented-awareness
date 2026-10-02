@@ -6,8 +6,13 @@ import { App } from "obsidian";
  * prompt and planner tests do not depend on the AI Providers plugin.
  */
 export interface ModelAdapter {
-	generate(system: string, user: string): Promise<string>;
+	generate(
+		system: string,
+		user: string,
+		signal?: AbortSignal
+	): Promise<string>;
 }
+
 
 export class ModelError extends Error {
 	constructor(
@@ -127,7 +132,14 @@ export class AIProvidersModelAdapter implements ModelAdapter {
 		private readonly model: string
 	) {}
 
-	async generate(system: string, user: string): Promise<string> {
+	async generate(
+		system: string,
+		user: string,
+		signal?: AbortSignal
+	): Promise<string> {
+		if (signal?.aborted) {
+			throw new DOMException("Generation was cancelled", "AbortError");
+		}
 		const service = await resolveService(this.app as AppWithAIProviders);
 		try {
 			service.checkCompatibility(REQUIRED_SERVICE_VERSION);
@@ -148,6 +160,12 @@ export class AIProvidersModelAdapter implements ModelAdapter {
 				"provider_not_found"
 			);
 		}
+		const abortController = new AbortController();
+		if (signal) {
+			signal.addEventListener("abort", () => abortController.abort(), {
+				once: true,
+			});
+		}
 		try {
 			// Passing an AbortController (even without streaming) selects the
 			// modern SDK path, where execute() resolves to the full text
@@ -159,9 +177,18 @@ export class AIProvidersModelAdapter implements ModelAdapter {
 					{ role: "system", content: system },
 					{ role: "user", content: user },
 				],
-				abortController: new AbortController(),
+				abortController,
 			});
 		} catch (err) {
+			if (
+				signal?.aborted ||
+				(err instanceof Error && err.name === "AbortError")
+			) {
+				throw new DOMException(
+					"Generation was cancelled",
+					"AbortError"
+				);
+			}
 			if (err instanceof ModelError) {
 				throw err;
 			}
@@ -174,3 +201,4 @@ export class AIProvidersModelAdapter implements ModelAdapter {
 		}
 	}
 }
+

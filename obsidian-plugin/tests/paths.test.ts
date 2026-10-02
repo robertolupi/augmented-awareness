@@ -3,9 +3,16 @@ import {
 	dailyJournalPath,
 	dailyRetroPath,
 	findNextBackupPath,
+	journalPath,
 	parseDailyJournalPath,
+	parseJournalOrRetroPath,
+	parseJournalPath,
+	parseRetroPath,
 	progressiveBackupPath,
+	retroPath,
 } from "../src/core/paths";
+import { moment } from "obsidian";
+
 
 describe("dailyRetroPath", () => {
 	it("maps a daily date to the retrospective path", () => {
@@ -201,3 +208,82 @@ describe("findNextBackupPath", () => {
 		expect(next).toBe("retrospectives/2025/01/r2025-01-08.4.md");
 	});
 });
+
+describe("journalPath and retroPath for all levels", () => {
+	it("formats daily paths", () => {
+		const m = moment("2025-01-08", "YYYY-MM-DD", true);
+		expect(journalPath(m, "daily")).toBe("journal/2025/01/2025-01-08.md");
+		expect(retroPath(m, "daily")).toBe("retrospectives/2025/01/r2025-01-08.md");
+	});
+
+	it("formats weekly paths with ISO week-year", () => {
+		const m1 = moment("2025-01-08", "YYYY-MM-DD", true);
+		expect(journalPath(m1, "weekly")).toBe("journal/2025/weeks/2025-W02.md");
+		expect(retroPath(m1, "weekly")).toBe("retrospectives/2025/weeks/r2025-W02.md");
+
+		// Dec 30 2024 is in ISO week 1 of 2025
+		const m2 = moment("2024-12-30", "YYYY-MM-DD", true);
+		expect(journalPath(m2, "weekly")).toBe("journal/2025/weeks/2025-W01.md");
+		expect(retroPath(m2, "weekly")).toBe("retrospectives/2025/weeks/r2025-W01.md");
+	});
+
+	it("formats monthly paths", () => {
+		const m = moment("2025-01-08", "YYYY-MM-DD", true);
+		expect(journalPath(m, "monthly")).toBe("journal/2025/months/2025-01.md");
+		expect(retroPath(m, "monthly")).toBe("retrospectives/2025/months/r2025-01.md");
+	});
+
+	it("formats yearly paths (journal is Yyyyy, retro is ryyyy)", () => {
+		const m = moment("2025-01-08", "YYYY-MM-DD", true);
+		expect(journalPath(m, "yearly")).toBe("journal/2025/Y2025.md");
+		expect(retroPath(m, "yearly")).toBe("retrospectives/2025/r2025.md");
+	});
+});
+
+describe("parseJournalPath and parseRetroPath", () => {
+	it("parses journal paths for all levels", () => {
+		const d = parseJournalPath("journal/2025/01/2025-01-08.md");
+		expect(d?.level).toBe("daily");
+		expect(d?.date.format("YYYY-MM-DD")).toBe("2025-01-08");
+
+		const w = parseJournalPath("journal/2025/weeks/2025-W02.md");
+		expect(w?.level).toBe("weekly");
+		expect(w?.date.isoWeekYear()).toBe(2025);
+		expect(w?.date.isoWeek()).toBe(2);
+
+		const m = parseJournalPath("journal/2025/months/2025-01.md");
+		expect(m?.level).toBe("monthly");
+		expect(m?.date.format("YYYY-MM")).toBe("2025-01");
+
+		const y = parseJournalPath("journal/2025/Y2025.md");
+		expect(y?.level).toBe("yearly");
+		expect(y?.date.format("YYYY")).toBe("2025");
+	});
+
+	it("parses retrospective paths for all levels", () => {
+		const d = parseRetroPath("retrospectives/2025/01/r2025-01-08.md");
+		expect(d?.level).toBe("daily");
+
+		const w = parseRetroPath("retrospectives/2025/weeks/r2025-W02.md");
+		expect(w?.level).toBe("weekly");
+
+		const m = parseRetroPath("retrospectives/2025/months/r2025-01.md");
+		expect(m?.level).toBe("monthly");
+
+		const y = parseRetroPath("retrospectives/2025/r2025.md");
+		expect(y?.level).toBe("yearly");
+	});
+
+	it("parseJournalOrRetroPath distinguishes journal vs retro", () => {
+		const j = parseJournalOrRetroPath("journal/2025/01/2025-01-08.md");
+		expect(j?.isRetro).toBe(false);
+		expect(j?.level).toBe("daily");
+
+		const r = parseJournalOrRetroPath("retrospectives/2025/months/r2025-01.md");
+		expect(r?.isRetro).toBe(true);
+		expect(r?.level).toBe("monthly");
+
+		expect(parseJournalOrRetroPath("some/random/file.md")).toBeNull();
+	});
+});
+

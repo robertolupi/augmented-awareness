@@ -3,8 +3,10 @@ import {
 	buildTagsBlock,
 	canonicalTagNames,
 	normalizeTags,
+	renderRetroPrompt,
 	renderTemplate,
 } from "../src/core/prompts";
+
 import dailyPrompt from "../src/prompts/daily.md";
 
 describe("renderTemplate", () => {
@@ -100,3 +102,25 @@ describe("bundled daily prompt", () => {
 		expect(rendered).not.toContain("{%");
 	});
 });
+
+describe("renderRetroPrompt for all levels", () => {
+	it("renders daily, weekly, monthly, yearly with canonical tags", () => {
+		const tags = { Reflection: "daily thought" };
+		for (const level of ["daily", "weekly", "monthly", "yearly"] as const) {
+			const prompt = renderRetroPrompt(level, tags);
+			expect(prompt).toContain("- #reflection: daily thought");
+			expect(prompt).not.toContain("{%");
+			expect(prompt).not.toContain("{{");
+		}
+	});
+
+	it("renders daily, weekly, monthly, yearly without canonical tags", () => {
+		for (const level of ["daily", "weekly", "monthly", "yearly"] as const) {
+			const prompt = renderRetroPrompt(level, {});
+			expect(prompt).toContain("No canonical tags configured.");
+			expect(prompt).not.toContain("{%");
+			expect(prompt).not.toContain("{{");
+		}
+	});
+});
+

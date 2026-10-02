@@ -1,17 +1,10 @@
-import { Notice, Plugin, TFile, normalizePath } from "obsidian";
-import {
-	dailyRetroPath,
-	findNextBackupPath,
-	parseDailyJournalPath,
-} from "./core/paths";
-import { prepareInput } from "./core/input";
-import { prepareOutput } from "./core/output";
-import {
-	buildTagsBlock,
-	canonicalTagNames,
-	renderTemplate,
-} from "./core/prompts";
-import { AIProvidersModelAdapter, ModelError } from "./adapters/Model";
+import { Notice, Plugin, TFile, moment, normalizePath } from "obsidian";
+import { AIProvidersModelAdapter } from "./adapters/Model";
+import { ObsidianVaultStore } from "./adapters/VaultStore";
+import { Level } from "./core/calendar";
+import { generateRetrospectives } from "./core/generate";
+import { parseJournalOrRetroPath } from "./core/paths";
+import { buildPlan } from "./core/plan";
 import {
 	AwwRetroSettingTab,
 	AwwRetroSettings,
@@ -20,13 +13,46 @@ import {
 	parseIgnoredHeadings,
 	parseMetricTemplates,
 } from "./settings";
-import dailyPrompt from "./prompts/daily.md";
+import { ProgressNotice } from "./ui/ProgressNotice";
 
 export default class AwwRetroPlugin extends Plugin {
 	settings: AwwRetroSettings = { ...DEFAULT_SETTINGS };
+	private activeAbortController?: AbortController;
 
 	async onload() {
 		await this.loadSettings();
+
+		this.addCommand({
+			id: "generate-daily-retrospective",
+			name: "Generate daily retrospective",
+			callback: () => {
+				void this.generateForLevel("daily");
+			},
+		});
+
+		this.addCommand({
+			id: "generate-weekly-retrospective",
+			name: "Generate weekly retrospective",
+			callback: () => {
+				void this.generateForLevel("weekly");
+			},
+		});
+
+		this.addCommand({
+			id: "generate-monthly-retrospective",
+			name: "Generate monthly retrospective",
+			callback: () => {
+				void this.generateForLevel("monthly");
+			},
+		});
+
+		this.addCommand({
+			id: "generate-yearly-retrospective",
+			name: "Generate yearly retrospective",
+			callback: () => {
+				void this.generateForLevel("yearly");
+			},
+		});
 
 		this.addCommand({
 			id: "generate-retrospective-active-note",
@@ -37,6 +63,13 @@ export default class AwwRetroPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new AwwRetroSettingTab(this.app, this));
+	}
+
+	async onunload() {
+		if (this.activeAbortController) {
+			this.activeAbortController.abort();
+			this.activeAbortController = undefined;
+		}
 	}
 
 	async loadSettings() {
@@ -51,29 +84,54 @@ export default class AwwRetroPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
+	private async generateForLevel(level: Level): Promise<void> {
+		const activeFile = this.app.workspace.getActiveFile();
+		let targetDate = moment();
+		if (activeFile) {
+			const parsed = parseJournalOrRetroPath(
+				activeFile.path,
+				this.settings.journalDir,
+				this.settings.retroDir
+			);
+			if (parsed) {
+				targetDate = parsed.date;
+			}
+		}
+		await this.runGeneration(targetDate, level);
+	}
+
 	private async generateRetrospectiveForActiveNote(): Promise<void> {
-		const file = this.app.workspace.getActiveFile();
-		if (!file) {
-			new Notice("No active note. Open a daily journal note first.");
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile) {
+			new Notice("No active note. Open a journal note first.");
 			return;
 		}
 
-		const dateISO = parseDailyJournalPath(
-			file.path,
-			this.settings.journalDir
+		const parsed = parseJournalOrRetroPath(
+			activeFile.path,
+			this.settings.journalDir,
+			this.settings.retroDir
 		);
-		if (!dateISO) {
+		if (!parsed) {
 			new Notice(
-				`"${file.path}" is not a daily journal note (expected ${this.settings.journalDir}/<yyyy>/<mm>/<yyyy-mm-dd>.md).`
+				`"${activeFile.path}" is not a recognized daily, weekly, monthly, or yearly note.`
 			);
 			return;
 		}
 
-		const targetPath = dailyRetroPath(
-			dateISO,
-			this.settings.journalDir,
-			this.settings.retroDir
-		);
+		await this.runGeneration(parsed.date, parsed.level);
+	}
+
+	private async runGeneration(
+		date: moment.Moment,
+		level: Level
+	): Promise<void> {
+		if (this.activeAbortController) {
+			new Notice(
+				"A retrospective generation is already running. Please cancel it or wait for it to finish."
+			);
+			return;
+		}
 
 		if (!this.settings.providerId) {
 			new Notice(
@@ -82,78 +140,69 @@ export default class AwwRetroPlugin extends Plugin {
 			return;
 		}
 
-		const adapter = new AIProvidersModelAdapter(
-			this.app,
-			this.settings.providerId,
-			this.settings.model
+		const plan = buildPlan(
+			date,
+			level,
+			this.settings.journalDir,
+			this.settings.retroDir
 		);
 
-		const existing = this.app.vault.getAbstractFileByPath(targetPath);
-		if (existing) {
-			new Notice(
-				`Regenerating retrospective for ${dateISO} (existing note will be archived)...`
-			);
-		} else {
-			new Notice(`Generating retrospective for ${dateISO}...`);
-		}
-		const rawContent = await this.app.vault.read(file);
+		const abortController = new AbortController();
+		this.activeAbortController = abortController;
 
-		const tags = parseCanonicalTags(this.settings.canonicalTags);
-		const systemPrompt = renderTemplate(dailyPrompt, {
-			canonical_tags: canonicalTagNames(tags),
-			canonical_tags_block: buildTagsBlock(tags),
-		});
-		const userMessage = prepareInput(file.basename, rawContent, {
-			ignoredHeaders: parseIgnoredHeadings(this.settings.ignoredHeadings),
-			metrics: parseMetricTemplates(this.settings.metricTemplates),
-		});
-
-		let generated: string;
-		try {
-			generated = await adapter.generate(systemPrompt, userMessage);
-		} catch (err) {
-			const message =
-				err instanceof ModelError || err instanceof Error
-					? err.message
-					: String(err);
-			new Notice(`Retrospective generation failed: ${message}`);
-			return;
-		}
+		const progress = new ProgressNotice(
+			`Generating ${level} retrospective (${plan.root.periodKey})...`,
+			plan.nodes.length,
+			() => abortController.abort()
+		);
 
 		try {
-			const parentDir = targetPath.slice(
-				0,
-				targetPath.lastIndexOf("/")
+			const model = new AIProvidersModelAdapter(
+				this.app,
+				this.settings.providerId,
+				this.settings.model
 			);
-			if (!this.app.vault.getAbstractFileByPath(parentDir)) {
-				await this.app.vault.createFolder(parentDir);
-			}
+			const vault = new ObsidianVaultStore(this.app);
 
-			const existingTarget =
-				this.app.vault.getAbstractFileByPath(targetPath);
-			if (existingTarget instanceof TFile) {
-				const backupPath = findNextBackupPath(targetPath, (p) =>
-					Boolean(this.app.vault.getAbstractFileByPath(p))
-				);
-				await this.app.vault.rename(
-					existingTarget,
-					normalizePath(backupPath)
-				);
-				new Notice(`Archived existing retrospective to ${backupPath}`);
-			}
+			const result = await generateRetrospectives({
+				plan,
+				model,
+				vault,
+				canonicalTags: parseCanonicalTags(this.settings.canonicalTags),
+				ignoredHeadings: parseIgnoredHeadings(
+					this.settings.ignoredHeadings
+				),
+				metricTemplates: parseMetricTemplates(
+					this.settings.metricTemplates
+				),
+				concurrencyLimit: 5,
+				modelName: this.settings.model,
+				signal: abortController.signal,
+				onProgress: (completed, total, message) => {
+					progress.update(completed, total, message);
+				},
+			});
 
-			const created = await this.app.vault.create(
-				normalizePath(targetPath),
-				prepareOutput(generated, `r${dateISO}`)
+			progress.complete(`Retrospective created: ${result.targetPath}`);
+
+			const createdFile = this.app.vault.getAbstractFileByPath(
+				normalizePath(result.targetPath)
 			);
-			await this.app.workspace.getLeaf().openFile(created);
-			new Notice(`Retrospective created: ${targetPath}`);
+			if (createdFile instanceof TFile) {
+				await this.app.workspace.getLeaf().openFile(createdFile);
+			}
 		} catch (err) {
-			new Notice(
-				`Failed to save retrospective: ${
-					err instanceof Error ? err.message : String(err)
-				}`
-			);
+			if (
+				abortController.signal.aborted ||
+				(err instanceof Error && err.name === "AbortError")
+			) {
+				progress.cancel();
+			} else {
+				const msg = err instanceof Error ? err.message : String(err);
+				progress.error(msg);
+			}
+		} finally {
+			this.activeAbortController = undefined;
 		}
 	}
 }

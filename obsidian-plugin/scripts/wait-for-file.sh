@@ -38,6 +38,15 @@ get_mtime() {
 start_time=$(date +%s)
 echo "Waiting up to ${TIMEOUT}s for: $TARGET" >&2
 
+# If WAIT_NEWER_THAN_SEC is not explicitly passed and target already exists,
+# default to waiting for an update newer than its current mtime.
+if [[ -z "${WAIT_NEWER_THAN_SEC:-}" ]]; then
+  if [[ -f "$TARGET" ]]; then
+    WAIT_NEWER_THAN_SEC=$(get_mtime "$TARGET")
+    echo "Target already exists (mtime=$WAIT_NEWER_THAN_SEC); waiting for update..." >&2
+  fi
+fi
+
 while true; do
   if [[ -f "$TARGET" && -s "$TARGET" ]]; then
     if [[ -n "${WAIT_NEWER_THAN_SEC:-}" ]]; then
@@ -51,6 +60,7 @@ while true; do
       exit 0
     fi
   fi
+
 
   now=$(date +%s)
   elapsed=$(( now - start_time ))
