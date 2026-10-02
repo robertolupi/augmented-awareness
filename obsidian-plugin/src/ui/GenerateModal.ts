@@ -1,7 +1,9 @@
-import { App, Modal, Setting, moment } from "obsidian";
+import { App, Modal, Notice, Setting, moment } from "obsidian";
 import { ObsidianVaultStore } from "../adapters/VaultStore";
+import { AIProvidersService } from "../adapters/Model";
 import { Level } from "../core/calendar";
 import { PlanAnalysis, analyzePlan, buildPlan } from "../core/plan";
+import { getModelOptions, getProviderOptions } from "../settings";
 
 export interface GenerateModalOptions {
 	app: App;
@@ -14,14 +16,19 @@ export interface GenerateModalOptions {
 	onGenerate: (
 		date: moment.Moment,
 		level: Level,
-		alwaysRegenerateRoot: boolean
+		alwaysRegenerateRoot: boolean,
+		providerId: string,
+		model: string
 	) => Promise<void>;
 }
 
 export class GenerateModal extends Modal {
 	private date: moment.Moment;
 	private level: Level;
+	private providerId: string;
+	private model: string;
 	private alwaysRegenerateRoot = true;
+	private modelContainerEl!: HTMLElement;
 	private previewContainer!: HTMLElement;
 	private generateBtn!: HTMLButtonElement;
 	private vault: ObsidianVaultStore;
@@ -30,6 +37,8 @@ export class GenerateModal extends Modal {
 		super(options.app);
 		this.date = options.initialDate.clone();
 		this.level = options.initialLevel;
+		this.providerId = options.providerId || "";
+		this.model = options.model || "";
 		this.vault = new ObsidianVaultStore(options.app);
 	}
 
@@ -71,7 +80,65 @@ export class GenerateModal extends Modal {
 					});
 			});
 
-		// 3. Always regenerate root toggle
+		// 3. Provider setting
+		const aiProviders = (
+			this.app as App & { aiProviders?: AIProvidersService }
+		).aiProviders;
+		const providers = aiProviders?.providers ?? [];
+
+		const providerSetting = new Setting(contentEl)
+			.setName("Provider")
+			.setDesc("Provider configured in the AI Providers plugin.");
+
+		if (providers.length > 0) {
+			providerSetting.addDropdown((dropdown) => {
+				const providerOptions = getProviderOptions(providers);
+				if (!this.providerId || !providerOptions[this.providerId]) {
+					dropdown.addOption("", "-- Select a provider --");
+				}
+				for (const [id, label] of Object.entries(providerOptions)) {
+					dropdown.addOption(id, label);
+				}
+				if (this.providerId && !providerOptions[this.providerId]) {
+					dropdown.addOption(
+						this.providerId,
+						`${this.providerId} (configured)`
+					);
+				}
+				dropdown.setValue(this.providerId);
+				dropdown.onChange((value) => {
+					this.providerId = value;
+					const selected = providers.find((p) => p.id === value);
+					this.model = selected?.model ?? "";
+					this.renderModelSetting();
+					void this.renderPreview();
+				});
+			});
+		} else {
+			providerSetting.setDesc(
+				aiProviders
+					? "No providers configured in AI Providers."
+					: "AI Providers plugin is not available."
+			);
+			providerSetting.addText((text) => {
+				text
+					.setPlaceholder("e.g. id-1790951942041")
+					.setValue(this.providerId)
+					.onChange((value) => {
+						this.providerId = value.trim();
+						this.renderModelSetting();
+						void this.renderPreview();
+					});
+			});
+		}
+
+		// 4. Model setting container
+		this.modelContainerEl = contentEl.createDiv({
+			cls: "aww-retro-modal-model-container",
+		});
+		this.renderModelSetting();
+
+		// 5. Always regenerate root toggle
 		new Setting(contentEl)
 			.setName("Force regenerate target")
 			.setDesc(
@@ -86,22 +153,7 @@ export class GenerateModal extends Modal {
 					});
 			});
 
-		// 4. Model info
-		if (this.options.providerId || this.options.model) {
-			const infoEl = contentEl.createDiv({
-				cls: "aww-retro-model-info",
-			});
-			infoEl.style.fontSize = "0.9em";
-			infoEl.style.color = "var(--text-muted)";
-			infoEl.style.marginBottom = "14px";
-			infoEl.setText(
-				`Model: ${this.options.model || "default"} (Provider: ${
-					this.options.providerId || "none"
-				})`
-			);
-		}
-
-		// 5. Plan preview container
+		// 6. Plan preview container
 		this.previewContainer = contentEl.createDiv({
 			cls: "aww-retro-modal-preview",
 		});
@@ -112,7 +164,7 @@ export class GenerateModal extends Modal {
 		this.previewContainer.style.marginBottom = "16px";
 		this.previewContainer.style.background = "var(--background-secondary)";
 
-		// 6. Action buttons
+		// 7. Action buttons
 		const btnRow = contentEl.createDiv({
 			cls: "aww-retro-modal-actions",
 		});
@@ -128,15 +180,72 @@ export class GenerateModal extends Modal {
 			cls: "mod-cta",
 		});
 		this.generateBtn.addEventListener("click", async () => {
+			if (!this.providerId) {
+				new Notice("Please select or enter an AI provider.");
+				return;
+			}
 			this.close();
 			await this.options.onGenerate(
 				this.date,
 				this.level,
-				this.alwaysRegenerateRoot
+				this.alwaysRegenerateRoot,
+				this.providerId,
+				this.model
 			);
 		});
 
 		void this.renderPreview();
+	}
+
+	private renderModelSetting(): void {
+		this.modelContainerEl.empty();
+
+		const aiProviders = (
+			this.app as App & { aiProviders?: AIProvidersService }
+		).aiProviders;
+		const providers = aiProviders?.providers ?? [];
+		const selectedProvider = providers.find(
+			(p) => p.id === this.providerId
+		);
+
+		const modelSetting = new Setting(this.modelContainerEl)
+			.setName("Model")
+			.setDesc("Model to use for retrospective generation.");
+
+		const { hasChoices, options: modelOptions } = getModelOptions(
+			selectedProvider,
+			this.model
+		);
+
+		if (hasChoices) {
+			modelSetting.addDropdown((dropdown) => {
+				for (const [val, label] of Object.entries(modelOptions)) {
+					dropdown.addOption(val, label);
+				}
+				if (modelOptions[this.model] !== undefined) {
+					dropdown.setValue(this.model);
+				} else {
+					dropdown.setValue("");
+				}
+				dropdown.onChange((value) => {
+					this.model = value;
+					void this.renderPreview();
+				});
+			});
+		} else {
+			modelSetting.setDesc(
+				"Model override passed to provider. Leave empty for provider default."
+			);
+			modelSetting.addText((text) => {
+				text
+					.setPlaceholder("e.g. gpt-4o")
+					.setValue(this.model)
+					.onChange((value) => {
+						this.model = value.trim();
+						void this.renderPreview();
+					});
+			});
+		}
 	}
 
 	private async renderPreview(): Promise<void> {
@@ -164,6 +273,15 @@ export class GenerateModal extends Modal {
 		targetRow.style.marginBottom = "6px";
 		targetRow.createEl("strong", { text: "Target: " });
 		targetRow.createSpan({ text: analysis.rootPath });
+
+		const modelRow = this.previewContainer.createDiv();
+		modelRow.style.marginBottom = "6px";
+		modelRow.createEl("strong", { text: "Model: " });
+		modelRow.createSpan({
+			text: `${this.model || "default"} (Provider: ${
+				this.providerId || "none"
+			})`,
+		});
 
 		const statusRow = this.previewContainer.createDiv();
 		statusRow.style.marginBottom = "8px";

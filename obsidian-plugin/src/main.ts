@@ -158,17 +158,30 @@ export default class AwwRetroPlugin extends Plugin {
 			retroDir: this.settings.retroDir,
 			providerId: this.settings.providerId,
 			model: this.settings.model,
-			onGenerate: async (date, level, alwaysRegenerateRoot) => {
-				await this.runGeneration(date, level, alwaysRegenerateRoot);
+			onGenerate: async (
+				date,
+				level,
+				alwaysRegenerateRoot,
+				providerId,
+				model
+			) => {
+				await this.runGeneration(
+					date,
+					level,
+					alwaysRegenerateRoot,
+					providerId,
+					model
+				);
 			},
 		}).open();
 	}
 
 	private async runGeneration(
-
 		date: moment.Moment,
 		level: Level,
-		alwaysRegenerateRoot = false
+		alwaysRegenerateRoot = false,
+		overrideProviderId?: string,
+		overrideModel?: string
 	): Promise<void> {
 		if (this.activeAbortController) {
 			new Notice(
@@ -177,9 +190,14 @@ export default class AwwRetroPlugin extends Plugin {
 			return;
 		}
 
-		if (!this.settings.providerId) {
+		const effectiveProviderId =
+			overrideProviderId || this.settings.providerId;
+		const effectiveModel =
+			overrideModel !== undefined ? overrideModel : this.settings.model;
+
+		if (!effectiveProviderId) {
 			new Notice(
-				"No AI Providers provider ID configured. Set it in AWW Retrospectives settings."
+				"No AI Providers provider ID configured. Set it in AWW Retrospectives settings or the generation options."
 			);
 			return;
 		}
@@ -203,8 +221,8 @@ export default class AwwRetroPlugin extends Plugin {
 		try {
 			const model = new AIProvidersModelAdapter(
 				this.app,
-				this.settings.providerId,
-				this.settings.model
+				effectiveProviderId,
+				effectiveModel
 			);
 			const vault = new ObsidianVaultStore(this.app);
 
@@ -220,7 +238,7 @@ export default class AwwRetroPlugin extends Plugin {
 					this.settings.metricTemplates
 				),
 				concurrencyLimit: 5,
-				modelName: this.settings.model,
+				modelName: effectiveModel || effectiveProviderId,
 				signal: abortController.signal,
 				alwaysRegenerateRoot,
 				onProgress: (completed, total, message) => {
