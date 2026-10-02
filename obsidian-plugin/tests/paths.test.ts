@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
 	dailyJournalPath,
 	dailyRetroPath,
+	findNextBackupPath,
 	parseDailyJournalPath,
+	progressiveBackupPath,
 } from "../src/core/paths";
 
 describe("dailyRetroPath", () => {
@@ -154,5 +156,48 @@ describe("parseDailyJournalPath", () => {
 		expect(
 			parseDailyJournalPath("journal/2025/01/2025-02-02.md")
 		).toBeNull();
+	});
+});
+
+describe("progressiveBackupPath", () => {
+	it("replaces .md suffix with progressive index", () => {
+		expect(
+			progressiveBackupPath("retrospectives/2025/01/r2025-01-08.md", 1)
+		).toBe("retrospectives/2025/01/r2025-01-08.1.md");
+		expect(
+			progressiveBackupPath("retrospectives/2025/01/r2025-01-08.md", 5)
+		).toBe("retrospectives/2025/01/r2025-01-08.5.md");
+	});
+
+	it("throws on invalid n", () => {
+		expect(() =>
+			progressiveBackupPath("r2025-01-08.md", 0)
+		).toThrow();
+		expect(() =>
+			progressiveBackupPath("r2025-01-08.md", 1.5)
+		).toThrow();
+	});
+});
+
+describe("findNextBackupPath", () => {
+	it("returns .1.md when no backup exists", () => {
+		const next = findNextBackupPath(
+			"retrospectives/2025/01/r2025-01-08.md",
+			() => false
+		);
+		expect(next).toBe("retrospectives/2025/01/r2025-01-08.1.md");
+	});
+
+	it("finds the next available index skipping existing ones", () => {
+		const existing = new Set([
+			"retrospectives/2025/01/r2025-01-08.1.md",
+			"retrospectives/2025/01/r2025-01-08.2.md",
+			"retrospectives/2025/01/r2025-01-08.3.md",
+		]);
+		const next = findNextBackupPath(
+			"retrospectives/2025/01/r2025-01-08.md",
+			(p) => existing.has(p)
+		);
+		expect(next).toBe("retrospectives/2025/01/r2025-01-08.4.md");
 	});
 });

@@ -70,3 +70,36 @@ export function parseDailyJournalPath(
 	}
 	return date;
 }
+
+/**
+ * Compute the progressive backup path for an existing file:
+ * e.g. path/to/r2025-01-08.md -> path/to/r2025-01-08.1.md
+ */
+export function progressiveBackupPath(targetPath: string, n: number): string {
+	if (n < 1 || !Number.isInteger(n)) {
+		throw new Error(
+			`Progressive backup number must be a positive integer, got ${n}`
+		);
+	}
+	if (targetPath.endsWith(".md")) {
+		return `${targetPath.slice(0, -3)}.${n}.md`;
+	}
+	return `${targetPath}.${n}`;
+}
+
+/**
+ * Find the next available backup path using the provided existence check.
+ */
+export function findNextBackupPath(
+	targetPath: string,
+	exists: (path: string) => boolean
+): string {
+	let i = 1;
+	while (true) {
+		const candidate = progressiveBackupPath(targetPath, i);
+		if (!exists(candidate)) {
+			return candidate;
+		}
+		i++;
+	}
+}

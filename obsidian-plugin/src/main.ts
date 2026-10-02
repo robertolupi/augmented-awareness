@@ -1,5 +1,9 @@
-import { Notice, Plugin, normalizePath } from "obsidian";
-import { dailyRetroPath, parseDailyJournalPath } from "./core/paths";
+import { Notice, Plugin, TFile, normalizePath } from "obsidian";
+import {
+	dailyRetroPath,
+	findNextBackupPath,
+	parseDailyJournalPath,
+} from "./core/paths";
 import { prepareInput } from "./core/input";
 import { prepareOutput } from "./core/output";
 import {
@@ -70,10 +74,6 @@ export default class AwwRetroPlugin extends Plugin {
 			this.settings.journalDir,
 			this.settings.retroDir
 		);
-		if (this.app.vault.getAbstractFileByPath(targetPath)) {
-			new Notice(`Retrospective already exists: ${targetPath}`);
-			return;
-		}
 
 		if (!this.settings.providerId) {
 			new Notice(
@@ -88,7 +88,14 @@ export default class AwwRetroPlugin extends Plugin {
 			this.settings.model
 		);
 
-		new Notice(`Generating retrospective for ${dateISO}...`);
+		const existing = this.app.vault.getAbstractFileByPath(targetPath);
+		if (existing) {
+			new Notice(
+				`Regenerating retrospective for ${dateISO} (existing note will be archived)...`
+			);
+		} else {
+			new Notice(`Generating retrospective for ${dateISO}...`);
+		}
 		const rawContent = await this.app.vault.read(file);
 
 		const tags = parseCanonicalTags(this.settings.canonicalTags);
@@ -121,6 +128,20 @@ export default class AwwRetroPlugin extends Plugin {
 			if (!this.app.vault.getAbstractFileByPath(parentDir)) {
 				await this.app.vault.createFolder(parentDir);
 			}
+
+			const existingTarget =
+				this.app.vault.getAbstractFileByPath(targetPath);
+			if (existingTarget instanceof TFile) {
+				const backupPath = findNextBackupPath(targetPath, (p) =>
+					Boolean(this.app.vault.getAbstractFileByPath(p))
+				);
+				await this.app.vault.rename(
+					existingTarget,
+					normalizePath(backupPath)
+				);
+				new Notice(`Archived existing retrospective to ${backupPath}`);
+			}
+
 			const created = await this.app.vault.create(
 				normalizePath(targetPath),
 				prepareOutput(generated, `r${dateISO}`)
