@@ -27,7 +27,26 @@ export class Setting {
 	addDropdown(_cb: (dropdown: unknown) => void): this {
 		return this;
 	}
+	addToggle(_cb: (toggle: unknown) => void): this {
+		return this;
+	}
+	addButton(_cb: (btn: unknown) => void): this {
+		return this;
+	}
 }
+export class Modal {
+	contentEl: HTMLElement;
+	titleEl: HTMLElement;
+	constructor(public app: unknown) {
+		this.contentEl = {} as HTMLElement;
+		this.titleEl = {} as HTMLElement;
+	}
+	open(): void {}
+	close(): void {}
+	onOpen(): void {}
+	onClose(): void {}
+}
+
 export class TFile {}
 export function normalizePath(path: string): string {
 	return path;

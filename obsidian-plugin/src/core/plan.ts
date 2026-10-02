@@ -145,3 +145,149 @@ export function buildPlan(
 		nodes: orderedNodes,
 	};
 }
+
+export interface NodeAnalysis {
+	key: string;
+	targetName: string;
+	level: Level;
+	status: "generate" | "reuse" | "skip";
+	reason: string;
+}
+
+export interface PlanAnalysis {
+	rootPath: string;
+	rootName: string;
+	rootExists: boolean;
+	rootWillRegenerate: boolean;
+	totalNodes: number;
+	toGenerateCount: number;
+	reusedCount: number;
+	skippedCount: number;
+	nodeDetails: NodeAnalysis[];
+}
+
+export async function analyzePlan(
+	plan: Plan,
+	vault: {
+		exists(path: string): Promise<boolean>;
+		mtime(path: string): Promise<number>;
+	},
+	alwaysRegenerateRoot = false
+): Promise<PlanAnalysis> {
+	const nodeDetails: NodeAnalysis[] = [];
+	const needsGen = new Set<string>();
+	let toGenerateCount = 0;
+	let reusedCount = 0;
+	let skippedCount = 0;
+
+	for (const node of plan.nodes) {
+		const targetExists = await vault.exists(node.targetPath);
+		const journalExists = await vault.exists(node.journalPath);
+
+		if (node.level === "daily" && !journalExists && !targetExists) {
+			skippedCount++;
+			nodeDetails.push({
+				key: node.key,
+				targetName: node.targetName,
+				level: node.level,
+				status: "skip",
+				reason: "Missing daily journal file",
+			});
+			continue;
+		}
+
+		if (!targetExists) {
+			needsGen.add(node.key);
+			toGenerateCount++;
+			nodeDetails.push({
+				key: node.key,
+				targetName: node.targetName,
+				level: node.level,
+				status: "generate",
+				reason: "Retrospective note does not exist yet",
+			});
+			continue;
+		}
+
+		if (node.isRoot && alwaysRegenerateRoot) {
+			needsGen.add(node.key);
+			toGenerateCount++;
+			nodeDetails.push({
+				key: node.key,
+				targetName: node.targetName,
+				level: node.level,
+				status: "generate",
+				reason: "Forced root regeneration",
+			});
+			continue;
+		}
+
+		const targetMtime = await vault.mtime(node.targetPath);
+		const journalMtime = journalExists
+			? await vault.mtime(node.journalPath)
+			: 0;
+
+		if (journalMtime > targetMtime) {
+			needsGen.add(node.key);
+			toGenerateCount++;
+			nodeDetails.push({
+				key: node.key,
+				targetName: node.targetName,
+				level: node.level,
+				status: "generate",
+				reason: "Journal note modified after retrospective",
+			});
+			continue;
+		}
+
+		let sourceChanged = false;
+		for (const src of node.sources) {
+			if (needsGen.has(src.key)) {
+				sourceChanged = true;
+				break;
+			}
+			const srcMtime = await vault.mtime(src.targetPath);
+			if (srcMtime > targetMtime) {
+				sourceChanged = true;
+				break;
+			}
+		}
+
+		if (sourceChanged) {
+			needsGen.add(node.key);
+			toGenerateCount++;
+			nodeDetails.push({
+				key: node.key,
+				targetName: node.targetName,
+				level: node.level,
+				status: "generate",
+				reason: "Child dependency modified or regenerating",
+			});
+		} else {
+			reusedCount++;
+			nodeDetails.push({
+				key: node.key,
+				targetName: node.targetName,
+				level: node.level,
+				status: "reuse",
+				reason: "Up to date with journal note",
+			});
+		}
+	}
+
+	const rootExists = await vault.exists(plan.root.targetPath);
+	const rootWillRegenerate = needsGen.has(plan.root.key);
+
+	return {
+		rootPath: plan.root.targetPath,
+		rootName: plan.root.targetName,
+		rootExists,
+		rootWillRegenerate,
+		totalNodes: plan.nodes.length,
+		toGenerateCount,
+		reusedCount,
+		skippedCount,
+		nodeDetails,
+	};
+}
+

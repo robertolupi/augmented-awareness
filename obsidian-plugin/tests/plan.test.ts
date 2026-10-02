@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { moment } from "obsidian";
-import { buildPlan } from "../src/core/plan";
+import { analyzePlan, buildPlan } from "../src/core/plan";
+
 
 describe("buildPlan", () => {
 	it("builds a 1-node plan for daily level", () => {
@@ -71,3 +72,44 @@ describe("buildPlan", () => {
 		expect(weeklyNodes.length).toBeGreaterThan(0);
 	});
 });
+
+describe("analyzePlan", () => {
+	it("analyzes plan with missing journals, new notes, and up to date notes", async () => {
+		const files = new Set<string>();
+		const mtimes = new Map<string, number>();
+
+		// 2025-01-06: Journal exists, no retro -> generate
+		files.add("journal/2025/01/2025-01-06.md");
+		mtimes.set("journal/2025/01/2025-01-06.md", 1000);
+
+		// 2025-01-07: Journal exists, retro exists and is newer -> reuse
+		files.add("journal/2025/01/2025-01-07.md");
+		files.add("retrospectives/2025/01/r2025-01-07.md");
+		mtimes.set("journal/2025/01/2025-01-07.md", 1000);
+		mtimes.set("retrospectives/2025/01/r2025-01-07.md", 2000);
+
+		// Other days (08..12): no journal, no retro -> skip
+
+		const fakeVault = {
+			exists: async (p: string) => files.has(p),
+			mtime: async (p: string) => mtimes.get(p) ?? 0,
+		};
+
+		const m = moment("2025-01-08", "YYYY-MM-DD", true);
+		const plan = buildPlan(m, "weekly");
+
+		const analysis = await analyzePlan(plan, fakeVault, false);
+
+		expect(analysis.rootPath).toBe("retrospectives/2025/weeks/r2025-W02.md");
+		expect(analysis.rootExists).toBe(false);
+		expect(analysis.rootWillRegenerate).toBe(true);
+		expect(analysis.totalNodes).toBe(8);
+		// 1 day (06) + 1 root (W02) = 2 to generate
+		expect(analysis.toGenerateCount).toBe(2);
+		// 1 day (07) reused
+		expect(analysis.reusedCount).toBe(1);
+		// 5 days skipped (no journal)
+		expect(analysis.skippedCount).toBe(5);
+	});
+});
+

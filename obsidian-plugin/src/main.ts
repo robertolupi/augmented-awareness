@@ -14,6 +14,8 @@ import {
 	parseMetricTemplates,
 } from "./settings";
 import { ProgressNotice } from "./ui/ProgressNotice";
+import { GenerateModal } from "./ui/GenerateModal";
+
 
 export default class AwwRetroPlugin extends Plugin {
 	settings: AwwRetroSettings = { ...DEFAULT_SETTINGS };
@@ -62,8 +64,17 @@ export default class AwwRetroPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "generate-retrospective-options",
+			name: "Generate retrospective with options...",
+			callback: () => {
+				this.openGenerateModal();
+			},
+		});
+
 		this.addSettingTab(new AwwRetroSettingTab(this.app, this));
 	}
+
 
 	async onunload() {
 		if (this.activeAbortController) {
@@ -122,7 +133,39 @@ export default class AwwRetroPlugin extends Plugin {
 		await this.runGeneration(parsed.date, parsed.level, true);
 	}
 
+	private openGenerateModal(): void {
+		const activeFile = this.app.workspace.getActiveFile();
+		let targetDate = moment();
+		let initialLevel: Level = "daily";
+
+		if (activeFile) {
+			const parsed = parseJournalOrRetroPath(
+				activeFile.path,
+				this.settings.journalDir,
+				this.settings.retroDir
+			);
+			if (parsed) {
+				targetDate = parsed.date;
+				initialLevel = parsed.level;
+			}
+		}
+
+		new GenerateModal({
+			app: this.app,
+			initialDate: targetDate,
+			initialLevel,
+			journalDir: this.settings.journalDir,
+			retroDir: this.settings.retroDir,
+			providerId: this.settings.providerId,
+			model: this.settings.model,
+			onGenerate: async (date, level, alwaysRegenerateRoot) => {
+				await this.runGeneration(date, level, alwaysRegenerateRoot);
+			},
+		}).open();
+	}
+
 	private async runGeneration(
+
 		date: moment.Moment,
 		level: Level,
 		alwaysRegenerateRoot = false
