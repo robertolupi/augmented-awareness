@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type AwwRetroPlugin from "./main";
+import type { AIProviderEntry, AIProvidersService } from "./adapters/Model";
 
 export interface AwwRetroSettings {
 	providerId: string;
@@ -100,6 +101,73 @@ export function parseCanonicalTags(text: string): Record<string, string> {
 	return out;
 }
 
+/**
+ * Build a record of provider id -> display label for dropdown selection.
+ */
+export function getProviderOptions(
+	providers: AIProviderEntry[]
+): Record<string, string> {
+	const out: Record<string, string> = {};
+	for (const p of providers) {
+		const label = p.name
+			? p.type
+				? `${p.name} (${p.type})`
+				: p.name
+			: p.id;
+		out[p.id] = label;
+	}
+	return out;
+}
+
+export interface ModelOptionsResult {
+	hasChoices: boolean;
+	options: Record<string, string>;
+}
+
+/**
+ * Build model choices for a given provider.
+ * Returns hasChoices: false if the provider has no known models.
+ */
+export function getModelOptions(
+	provider: AIProviderEntry | undefined,
+	currentModel = ""
+): ModelOptionsResult {
+	if (!provider) {
+		return { hasChoices: false, options: {} };
+	}
+
+	const modelSet = new Set<string>();
+	if (provider.availableModels && Array.isArray(provider.availableModels)) {
+		for (const m of provider.availableModels) {
+			if (typeof m === "string" && m.trim()) {
+				modelSet.add(m.trim());
+			}
+		}
+	}
+	if (provider.model && provider.model.trim()) {
+		modelSet.add(provider.model.trim());
+	}
+	if (currentModel && currentModel.trim()) {
+		modelSet.add(currentModel.trim());
+	}
+
+	if (modelSet.size === 0) {
+		return { hasChoices: false, options: {} };
+	}
+
+	const options: Record<string, string> = {};
+	const defaultLabel = provider.model
+		? `Default (${provider.model})`
+		: "Default";
+	options[""] = defaultLabel;
+
+	for (const m of Array.from(modelSet).sort()) {
+		options[m] = m;
+	}
+
+	return { hasChoices: true, options };
+}
+
 export class AwwRetroSettingTab extends PluginSettingTab {
 	constructor(
 		app: App,
@@ -112,27 +180,94 @@ export class AwwRetroSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl)
-			.setName("Provider ID")
-			.setDesc(
-				"ID of the provider configured in the AI Providers plugin (see its settings)."
-			)
-			.addText((text) =>
+		const aiProviders = (
+			this.app as App & { aiProviders?: AIProvidersService }
+		).aiProviders;
+		const providers = aiProviders?.providers ?? [];
+
+		const providerSetting = new Setting(containerEl)
+			.setName("Provider")
+			.setDesc("Provider configured in the AI Providers plugin.");
+
+		if (providers.length > 0) {
+			providerSetting.addDropdown((dropdown) => {
+				const providerOptions = getProviderOptions(providers);
+				if (
+					!this.plugin.settings.providerId ||
+					!providerOptions[this.plugin.settings.providerId]
+				) {
+					dropdown.addOption("", "-- Select a provider --");
+				}
+				for (const [id, label] of Object.entries(providerOptions)) {
+					dropdown.addOption(id, label);
+				}
+				if (
+					this.plugin.settings.providerId &&
+					!providerOptions[this.plugin.settings.providerId]
+				) {
+					dropdown.addOption(
+						this.plugin.settings.providerId,
+						`${this.plugin.settings.providerId} (saved)`
+					);
+				}
+				dropdown.setValue(this.plugin.settings.providerId);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.providerId = value;
+					const selected = providers.find((p) => p.id === value);
+					this.plugin.settings.model = selected?.model ?? "";
+					await this.plugin.saveSettings();
+					this.display();
+				});
+			});
+		} else {
+			providerSetting.setDesc(
+				aiProviders
+					? "No providers configured in AI Providers. Configure a provider in AI Providers settings first."
+					: "AI Providers plugin is not available. Install and enable it, then configure a provider."
+			);
+			providerSetting.addText((text) =>
 				text
-					.setPlaceholder("e.g. 1732815722182")
+					.setPlaceholder("e.g. id-1790951942041")
 					.setValue(this.plugin.settings.providerId)
 					.onChange(async (value) => {
 						this.plugin.settings.providerId = value.trim();
 						await this.plugin.saveSettings();
 					})
 			);
+		}
 
-		new Setting(containerEl)
+		const selectedProvider = providers.find(
+			(p) => p.id === this.plugin.settings.providerId
+		);
+		const modelSetting = new Setting(containerEl)
 			.setName("Model")
-			.setDesc(
+			.setDesc("Model to use for retrospective generation.");
+
+		const { hasChoices, options: modelOptions } = getModelOptions(
+			selectedProvider,
+			this.plugin.settings.model
+		);
+
+		if (hasChoices) {
+			modelSetting.addDropdown((dropdown) => {
+				for (const [val, label] of Object.entries(modelOptions)) {
+					dropdown.addOption(val, label);
+				}
+				if (modelOptions[this.plugin.settings.model] !== undefined) {
+					dropdown.setValue(this.plugin.settings.model);
+				} else {
+					dropdown.setValue("");
+				}
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.model = value;
+					await this.plugin.saveSettings();
+				});
+			});
+		} else {
+			modelSetting.setDesc(
 				"Model override passed to the provider. Leave empty to use the provider's default model."
-			)
-			.addText((text) =>
+			);
+			modelSetting.addText((text) =>
 				text
 					.setPlaceholder("e.g. gpt-4o")
 					.setValue(this.plugin.settings.model)
@@ -141,6 +276,7 @@ export class AwwRetroSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+		}
 
 		new Setting(containerEl)
 			.setName("Journal folder")

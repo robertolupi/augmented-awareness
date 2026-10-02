@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	DEFAULT_METRIC_TEMPLATES,
 	DEFAULT_SETTINGS,
+	getModelOptions,
+	getProviderOptions,
 	parseCanonicalTags,
 	parseIgnoredHeadings,
 	parseMetricTemplates,
@@ -108,5 +110,76 @@ describe("settings defaults", () => {
 	it("has empty defaults for ignoredHeadings and canonicalTags", () => {
 		expect(DEFAULT_SETTINGS.ignoredHeadings).toBe("");
 		expect(DEFAULT_SETTINGS.canonicalTags).toBe("");
+	});
+});
+
+describe("getProviderOptions", () => {
+	it("formats providers with name and type", () => {
+		const providers = [
+			{
+				id: "prov-1",
+				name: "LM Studio (Bonsai)",
+				type: "lmstudio",
+				model: "bonsai-27b",
+			},
+			{
+				id: "prov-2",
+				name: "OpenRouter",
+				type: "openrouter",
+				model: "meta/llama-3",
+			},
+		];
+		expect(getProviderOptions(providers)).toEqual({
+			"prov-1": "LM Studio (Bonsai) (lmstudio)",
+			"prov-2": "OpenRouter (openrouter)",
+		});
+	});
+
+	it("falls back to id if name is missing", () => {
+		const providers = [{ id: "prov-bare", model: "m" }];
+		expect(getProviderOptions(providers)).toEqual({
+			"prov-bare": "prov-bare",
+		});
+	});
+});
+
+describe("getModelOptions", () => {
+	it("returns hasChoices: false when provider is undefined or has no models", () => {
+		expect(getModelOptions(undefined)).toEqual({
+			hasChoices: false,
+			options: {},
+		});
+		expect(getModelOptions({ id: "p", model: "" })).toEqual({
+			hasChoices: false,
+			options: {},
+		});
+	});
+
+	it("includes default option and sorted availableModels", () => {
+		const provider = {
+			id: "p1",
+			name: "Test",
+			model: "default-model",
+			availableModels: ["model-b", "model-a", "default-model"],
+		};
+		const result = getModelOptions(provider);
+		expect(result.hasChoices).toBe(true);
+		expect(result.options).toEqual({
+			"": "Default (default-model)",
+			"default-model": "default-model",
+			"model-a": "model-a",
+			"model-b": "model-b",
+		});
+	});
+
+	it("preserves currentModel if not already in availableModels", () => {
+		const provider = {
+			id: "p1",
+			model: "m1",
+			availableModels: ["m1", "m2"],
+		};
+		const result = getModelOptions(provider, "custom-saved-model");
+		expect(result.hasChoices).toBe(true);
+		expect(result.options["custom-saved-model"]).toBe("custom-saved-model");
 	});
 });

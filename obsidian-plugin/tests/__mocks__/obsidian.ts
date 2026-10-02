@@ -6,7 +6,23 @@ export class Notice {
 }
 export class Plugin {}
 export class PluginSettingTab {}
-export class Setting {}
+export class Setting {
+	setName(_name: string): this {
+		return this;
+	}
+	setDesc(_desc: string): this {
+		return this;
+	}
+	addText(_cb: (text: unknown) => void): this {
+		return this;
+	}
+	addTextArea(_cb: (text: unknown) => void): this {
+		return this;
+	}
+	addDropdown(_cb: (dropdown: unknown) => void): this {
+		return this;
+	}
+}
 export class TFile {}
 export function normalizePath(path: string): string {
 	return path;
