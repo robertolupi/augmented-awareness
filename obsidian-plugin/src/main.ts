@@ -15,14 +15,42 @@ import {
 } from "./settings";
 import { ProgressNotice } from "./ui/ProgressNotice";
 import { GenerateModal } from "./ui/GenerateModal";
+import { AwwChatView, CHAT_VIEW_TYPE } from "./ui/ChatView";
+import type { ChatSession } from "./core/chat/session";
 
 
 export default class AwwRetroPlugin extends Plugin {
 	settings: AwwRetroSettings = { ...DEFAULT_SETTINGS };
 	private activeAbortController?: AbortController;
+	private chatSessions: ChatSession[] = [];
+	private activeSessionId?: string;
 
 	async onload() {
 		await this.loadSettings();
+
+		// Register Chat View
+		this.registerView(
+			CHAT_VIEW_TYPE,
+			(leaf) => new AwwChatView(leaf, this)
+		);
+
+		// Ribbon icon to open chat
+		this.addRibbonIcon(
+			"message-square",
+			"Open Augmented Awareness Chat",
+			() => {
+				void this.activateChatView();
+			}
+		);
+
+		// Command to open chat
+		this.addCommand({
+			id: "open-chat",
+			name: "Open chat",
+			callback: () => {
+				void this.activateChatView();
+			},
+		});
 
 		this.addCommand({
 			id: "generate-daily-retrospective",
@@ -84,15 +112,77 @@ export default class AwwRetroPlugin extends Plugin {
 	}
 
 	async loadSettings() {
+		const data = await this.loadData();
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData()
+			data
 		);
+		if (data && Array.isArray(data.chatSessions)) {
+			this.chatSessions = data.chatSessions;
+		}
+		if (data && typeof data.activeSessionId === "string") {
+			this.activeSessionId = data.activeSessionId;
+		}
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		const data = {
+			...this.settings,
+			chatSessions: this.chatSessions,
+			activeSessionId: this.activeSessionId,
+		};
+		await this.saveData(data);
+	}
+
+	async activateChatView(): Promise<void> {
+		const { workspace } = this.app;
+		let leaf = workspace.getLeavesOfType(CHAT_VIEW_TYPE)[0];
+		if (!leaf) {
+			const rightLeaf = workspace.getRightLeaf(false);
+			if (rightLeaf) {
+				await rightLeaf.setViewState({
+					type: CHAT_VIEW_TYPE,
+					active: true,
+				});
+				leaf = rightLeaf;
+			}
+		}
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
+	getChatSessions(): ChatSession[] {
+		return this.chatSessions;
+	}
+
+	getActiveSessionId(): string | undefined {
+		return this.activeSessionId;
+	}
+
+	setActiveSessionId(id: string): void {
+		this.activeSessionId = id;
+		void this.saveSettings();
+	}
+
+	saveChatSession(session: ChatSession): void {
+		const idx = this.chatSessions.findIndex((s) => s.id === session.id);
+		if (idx >= 0) {
+			this.chatSessions[idx] = session;
+		} else {
+			this.chatSessions.unshift(session);
+		}
+		this.activeSessionId = session.id;
+		void this.saveSettings();
+	}
+
+	deleteChatSession(id: string): void {
+		this.chatSessions = this.chatSessions.filter((s) => s.id !== id);
+		if (this.activeSessionId === id) {
+			this.activeSessionId = this.chatSessions[0]?.id;
+		}
+		void this.saveSettings();
 	}
 
 	private async generateForLevel(level: Level): Promise<void> {

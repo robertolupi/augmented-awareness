@@ -15,6 +15,21 @@ AWW Retrospectives reads your Obsidian vault journal notes and aggregates them i
 - **Options Modal with Live Plan Preview**: The "Generate retrospective with options..." command provides a date picker, level dropdown, force-regeneration toggle, and a live preview of expected model calls and dependency resolution before execution.
 - **Visual Progress & In-Flight Cancellation**: Native Obsidian progress bar displays real-time step status with an immediate Cancel button backed by `AbortController`.
 - **Configurable Input Filters**: Customize ignored journal headings (case-insensitive) and frontmatter metric extractors (stress, sleep, mood, meditation, etc.) matching Python Augmented Awareness rules.
+- **AI Chat Pane with Native Tool Calling**: Full conversational interface mirroring Streamlit chat workflows, powered by Obsidian's native APIs and `aiProviders.toolsExecute`.
+  - **Read-Only Vault Tools**:
+    - `search_vault`: Multi-token keyword search using Obsidian's native `prepareSimpleSearch` with basename boosts and context snippets.
+    - `read_pages`: Resolves and reads note content and frontmatter metadata via `metadataCache.getFirstLinkpathDest`.
+    - `read_journal`: Reads structured daily journal entries.
+    - `read_retro`: Reads retrospectives across daily, weekly, monthly, and yearly horizons.
+    - `read_tasks`: Fast task querying across date ranges using Obsidian's pre-indexed `metadataCache.getFileCache().listItems`.
+    - `list_dates`: Enumerates available journal and retrospective dates for any range.
+    - `extract_metric`: Extracts numeric frontmatter metrics (e.g. sleep, stress, meditation) across dates.
+    - `datetime`: Contextual current date, time, and relevant periodic note wikilinks.
+    - `calculator`: Safe arithmetic and calendar calculation engine (`daysBetween`, `addDays`, `subDays`, `dayOfWeek`, `daysInMonth`).
+  - **Collapsible Reasoning**: Models emitting `<think>...</think>` (like DeepSeek) have their thoughts packaged in tidy, collapsible disclosure widgets (`💭 Thought process`), expandable on click.
+  - **Session Management**: Multi-session switcher with New, Rename, and Delete actions, persisted across vault restarts.
+  - **Save to Obsidian**: One-click export to Markdown notes in `Chats/YYYY-MM-DD <title>.md` with frontmatter, wikilinks, and clean message transcripts.
+  - **Active Note Context**: Automatically attaches the currently open vault note as an active context chip (`📎 [[note]]`).
 
 ## Requirements
 
@@ -57,6 +72,7 @@ AWW Retrospectives reads your Obsidian vault journal notes and aggregates them i
 | `aww-retro:generate-weekly-retrospective` | Generate weekly retrospective | Generates weekly retrospective (`YYYY-Www`), resolving daily dependencies. |
 | `aww-retro:generate-monthly-retrospective` | Generate monthly retrospective | Generates monthly retrospective (`YYYY-MM`), resolving weekly and daily dependencies. |
 | `aww-retro:generate-yearly-retrospective` | Generate yearly retrospective | Generates yearly retrospective (`YYYY`), resolving monthly, weekly, and daily dependencies. |
+| `aww-retro:open-chat` | Open chat | Opens or reveals the AWW Chat sidebar view. |
 
 ## Development & Testing
 
