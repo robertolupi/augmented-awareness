@@ -40,4 +40,40 @@ describe("prepareOutput", () => {
 			"# r2025-12-31\n\nBody text."
 		);
 	});
+
+	it("strips <think> reasoning wrappers from output", () => {
+		const input = "<think>\nAnalyzing the day's events...\n- Meeting at 10\n- Stress level was high\n</think>\n\n# January 8 Summary\n\nEverything went well.";
+		expect(prepareOutput(input, "r2025-01-08")).toBe(
+			"# r2025-01-08\n\n# January 8 Summary\n\nEverything went well."
+		);
+	});
+
+	it("strips <think> wrapper before a ```markdown fence", () => {
+		const input = "<think>\nInternal thinking process.\n</think>\n```markdown\nActual retrospective text.\n```";
+		expect(prepareOutput(input, "r2025-01-08")).toBe(
+			"# r2025-01-08\n\nActual retrospective text."
+		);
+	});
+
+	it("strips <think> wrapper inside a ```markdown fence", () => {
+		const input = "```markdown\n<think>\nInner thinking process.\n</think>\nActual retrospective text.\n```";
+		expect(prepareOutput(input, "r2025-01-08")).toBe(
+			"# r2025-01-08\n\nActual retrospective text."
+		);
+	});
+
+	it("strips multiple or case-insensitive <think> and <thought> tags", () => {
+		const input = "<THINK>first think</THINK>\nIntro.\n<thought>second think</thought>\nOutro.";
+		expect(prepareOutput(input, "r1")).toBe(
+			"# r1\n\nIntro.\n\nOutro."
+		);
+	});
+
+	it("strips <think> tag immediately followed by heading without newline", () => {
+		const input =
+			"<think>**Interpreting completed events**\n\nI need to interpret only completed events.\nTwo questions remain.</think>### 1 Key Events\n- None observed";
+		expect(prepareOutput(input, "r2026-10-02")).toBe(
+			"# r2026-10-02\n\n### 1 Key Events\n- None observed"
+		);
+	});
 });
