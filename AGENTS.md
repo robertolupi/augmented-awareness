@@ -72,6 +72,26 @@ Use `uv add` for python dependencies and `uv run` to execute Python programs, su
 uv add streamlit
 ```
 
+### Obsidian Plugin (TypeScript)
+
+The `obsidian-plugin/` directory contains the native Obsidian desktop plugin (`aww-retro`):
+
+- `src/main.ts`: Main plugin entry point, registering views, settings tab, ribbon icons, and commands.
+- `src/settings.ts`: Settings definitions and configuration UI.
+- `src/adapters/`: Interfaces with the Obsidian `aiProviders` plugin (`Model.ts`).
+- `src/core/`: Core application logic:
+  - `core/plan.ts`: Retrospective dependency resolution DAG.
+  - `core/generate.ts`: Retrospective generation pipeline.
+  - `core/tools/`: Read-only vault tools (`search_vault`, `read_pages`, `read_journal`, `read_retro`, `read_tasks`, `list_dates`, `extract_metric`, `datetime`, `calculator`).
+  - `core/chat/`: Chat agent, multi-turn tool calling, session management, and system prompts.
+- `src/ui/`: UI components (`ChatView.ts`, `GenerateModal.ts`, `ProgressNotice.ts`).
+- `styles.css`: Obsidian native CSS styling.
+- `tests/`: Vitest test suites.
+
+Build commands:
+- Build: `cd obsidian-plugin && npm run build`
+- Tests: `cd obsidian-plugin && npm test`
+
 
 ## Testing
 
@@ -98,6 +118,36 @@ To run a specific test file:
 ```bash
 PYTHONPATH=. uv run pytest path/to/test_file.py
 ```
+
+### Obsidian Plugin Testing & UI Verification
+
+#### Unit Testing
+To run all plugin unit tests:
+
+```bash
+cd obsidian-plugin && npm test
+```
+
+#### Hot-Reloading in Obsidian
+When modifying plugin code or styles, build and reload in the active vault:
+
+```bash
+cd obsidian-plugin && npm run build
+cp obsidian-plugin/main.js obsidian-plugin/styles.css /Users/rlupi/data/notes/.obsidian/plugins/aww-retro/
+obsidian plugin:reload id=aww-retro vault=notes
+```
+
+#### UI Screenshots (IMPORTANT)
+**ALWAYS use `obsidian dev:screenshot` instead of macOS `screencapture`**:
+
+```bash
+obsidian dev:screenshot path=/path/to/screenshot.png vault=notes
+```
+
+Benefits:
+- **No macOS Screen Recording permissions needed**: Uses Obsidian's internal Electron/Chromium capture directly.
+- **Strict window cropping**: Captures only the Obsidian window, cleanly omitting the user's desktop, other open apps, or OS menubar.
+- **Fast and resilient**: Works reliably regardless of display sleep or space switching.
 
 ### General Best Practices
 
