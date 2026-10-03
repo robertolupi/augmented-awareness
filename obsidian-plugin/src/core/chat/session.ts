@@ -60,6 +60,11 @@ export function formatChatMarkdown(session: ChatSession): string {
 			} else if (msg.stopped) {
 				lines.push(`### AI\n*(Generation stopped by user)*\n`);
 			}
+		} else if (msg.role === "system") {
+			const match = msg.content.match(/### \[\[(.*?)\]\]/);
+			if (match) {
+				lines.push(`> 📎 **Context Note**: [[${match[1]}]]\n`);
+			}
 		}
 	}
 

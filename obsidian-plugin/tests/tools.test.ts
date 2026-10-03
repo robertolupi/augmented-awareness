@@ -119,7 +119,28 @@ describe("searchVault", () => {
 	});
 });
 
-describe("readPages", () => {
+describe("readPages and resolveVaultPage", () => {
+	it("resolves pages by link name, heading, and alias", async () => {
+		const { resolveVaultPage } = await import("../src/core/tools/pages");
+		const file = createMockFile("3-resources/Values.md", "Values");
+		const mockApp: any = {
+			vault: {
+				getMarkdownFiles: () => [file],
+				cachedRead: async () => "Integrity and Curiosity",
+			},
+			metadataCache: {
+				getFirstLinkpathDest: (name: string) => (name === "Values" ? file : null),
+			},
+		};
+
+		expect(resolveVaultPage(mockApp, "Values")?.basename).toBe("Values");
+		expect(resolveVaultPage(mockApp, "[[Values]]")?.basename).toBe("Values");
+		expect(resolveVaultPage(mockApp, "[[Values#Core Principles]]")?.basename).toBe("Values");
+		expect(resolveVaultPage(mockApp, "[[Values|My Core Values]]")?.basename).toBe("Values");
+		expect(resolveVaultPage(mockApp, "[[Values#Section|Alias]]")?.basename).toBe("Values");
+		expect(resolveVaultPage(mockApp, "[[NonExistent]]")).toBeNull();
+	});
+
 	it("reads pages by link name or clean basename", async () => {
 		const file = createMockFile("3-resources/Values.md", "Values");
 		const mockApp: any = {

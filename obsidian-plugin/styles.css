@@ -306,3 +306,96 @@
 	height: 12px;
 }
 
+.aww-chat-btn-spacer {
+	flex: 1;
+}
+
+.aww-chat-insert-page-btn {
+	font-size: var(--font-ui-smaller);
+	padding: 4px 10px;
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-normal);
+	cursor: pointer;
+	border-radius: var(--radius-s);
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.aww-chat-insert-page-btn:hover:not(:disabled) {
+	background-color: var(--nav-item-background-hover);
+	border-color: var(--text-accent);
+	color: var(--text-accent);
+}
+
+.aww-chat-insert-page-btn:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.aww-chat-active-note-indicator {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.aww-chat-active-note-link {
+	color: var(--text-accent);
+	cursor: pointer;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.aww-chat-active-note-link:hover {
+	text-decoration: underline;
+}
+
+/* Context Card in Message Stream */
+.aww-chat-context-card {
+	align-self: flex-start;
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-left: 3px solid var(--text-accent);
+	width: 100%;
+	font-size: var(--font-ui-smaller);
+}
+
+.aww-chat-context-card-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-normal);
+}
+
+.aww-chat-context-card-path {
+	color: var(--text-muted);
+	font-size: 11px;
+}
+
+.aww-chat-context-preview {
+	margin-top: 6px;
+}
+
+.aww-chat-context-preview summary {
+	cursor: pointer;
+	color: var(--text-muted);
+	font-size: 11px;
+}
+
+.aww-chat-context-preview-body pre {
+	margin-top: 4px;
+	padding: 6px;
+	font-size: 11px;
+	background-color: var(--background-primary);
+	border-radius: var(--radius-s);
+	overflow-x: auto;
+	max-height: 140px;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+

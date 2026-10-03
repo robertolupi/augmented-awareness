@@ -96,6 +96,11 @@ export async function runChatAgent(
 				tool_call_id: msg.tool_call_id,
 				content: msg.content,
 			});
+		} else if (msg.role === "system") {
+			openAiMessages.push({
+				role: "system",
+				content: msg.content,
+			});
 		}
 	}
 

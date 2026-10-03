@@ -21,6 +21,7 @@ import {
 	extractThinking,
 	ChatCancelledError,
 } from "../core/chat/agent";
+import { resolveVaultPage } from "../core/tools/pages";
 
 export const CHAT_VIEW_TYPE = "aww-chat-view";
 
@@ -31,7 +32,6 @@ export class AwwChatView extends ItemView {
 	private activeSession: ChatSession;
 	private isGenerating = false;
 	private showToolCalls = false;
-	private attachedNote: TFile | null = null;
 	private abortController: AbortController | null = null;
 	private currentIndicatorEl: HTMLElement | null = null;
 
@@ -43,6 +43,7 @@ export class AwwChatView extends ItemView {
 	private textareaEl!: HTMLTextAreaElement;
 	private sendBtnEl!: HTMLButtonElement;
 	private stopBtnEl!: HTMLButtonElement;
+	private insertPageBtnEl!: HTMLButtonElement;
 
 	// Dropdown elements
 	private sessionSelectEl!: HTMLSelectElement;
@@ -307,29 +308,60 @@ export class AwwChatView extends ItemView {
 
 	private renderContextBar(): void {
 		this.contextBarEl.empty();
-		const activeFile = this.app.workspace.getActiveFile();
+		this.updateInsertPageButton();
 
-		if (this.attachedNote) {
-			const badge = this.contextBarEl.createDiv({ cls: "aww-chat-context-chip" });
-			badge.createSpan({ text: `📎 [[${this.attachedNote.basename}]]` });
-			const detachBtn = badge.createEl("button", {
-				cls: "clickable-icon aww-chat-chip-remove",
-				attr: { "aria-label": "Remove note context" },
+		const activeFile = this.app.workspace.getActiveFile();
+		if (activeFile && activeFile instanceof TFile && activeFile.extension === "md") {
+			const bar = this.contextBarEl.createDiv({ cls: "aww-chat-active-note-indicator" });
+			const iconSpan = bar.createSpan({ cls: "aww-chat-active-note-icon" });
+			setIcon(iconSpan, "file-text");
+			bar.createSpan({ text: "Active note: " });
+			const linkEl = bar.createEl("a", {
+				cls: "aww-chat-active-note-link",
+				text: `[[${activeFile.basename}]]`,
+				attr: { title: `Click to insert [[${activeFile.basename}]] into chat` },
 			});
-			setIcon(detachBtn, "x");
-			detachBtn.addEventListener("click", () => {
-				this.attachedNote = null;
-				this.renderContextBar();
+			linkEl.addEventListener("click", () => {
+				this.insertCurrentPageName();
 			});
-		} else if (activeFile && activeFile instanceof TFile && activeFile.extension === "md") {
-			const attachBtn = this.contextBarEl.createEl("button", {
-				cls: "aww-chat-attach-btn",
-				text: `+ Attach note: [[${activeFile.basename}]]`,
-			});
-			attachBtn.addEventListener("click", () => {
-				this.attachedNote = activeFile;
-				this.renderContextBar();
-			});
+		}
+	}
+
+	private insertCurrentPageName(): void {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile || !(activeFile instanceof TFile) || activeFile.extension !== "md") {
+			new Notice("No active markdown note open in Obsidian.");
+			return;
+		}
+
+		const wikilink = `[[${activeFile.basename}]] `;
+		const textarea = this.textareaEl;
+		const start = textarea.selectionStart ?? textarea.value.length;
+		const end = textarea.selectionEnd ?? textarea.value.length;
+		const text = textarea.value;
+
+		textarea.value = text.slice(0, start) + wikilink + text.slice(end);
+		const newPos = start + wikilink.length;
+		textarea.setSelectionRange(newPos, newPos);
+		textarea.focus();
+	}
+
+	private updateInsertPageButton(): void {
+		if (!this.insertPageBtnEl) return;
+		const activeFile = this.app.workspace.getActiveFile();
+		if (activeFile && activeFile instanceof TFile && activeFile.extension === "md") {
+			this.insertPageBtnEl.setText(`+ [[${activeFile.basename}]]`);
+			this.insertPageBtnEl.setAttribute(
+				"aria-label",
+				`Insert [[${activeFile.basename}]] into chat`
+			);
+			this.insertPageBtnEl.disabled = false;
+			this.insertPageBtnEl.style.opacity = "1";
+		} else {
+			this.insertPageBtnEl.setText("+ [[current page]]");
+			this.insertPageBtnEl.setAttribute("aria-label", "No active note open");
+			this.insertPageBtnEl.disabled = true;
+			this.insertPageBtnEl.style.opacity = "0.5";
 		}
 	}
 
@@ -450,6 +482,43 @@ export class AwwChatView extends ItemView {
 				summary.createEl("b", { text: msg.tool_name || "tool" });
 				const body = toolCard.createDiv({ cls: "aww-chat-tool-body" });
 				body.createEl("pre", { text: msg.content });
+			} else if (msg.role === "system") {
+				if (msg.content.startsWith("The user wants you to read this page for context:")) {
+					const match = msg.content.match(/### \[\[(.*?)\]\](?:\s*\((.*?)\))?/);
+					const title = match ? match[1] : "Note";
+					const path = match && match[2] ? match[2] : "";
+
+					const ctxCard = this.messagesContainerEl.createDiv({
+						cls: "aww-chat-msg aww-chat-context-card",
+					});
+					const header = ctxCard.createDiv({
+						cls: "aww-chat-context-card-header",
+					});
+					const iconSpan = header.createSpan({
+						cls: "aww-chat-context-card-icon",
+					});
+					setIcon(iconSpan, "file-text");
+					header.createSpan({ text: "Page context added: " });
+					header.createEl("b", { text: `[[${title}]]` });
+					if (path) {
+						header.createSpan({
+							cls: "aww-chat-context-card-path",
+							text: ` (${path})`,
+						});
+					}
+
+					const details = ctxCard.createEl("details", {
+						cls: "aww-chat-context-preview",
+					});
+					details.createEl("summary", { text: "View page content" });
+					const previewBody = details.createDiv({
+						cls: "aww-chat-context-preview-body",
+					});
+					const prefixRegex =
+						/^The user wants you to read this page for context:\s*### \[\[.*?\]\](?:\s*\(.*?\))?\s*/;
+					const rawContent = msg.content.replace(prefixRegex, "").trim();
+					previewBody.createEl("pre", { text: rawContent });
+				}
 			}
 		}
 
@@ -475,6 +544,17 @@ export class AwwChatView extends ItemView {
 		});
 
 		const btnRow = this.inputAreaEl.createDiv({ cls: "aww-chat-btn-row" });
+
+		this.insertPageBtnEl = btnRow.createEl("button", {
+			cls: "aww-chat-insert-page-btn",
+			text: "+ [[current page]]",
+		});
+		this.updateInsertPageButton();
+		this.insertPageBtnEl.addEventListener("click", () => {
+			this.insertCurrentPageName();
+		});
+
+		btnRow.createDiv({ cls: "aww-chat-btn-spacer" });
 
 		this.stopBtnEl = btnRow.createEl("button", {
 			cls: "mod-warning aww-chat-stop-btn",
@@ -506,6 +586,34 @@ export class AwwChatView extends ItemView {
 		if (!prompt || this.isGenerating) return;
 
 		this.textareaEl.value = "";
+
+		// Auto-detect and resolve all [[wikilinks]] mentioned in the user prompt
+		const linkRegex = /\[\[(.*?)\]\]/g;
+		const matches = Array.from(prompt.matchAll(linkRegex));
+		const resolvedFiles: TFile[] = [];
+
+		for (const m of matches) {
+			const file = resolveVaultPage(this.app, m[1]);
+			if (file && !resolvedFiles.some((f) => f.path === file.path)) {
+				resolvedFiles.push(file);
+			}
+		}
+
+		// Inject system context messages informing the agent to read each page
+		for (const file of resolvedFiles) {
+			try {
+				const content = await this.app.vault.cachedRead(file);
+				const sysMsg: ChatMessage = {
+					id: `ctx-${Date.now()}-${file.basename}`,
+					role: "system",
+					content: `The user wants you to read this page for context:\n\n### [[${file.basename}]] (${file.path})\n\n${content}`,
+					timestamp: Date.now(),
+				};
+				this.activeSession.messages.push(sysMsg);
+			} catch {
+				// Ignore read error; agent will fall back to read_pages tool
+			}
+		}
 
 		// Add user message to session
 		const userMsg: ChatMessage = {
@@ -553,20 +661,7 @@ export class AwwChatView extends ItemView {
 		this.scrollToBottom();
 
 		try {
-			// Read context note if attached
-			let contextNoteData = null;
-			if (this.attachedNote) {
-				const noteContent = await this.app.vault.cachedRead(this.attachedNote);
-				contextNoteData = {
-					path: this.attachedNote.path,
-					basename: this.attachedNote.basename,
-					content: noteContent,
-				};
-			}
-
-			const systemPrompt = await buildChatSystemPrompt(this.app, {
-				contextNote: contextNoteData,
-			});
+			const systemPrompt = await buildChatSystemPrompt(this.app);
 
 			const result = await runChatAgent({
 				app: this.app,
