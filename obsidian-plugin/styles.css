@@ -321,6 +321,10 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
