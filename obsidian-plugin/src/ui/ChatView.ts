@@ -15,7 +15,12 @@ import {
 	saveChatToVault,
 } from "../core/chat/session";
 import { buildChatSystemPrompt } from "../core/chat/systemPrompt";
-import { runChatAgent, ChatMessage, extractThinking } from "../core/chat/agent";
+import {
+	runChatAgent,
+	ChatMessage,
+	extractThinking,
+	ChatCancelledError,
+} from "../core/chat/agent";
 
 export const CHAT_VIEW_TYPE = "aww-chat-view";
 
@@ -28,6 +33,7 @@ export class AwwChatView extends ItemView {
 	private showToolCalls = false;
 	private attachedNote: TFile | null = null;
 	private abortController: AbortController | null = null;
+	private currentIndicatorEl: HTMLElement | null = null;
 
 	// UI elements
 	private headerEl!: HTMLElement;
@@ -401,7 +407,7 @@ export class AwwChatView extends ItemView {
 					continue;
 				}
 
-				if (!cleanContent && thoughts.length === 0) continue;
+				if (!cleanContent && thoughts.length === 0 && !msg.stopped) continue;
 
 				const asstBubble = this.messagesContainerEl.createDiv({
 					cls: "aww-chat-msg aww-chat-assistant",
@@ -424,6 +430,17 @@ export class AwwChatView extends ItemView {
 				if (cleanContent) {
 					const contentDiv = asstBubble.createDiv({ cls: "aww-chat-msg-content" });
 					await MarkdownRenderer.render(this.app, cleanContent, contentDiv, "", this);
+				}
+
+				if (msg.stopped) {
+					const stopNotice = asstBubble.createDiv({
+						cls: "aww-chat-stopped-notice",
+					});
+					const iconSpan = stopNotice.createSpan({
+						cls: "aww-chat-stopped-icon",
+					});
+					setIcon(iconSpan, "square");
+					stopNotice.createSpan({ text: "Generation stopped" });
 				}
 			} else if (msg.role === "tool" && this.showToolCalls) {
 				const toolBubble = this.messagesContainerEl.createDiv({ cls: "aww-chat-msg aww-chat-tool" });
@@ -466,6 +483,11 @@ export class AwwChatView extends ItemView {
 		this.stopBtnEl.style.display = "none";
 		this.stopBtnEl.addEventListener("click", () => {
 			if (this.abortController) {
+				this.stopBtnEl.setText("Stopping...");
+				this.stopBtnEl.disabled = true;
+				if (this.currentIndicatorEl) {
+					this.currentIndicatorEl.setText("⏹ Stopping generation...");
+				}
 				this.abortController.abort();
 			}
 		});
@@ -519,13 +541,15 @@ export class AwwChatView extends ItemView {
 		this.isGenerating = true;
 		this.abortController = new AbortController();
 		this.sendBtnEl.style.display = "none";
+		this.stopBtnEl.setText("Stop");
+		this.stopBtnEl.disabled = false;
 		this.stopBtnEl.style.display = "inline-block";
 
 		// Temporary indicator bubble
-		const indicator = this.messagesContainerEl.createDiv({
+		this.currentIndicatorEl = this.messagesContainerEl.createDiv({
 			cls: "aww-chat-msg aww-chat-assistant aww-chat-generating",
 		});
-		indicator.createSpan({ cls: "aww-chat-spinner", text: "● Thinking..." });
+		this.currentIndicatorEl.createSpan({ cls: "aww-chat-spinner", text: "● Thinking..." });
 		this.scrollToBottom();
 
 		try {
@@ -554,12 +578,16 @@ export class AwwChatView extends ItemView {
 				retroDir: this.plugin.settings.retroDir,
 				abortController: this.abortController,
 				onProgress: (_chunk, accumulated) => {
-					indicator.setText(accumulated || "Thinking...");
-					this.scrollToBottom();
+					if (this.currentIndicatorEl) {
+						this.currentIndicatorEl.setText(accumulated || "Thinking...");
+						this.scrollToBottom();
+					}
 				},
 				onToolCallStart: (toolName) => {
-					indicator.setText(`🔧 Using tool: ${toolName}...`);
-					this.scrollToBottom();
+					if (this.currentIndicatorEl) {
+						this.currentIndicatorEl.setText(`🔧 Using tool: ${toolName}...`);
+						this.scrollToBottom();
+					}
 				},
 			});
 
@@ -569,7 +597,28 @@ export class AwwChatView extends ItemView {
 			}
 			this.plugin.saveChatSession(this.activeSession);
 		} catch (err: any) {
-			if (err.message !== "Chat generation cancelled.") {
+			const isCancelled =
+				err instanceof ChatCancelledError ||
+				err.name === "ChatCancelledError" ||
+				err.message === "Chat generation cancelled.";
+
+			if (isCancelled) {
+				new Notice("Chat generation stopped.");
+				const intermediate = err.generatedMessages || [];
+				for (const m of intermediate) {
+					this.activeSession.messages.push(m);
+				}
+				const partial = (err.partialContent || "").trim();
+				const stoppedMsg: ChatMessage = {
+					id: `asst-stopped-${Date.now()}`,
+					role: "assistant",
+					content: partial,
+					timestamp: Date.now(),
+					stopped: true,
+				};
+				this.activeSession.messages.push(stoppedMsg);
+				this.plugin.saveChatSession(this.activeSession);
+			} else {
 				new Notice(`Chat error: ${err.message || String(err)}`);
 				const errorMsg: ChatMessage = {
 					id: `err-${Date.now()}`,
@@ -581,9 +630,14 @@ export class AwwChatView extends ItemView {
 				this.plugin.saveChatSession(this.activeSession);
 			}
 		} finally {
-			indicator.remove();
+			if (this.currentIndicatorEl) {
+				this.currentIndicatorEl.remove();
+				this.currentIndicatorEl = null;
+			}
 			this.isGenerating = false;
 			this.abortController = null;
+			this.stopBtnEl.setText("Stop");
+			this.stopBtnEl.disabled = false;
 			this.sendBtnEl.style.display = "inline-block";
 			this.stopBtnEl.style.display = "none";
 			await this.renderMessages();

@@ -14,6 +14,23 @@ export interface ChatMessage {
 	tool_calls?: any[];
 	tool_call_id?: string;
 	tool_name?: string;
+	stopped?: boolean;
+}
+
+export class ChatCancelledError extends Error {
+	generatedMessages: ChatMessage[];
+	partialContent: string;
+
+	constructor(
+		message = "Chat generation cancelled.",
+		generatedMessages: ChatMessage[] = [],
+		partialContent = ""
+	) {
+		super(message);
+		this.name = "ChatCancelledError";
+		this.generatedMessages = generatedMessages;
+		this.partialContent = partialContent;
+	}
 }
 
 export interface RunChatAgentOptions {
@@ -86,12 +103,17 @@ export async function runChatAgent(
 	let step = 0;
 	const maxSteps = 8;
 	let finalContent = "";
+	let latestAccumulated = "";
 
 	while (step < maxSteps) {
 		step++;
 
 		if (abortController.signal.aborted) {
-			throw new Error("Chat generation cancelled.");
+			throw new ChatCancelledError(
+				"Chat generation cancelled.",
+				generatedMessages,
+				latestAccumulated
+			);
 		}
 
 		// Execute with tools
@@ -105,6 +127,7 @@ export async function runChatAgent(
 					tools: CHAT_TOOLS,
 					abortController,
 					onProgress: (chunk: string, accumulated: string) => {
+						latestAccumulated = accumulated;
 						if (onProgress) {
 							onProgress(chunk, accumulated);
 						}
@@ -118,6 +141,7 @@ export async function runChatAgent(
 					messages: openAiMessages,
 					abortController,
 					onProgress: (chunk: string, accumulated: string) => {
+						latestAccumulated = accumulated;
 						if (onProgress) {
 							onProgress(chunk, accumulated);
 						}
@@ -126,8 +150,16 @@ export async function runChatAgent(
 				response = { role: "assistant", content: text };
 			}
 		} catch (err: any) {
-			if (abortController.signal.aborted || err.message === "Aborted") {
-				throw new Error("Chat generation cancelled.");
+			if (
+				abortController.signal.aborted ||
+				err.message === "Aborted" ||
+				err.name === "AbortError"
+			) {
+				throw new ChatCancelledError(
+					"Chat generation cancelled.",
+					generatedMessages,
+					latestAccumulated
+				);
 			}
 			throw err;
 		}
@@ -155,6 +187,14 @@ export async function runChatAgent(
 			});
 
 			for (const call of response.tool_calls) {
+				if (abortController.signal.aborted) {
+					throw new ChatCancelledError(
+						"Chat generation cancelled.",
+						generatedMessages,
+						latestAccumulated
+					);
+				}
+
 				const toolName = call.function?.name || "";
 				let args: Record<string, any> = {};
 				try {
@@ -172,6 +212,14 @@ export async function runChatAgent(
 					journalDir,
 					retroDir,
 				});
+
+				if (abortController.signal.aborted) {
+					throw new ChatCancelledError(
+						"Chat generation cancelled.",
+						generatedMessages,
+						latestAccumulated
+					);
+				}
 
 				if (onToolCallEnd) {
 					onToolCallEnd(toolName, result);

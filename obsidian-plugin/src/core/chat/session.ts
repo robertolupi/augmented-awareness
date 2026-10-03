@@ -54,7 +54,11 @@ export function formatChatMarkdown(session: ChatSession): string {
 			}
 			const cleaned = (msg.content || "").replace(THINK_RE, "").trim();
 			if (cleaned) {
-				lines.push(`### AI\n${cleaned}\n`);
+				lines.push(
+					`### AI\n${cleaned}${msg.stopped ? "\n\n*(Generation stopped by user)*" : ""}\n`
+				);
+			} else if (msg.stopped) {
+				lines.push(`### AI\n*(Generation stopped by user)*\n`);
 			}
 		}
 	}

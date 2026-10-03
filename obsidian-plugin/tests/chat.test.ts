@@ -41,6 +41,48 @@ describe("Chat Session Management", () => {
 		expect(md).toContain("Model: `deepseek`");
 	});
 
+	it("formats stopped message with indicator in Markdown export", () => {
+		const session = createNewSession("Interrupted Chat");
+		session.messages.push({
+			id: "1",
+			role: "user",
+			content: "Generate long report",
+			timestamp: 1000,
+		});
+		session.messages.push({
+			id: "2",
+			role: "assistant",
+			content: "Here is part of the report...",
+			timestamp: 2000,
+			stopped: true,
+		});
+
+		const md = formatChatMarkdown(session);
+		expect(md).toContain(
+			"### AI\nHere is part of the report...\n\n*(Generation stopped by user)*"
+		);
+	});
+
+	it("formats empty stopped message with indicator in Markdown export", () => {
+		const session = createNewSession("Stopped Instantly");
+		session.messages.push({
+			id: "1",
+			role: "user",
+			content: "Hello",
+			timestamp: 1000,
+		});
+		session.messages.push({
+			id: "2",
+			role: "assistant",
+			content: "",
+			timestamp: 2000,
+			stopped: true,
+		});
+
+		const md = formatChatMarkdown(session);
+		expect(md).toContain("### AI\n*(Generation stopped by user)*");
+	});
+
 	it("saves chat session to vault under Chats/ directory", async () => {
 		const session = createNewSession("Goals 2026");
 		session.messages.push({
@@ -129,5 +171,31 @@ describe("extractThinking", () => {
 		const { thoughts, content } = extractThinking(raw);
 		expect(thoughts).toEqual(["First thought", "Second thought"]);
 		expect(content).toBe("Middle textEnd.");
+	});
+});
+
+describe("Chat Agent Cancellation", () => {
+	it("throws ChatCancelledError preserving state when abortController is triggered", async () => {
+		const { runChatAgent, ChatCancelledError } = await import(
+			"../src/core/chat/agent"
+		);
+		const abortController = new AbortController();
+		abortController.abort();
+
+		const mockApp: any = {
+			aiProviders: {
+				toolsExecute: vi.fn(),
+			},
+		};
+
+		await expect(
+			runChatAgent({
+				app: mockApp,
+				provider: { id: "test", name: "Test", model: "test-model" },
+				systemPrompt: "test",
+				messages: [],
+				abortController,
+			})
+		).rejects.toThrowError(ChatCancelledError);
 	});
 });
