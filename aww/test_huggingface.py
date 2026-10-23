@@ -171,7 +171,7 @@ def test_local_cross_encoder_reranker_uses_local_cache(monkeypatch):
     calls = []
 
     class FakeCrossEncoder:
-        def predict(self, pairs):
+        def predict(self, pairs, batch_size=None):
             return [1.0 for _ in pairs]
 
     def fake_loader(*args, **kwargs):

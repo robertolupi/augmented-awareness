@@ -10,12 +10,12 @@
 		"test": "vitest run"
 	},
 	"devDependencies": {
-		"@types/node": "^20.11.0",
+		"@types/node": "^22.0.0",
 		"builtin-modules": "3.3.0",
-		"esbuild": "0.17.3",
+		"esbuild": "^0.28.2",
 		"obsidian": "latest",
 		"tslib": "2.4.0",
 		"typescript": "^5.4.0",
-		"vitest": "^1.6.0"
+		"vitest": "^5.0.5"
 	}
 }
