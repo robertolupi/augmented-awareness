@@ -7,6 +7,8 @@ export interface AwwRetroSettings {
 	model: string;
 	journalDir: string;
 	retroDir: string;
+	/** Heading of the daily section holding time-tracking events. */
+	journalSection: string;
 	/** One heading per line; matching daily sections are removed from input. */
 	ignoredHeadings: string;
 	/** `key = template` lines; template may contain {} for the value. */
@@ -40,6 +42,7 @@ export const DEFAULT_SETTINGS: AwwRetroSettings = {
 	model: "",
 	journalDir: "journal",
 	retroDir: "retrospectives",
+	journalSection: "Journal and events",
 	ignoredHeadings: "",
 	metricTemplates: DEFAULT_METRIC_TEMPLATES,
 	canonicalTags: "",
@@ -302,6 +305,22 @@ export class AwwRetroSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.retroDir =
 							value.trim() || DEFAULT_SETTINGS.retroDir;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Journal events section")
+			.setDesc(
+				"Heading of the daily section holding time-tracking events (HH:MM lines)."
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("Journal and events")
+					.setValue(this.plugin.settings.journalSection)
+					.onChange(async (value) => {
+						this.plugin.settings.journalSection =
+							value.trim() || DEFAULT_SETTINGS.journalSection;
 						await this.plugin.saveSettings();
 					})
 			);

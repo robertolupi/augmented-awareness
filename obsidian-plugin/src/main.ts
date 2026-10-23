@@ -16,6 +16,7 @@ import {
 import { ProgressNotice } from "./ui/ProgressNotice";
 import { GenerateModal } from "./ui/GenerateModal";
 import { AwwChatView, CHAT_VIEW_TYPE } from "./ui/ChatView";
+import { AwwBusyView, BUSY_VIEW_TYPE } from "./ui/BusyView";
 import type { ChatSession } from "./core/chat/session";
 
 
@@ -34,6 +35,12 @@ export default class AwwRetroPlugin extends Plugin {
 			(leaf) => new AwwChatView(leaf, this)
 		);
 
+		// Register Time Tracking (busy) View
+		this.registerView(
+			BUSY_VIEW_TYPE,
+			(leaf) => new AwwBusyView(leaf, this)
+		);
+
 		// Ribbon icon to open chat
 		this.addRibbonIcon(
 			"message-square",
@@ -43,12 +50,30 @@ export default class AwwRetroPlugin extends Plugin {
 			}
 		);
 
+		// Ribbon icon to open time tracking stats
+		this.addRibbonIcon(
+			"bar-chart-3",
+			"Open time tracking stats",
+			() => {
+				void this.activateBusyView();
+			}
+		);
+
 		// Command to open chat
 		this.addCommand({
 			id: "open-chat",
 			name: "Open chat",
 			callback: () => {
 				void this.activateChatView();
+			},
+		});
+
+		// Command to open time tracking stats
+		this.addCommand({
+			id: "open-busy-view",
+			name: "Open time tracking stats",
+			callback: () => {
+				void this.activateBusyView();
 			},
 		});
 
@@ -143,6 +168,24 @@ export default class AwwRetroPlugin extends Plugin {
 			if (rightLeaf) {
 				await rightLeaf.setViewState({
 					type: CHAT_VIEW_TYPE,
+					active: true,
+				});
+				leaf = rightLeaf;
+			}
+		}
+		if (leaf) {
+			workspace.revealLeaf(leaf);
+		}
+	}
+
+	async activateBusyView(): Promise<void> {
+		const { workspace } = this.app;
+		let leaf = workspace.getLeavesOfType(BUSY_VIEW_TYPE)[0];
+		if (!leaf) {
+			const rightLeaf = workspace.getRightLeaf(false);
+			if (rightLeaf) {
+				await rightLeaf.setViewState({
+					type: BUSY_VIEW_TYPE,
 					active: true,
 				});
 				leaf = rightLeaf;
