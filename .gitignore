@@ -14,3 +14,6 @@ aww.toml
 
 node_modules/
 obsidian-plugin/main.js
+
+# Local agent notes (contains machine-specific paths)
+AGENTS.md
